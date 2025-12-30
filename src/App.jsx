@@ -721,7 +721,7 @@ export default function WorkoutTracker() {
           </button>
 
           <div className="mx-6 mb-6 space-y-3">
-            <button onClick={() => setView('selectTemplate')} className="w-full bg-rose-400 hover:bg-rose-500 text-white rounded-2xl p-4 flex items-center justify-center gap-2 font-semibold"><Plus size={20} /> Start New Workout</button>
+            <button onClick={() => setView('selectTemplate')} className="w-full bg-rose-400 hover:bg-rose-500 text-white rounded-2xl p-4 flex items-center justify-center gap-2 font-semibold"><Plus size={20} /> Start new workout</button>
             <button onClick={() => { setEditingTemplate({ name: '', exercises: [] }); setView('manageTemplates'); }} className="w-full bg-zinc-800 hover:bg-zinc-700 text-white rounded-2xl p-4 flex items-center justify-center gap-2 font-semibold"><Edit2 size={20} /> Manage Templates</button>
           </div>
 
