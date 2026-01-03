@@ -1,5 +1,33 @@
 @import "tailwindcss";
 
-html, body, #root {
-  height: 100%;
+/* Jeśli używasz starszego Tailwinda (v3), użyj tego zamiast powyższego:
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+*/
+
+body {
+  @apply bg-zinc-950 text-white antialiased;
+  /* Zapobiega "pull-to-refresh" na mobilkach, co psuje UX aplikacji typu app-like */
+  overscroll-behavior-y: none; 
+}
+
+/* Ukrycie paska przewijania, ale zachowanie funkcjonalności */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent; 
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-zinc-700 rounded-full;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-zinc-600;
+}
+
+/* Bezpieczny obszar na dole dla iPhone'ów */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 20px);
 }
