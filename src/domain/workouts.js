@@ -17,7 +17,7 @@ export const getPreviousSets = (exerciseId, workouts, excludeStartTime = null) =
     if (!ex) continue;
 
     // Return an array aligned to set indices; value present only when that set was completed
-    const aligned = ex.sets.map(s => s.completed ? { kg: s.kg, reps: s.reps } : null);
+    const aligned = ex.sets.map(s => (s.completed && !s.warmup) ? { kg: s.kg, reps: s.reps } : null);
     // If there is at least one completed set, return this aligned array
     if (aligned.some(a => a !== null)) return aligned;
   }

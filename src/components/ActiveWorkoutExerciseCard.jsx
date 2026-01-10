@@ -6,7 +6,11 @@ export const ActiveWorkoutExerciseCard = ({
   previousSets = [],
   onUpdateSet,
   onToggleSet,
-  onAddSet
+  onAddSet,
+  onDeleteSet,
+  onToggleWarmup,
+  deleteModeActive = false,
+  warmupModeActive = false
 }) => {
   return (
     <div className="bg-zinc-800 rounded-2xl p-4 mb-4 border border-zinc-700 shadow-sm">
@@ -22,9 +26,12 @@ export const ActiveWorkoutExerciseCard = ({
       <div className="space-y-3">
         {exercise.sets.map((set, i) => {
           const prev = previousSets && previousSets.length > i ? previousSets[i] : null;
+          // compute display index: warmup sets show #0, non-warmup are numbered sequentially
+          const nonWarmupBefore = exercise.sets.slice(0, i).filter(s => !s.warmup).length;
+          const displayLabel = set.warmup ? '#0' : `#${nonWarmupBefore + 1}`;
           return (
-            <div key={i} className="flex items-center gap-3">
-              <div className="w-6 text-sm text-zinc-400">#{i+1}</div>
+            <div key={i} className={`flex items-center gap-3 ${set.warmup ? 'bg-amber-900/20 p-2 rounded' : ''}`}>
+              <div className="w-6 text-sm text-zinc-400">{displayLabel}</div>
 
               <input
                 className="w-20 bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-center text-sm"
@@ -54,6 +61,24 @@ export const ActiveWorkoutExerciseCard = ({
               >
                 {set.completed ? '✓' : '○'}
               </button>
+              {warmupModeActive && (
+                <button
+                  onClick={() => onToggleWarmup && onToggleWarmup(exerciseIndex, i)}
+                  className={`ml-2 w-9 h-9 flex items-center justify-center rounded-lg border ${set.warmup ? 'bg-amber-500 border-amber-600 text-black' : 'bg-transparent border-zinc-700 text-zinc-400'}`}
+                  title="Toggle Warmup"
+                >
+                  W
+                </button>
+              )}
+              {deleteModeActive && (
+                <button
+                  onClick={() => { if (confirm('Delete this set?')) onDeleteSet && onDeleteSet(exerciseIndex, i); }}
+                  className="ml-2 w-9 h-9 flex items-center justify-center rounded-lg border bg-transparent border-zinc-700 text-zinc-400"
+                  title="Delete set"
+                >
+                  🗑
+                </button>
+              )}
             </div>
           );
         })}

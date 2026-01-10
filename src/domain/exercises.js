@@ -9,12 +9,15 @@ export const getExerciseHistory = (exerciseId, workouts) => {
 
   return relevantWorkouts.map(w => {
     const exData = w.exercises.find(e => e.exerciseId === exerciseId);
-    const max1RM = Math.max(0, ...exData.sets.map(s => calculate1RM(s.kg, s.reps)));
+    // include all completed sets in history, but compute best 1RM excluding warmup sets
+    const allCompleted = exData.sets.filter(s => s.completed).map(s => ({ ...s }));
+    const nonWarmupSets = exData.sets.filter(s => s.completed && !s.warmup);
+    const max1RM = nonWarmupSets.length ? Math.max(0, ...nonWarmupSets.map(s => calculate1RM(s.kg, s.reps))) : 0;
 
     return {
       date: w.date,
       workoutName: w.name,
-      sets: exData.sets.filter(s => s.completed),
+      sets: allCompleted,
       max1RM
     };
   }).filter(item => item.sets.length > 0);
@@ -32,6 +35,8 @@ export const getExerciseRecords = (exerciseId, workouts) => {
   history.forEach(day => {
     if (day.max1RM > best1RM) { best1RM = day.max1RM; best1RMDate = day.date; }
     day.sets.forEach(s => {
+      // ignore warmup sets for record calculations
+      if (s.warmup) return;
       if (s.kg > maxWeight) { maxWeight = s.kg; maxWeightDate = day.date; }
       if (s.reps > maxReps) { maxReps = s.reps; maxRepsDate = day.date; }
     });

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { X, Plus, FileText, ChevronDown, GripVertical, Trash2, MoreVertical } from 'lucide-react';
 import {ActiveWorkoutExerciseCard} from '../components/ActiveWorkoutExerciseCard';
 import { formatDate, formatTime } from '../domain/calculations';
@@ -20,11 +20,18 @@ export const ActiveWorkoutView = ({
   onAddExerciseNote,
   onDeleteExercise,
   onReorderExercises,
-  onReplaceExercise
+  onReplaceExercise,
+  onDeleteSet,
+  onToggleWarmup,
+  onAddWarmupSet
 }) => {
   const [draggedIndex, setDraggedIndex] = useState(null);
   const [menuOpenIndex, setMenuOpenIndex] = useState(null);
   const [reordering, setReordering] = useState(false);
+  const containerRef = useRef(null);
+  const itemRefs = useRef([]);
+  const [deleteModeIndex, setDeleteModeIndex] = useState(null);
+  const [warmupModeIndex, setWarmupModeIndex] = useState(null);
 
   // Calculate progress: completed sets / total sets
   const totalSets = useMemo(() => {
@@ -37,15 +44,9 @@ export const ActiveWorkoutView = ({
 
   const progressPercent = totalSets > 0 ? (completedSets / totalSets) * 100 : 0;
 
-  // Drag handlers
-  const handleDragStart = (index) => {
-    setDraggedIndex(index);
-  };
-
-  const handleDragOver = (e) => {
-    e.preventDefault();
-  };
-
+  // Drag handlers (desktop)
+  const handleDragStart = (index) => setDraggedIndex(index);
+  const handleDragOver = (e) => e.preventDefault();
   const handleDrop = (index) => {
     if (draggedIndex !== null && draggedIndex !== index) {
       const newExercises = [...activeWorkout.exercises];
@@ -55,6 +56,42 @@ export const ActiveWorkoutView = ({
     }
     setDraggedIndex(null);
   };
+
+  // Touch-based reordering (mobile)
+  const handleTouchStart = (index) => (e) => {
+    setDraggedIndex(index);
+    // initialize refs array
+    itemRefs.current = itemRefs.current.slice(0, activeWorkout.exercises.length);
+  };
+
+  const handleTouchMove = (e) => {
+    if (draggedIndex === null) return;
+    const touch = e.touches[0];
+    if (!touch) return;
+    const y = touch.clientY;
+
+    // find which index is under touch
+    let targetIndex = null;
+    for (let i = 0; i < itemRefs.current.length; i++) {
+      const el = itemRefs.current[i];
+      if (!el) continue;
+      const rect = el.getBoundingClientRect();
+      if (y >= rect.top && y <= rect.bottom) {
+        targetIndex = i;
+        break;
+      }
+    }
+
+    if (targetIndex !== null && targetIndex !== draggedIndex) {
+      const newExercises = [...activeWorkout.exercises];
+      const [moved] = newExercises.splice(draggedIndex, 1);
+      newExercises.splice(targetIndex, 0, moved);
+      onReorderExercises(newExercises);
+      setDraggedIndex(targetIndex);
+    }
+  };
+
+  const handleTouchEnd = () => setDraggedIndex(null);
 
   return (
     <div className="min-h-screen bg-zinc-900 text-white pb-32 flex flex-col">
@@ -131,10 +168,14 @@ export const ActiveWorkoutView = ({
           return (
             <div
               key={exIndex}
+              ref={el => itemRefs.current[exIndex] = el}
               draggable={reordering}
               onDragStart={() => handleDragStart(exIndex)}
               onDragOver={handleDragOver}
               onDrop={() => handleDrop(exIndex)}
+              onTouchStart={handleTouchStart(exIndex)}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
               className={`mb-4 ${reordering ? 'opacity-70 border-2 border-dashed border-rose-500 rounded-xl p-2' : ''}`}
             >
               <div className="flex items-center gap-2 mb-2">
@@ -197,12 +238,32 @@ export const ActiveWorkoutView = ({
                   </button>
                   <button
                     onClick={() => {
-                      onDeleteExercise(exIndex);
+                      onAddWarmupSet(exIndex);
+                      setMenuOpenIndex(null);
+                    }}
+                    className="block w-full text-left px-4 py-2 text-sm hover:bg-zinc-700 text-amber-400"
+                  >
+                    Add Warmup Set
+                  </button>
+                  <button
+                    onClick={() => {
+                      // enter/exit warmup edit mode for this exercise
+                      setWarmupModeIndex(warmupModeIndex === exIndex ? null : exIndex);
+                      setMenuOpenIndex(null);
+                    }}
+                    className="block w-full text-left px-4 py-2 text-sm hover:bg-zinc-700"
+                  >
+                    Edit Warmup Sets
+                  </button>
+                  <button
+                    onClick={() => {
+                      // toggle delete-mode for this exercise (shows trash icons)
+                      setDeleteModeIndex(deleteModeIndex === exIndex ? null : exIndex);
                       setMenuOpenIndex(null);
                     }}
                     className="block w-full text-left px-4 py-2 text-sm hover:bg-zinc-700 text-red-400"
                   >
-                    Delete
+                    Delete set
                   </button>
                 </div>
               )}
@@ -214,6 +275,10 @@ export const ActiveWorkoutView = ({
                   onUpdateSet={onUpdateSet}
                   onToggleSet={onToggleSet}
                   onAddSet={onAddSet}
+                  onDeleteSet={onDeleteSet}
+                  onToggleWarmup={onToggleWarmup}
+                  deleteModeActive={deleteModeIndex === exIndex}
+                  warmupModeActive={warmupModeIndex === exIndex}
                   previousSets={previousSets}
                 />
               )}

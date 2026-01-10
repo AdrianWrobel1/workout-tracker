@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 
 // DOMAIN
 import { calculate1RM } from './domain/calculations';
+import { getExerciseRecords } from './domain/exercises';
 
 // COMPONENTS
 import { MiniWorkoutBar } from './components/MiniWorkoutBar';
@@ -270,9 +271,16 @@ export default function App() {
     const exId = updated.exercises[exIndex].exerciseId;
     const isCompleted = updated.exercises[exIndex].sets[setIndex].completed;
     if (exId && isCompleted) {
-      const kg = updated.exercises[exIndex].sets[setIndex].kg;
-      const reps = updated.exercises[exIndex].sets[setIndex].reps;
-      setExercisesDB(prev => prev.map(e => e.id === exId ? { ...e, defaultSets: [{ kg, reps }, ...(e.defaultSets || []).slice(1)] } : e));
+      const kg = Number(updated.exercises[exIndex].sets[setIndex].kg) || 0;
+      const reps = Number(updated.exercises[exIndex].sets[setIndex].reps) || 0;
+        // compute 1RM for this set
+        const this1RM = calculate1RM(kg, reps);
+        // compare against historical best (exclude warmups)
+        const hist = getExerciseRecords(exId, workouts);
+        const histBest = hist.best1RM || 0;
+        if (this1RM > histBest) {
+          setExercisesDB(prev => prev.map(e => e.id === exId ? { ...e, defaultSets: [{ kg, reps }, ...(e.defaultSets || []).slice(1)] } : e));
+        }
     }
   };
 
@@ -286,9 +294,14 @@ export default function App() {
     if (newVal) {
       const exId = updated.exercises[exIndex].exerciseId;
       if (exId) {
-        const kg = updated.exercises[exIndex].sets[setIndex].kg;
-        const reps = updated.exercises[exIndex].sets[setIndex].reps;
-        setExercisesDB(prev => prev.map(e => e.id === exId ? { ...e, defaultSets: [{ kg, reps }, ...(e.defaultSets || []).slice(1)] } : e));
+        const kg = Number(updated.exercises[exIndex].sets[setIndex].kg) || 0;
+        const reps = Number(updated.exercises[exIndex].sets[setIndex].reps) || 0;
+        const this1RM = calculate1RM(kg, reps);
+        const hist = getExerciseRecords(exId, workouts);
+        const histBest = hist.best1RM || 0;
+        if (this1RM > histBest) {
+          setExercisesDB(prev => prev.map(e => e.id === exId ? { ...e, defaultSets: [{ kg, reps }, ...(e.defaultSets || []).slice(1)] } : e));
+        }
       }
     }
   };
@@ -298,6 +311,31 @@ export default function App() {
     const lastSet = updated.exercises[exIndex].sets.at(-1) || { kg: 0, reps: 0 };
     updated.exercises[exIndex].sets.push({ ...lastSet, completed: false });
     setActiveWorkout(updated);
+  };
+
+  const handleAddWarmupSet = (exIndex) => {
+    const updated = { ...activeWorkout };
+    const firstSet = updated.exercises[exIndex].sets[0] || { kg: 0, reps: 0 };
+    // insert before first set so it appears as #0
+    updated.exercises[exIndex].sets = [{ ...firstSet, completed: false, warmup: true }, ...updated.exercises[exIndex].sets];
+    setActiveWorkout(updated);
+  };
+
+  const handleDeleteSet = (exIndex, setIndex) => {
+    const updated = { ...activeWorkout };
+    if (updated.exercises[exIndex] && updated.exercises[exIndex].sets[setIndex]) {
+      updated.exercises[exIndex].sets.splice(setIndex, 1);
+      setActiveWorkout(updated);
+    }
+  };
+
+  const handleToggleWarmup = (exIndex, setIndex) => {
+    const updated = { ...activeWorkout };
+    const set = updated.exercises[exIndex].sets[setIndex];
+    if (set) {
+      set.warmup = !set.warmup;
+      setActiveWorkout(updated);
+    }
   };
 
   const handleAddNote = () => {
@@ -544,6 +582,9 @@ export default function App() {
               onReplaceExercise={(exIndex) => { setSelectedExerciseIndex(exIndex); setSelectorMode('activeWorkout'); setShowExerciseSelector(true); }}
               onAddExercise={() => { setSelectedExerciseIndex(null); setSelectorMode('activeWorkout'); setShowExerciseSelector(true); }}
               onMinimize={handleMinimizeWorkout}
+              onDeleteSet={handleDeleteSet}
+              onToggleWarmup={handleToggleWarmup}
+              onAddWarmupSet={handleAddWarmupSet}
             />
           )}
 
