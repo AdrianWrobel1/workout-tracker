@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { formatDate } from '../domain/calculations';
 import { SimpleLineChart } from '../components/SimpleLineChart';
 
-export const ProfileView = ({ workouts = [], exercisesDB = [] }) => {
+export const ProfileView = ({ workouts = [], exercisesDB = [], userWeight, onUserWeightChange }) => {
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [showStatsModal, setShowStatsModal] = useState(false);
 
@@ -14,8 +14,12 @@ export const ProfileView = ({ workouts = [], exercisesDB = [] }) => {
         const exDef = exercisesDB.find(d => d.id === ex.exerciseId) || {};
         const groups = (exDef.muscles && exDef.muscles.length > 0) ? exDef.muscles : [ex.category || 'Other'];
 
-        // volume = sum of completed kg * reps
-        const vol = (ex.sets || []).filter(s => s.completed).reduce((suma, s) => suma + (s.kg * s.reps), 0);
+        // volume = sum of completed (kg + bodyweight?) * reps
+        const vol = (ex.sets || []).filter(s => s.completed).reduce((suma, s) => {
+          const baseKg = Number(s.kg) || 0;
+          const kg = baseKg + ((exDef.usesBodyweight && userWeight) ? Number(userWeight) : 0);
+          return suma + (kg * s.reps);
+        }, 0);
         const reps = (ex.sets || []).filter(s => s.completed).reduce((suma, s) => suma + (s.reps || 0), 0);
 
         groups.forEach(g => {
@@ -80,6 +84,8 @@ export const ProfileView = ({ workouts = [], exercisesDB = [] }) => {
             <input
               type="number"
               placeholder="Weight (kg)"
+              value={userWeight ?? ''}
+              onChange={(e) => onUserWeightChange && onUserWeightChange(Number(e.target.value) || null)}
               className="w-full bg-zinc-900 rounded-xl p-3 text-white border border-transparent focus:border-rose-500 outline-none"
             />
           </div>

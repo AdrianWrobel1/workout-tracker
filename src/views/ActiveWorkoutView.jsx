@@ -32,6 +32,7 @@ export const ActiveWorkoutView = ({
   const itemRefs = useRef([]);
   const [deleteModeIndex, setDeleteModeIndex] = useState(null);
   const [warmupModeIndex, setWarmupModeIndex] = useState(null);
+  const [selectedSwapIndex, setSelectedSwapIndex] = useState(null);
 
   // Calculate progress: completed sets / total sets
   const totalSets = useMemo(() => {
@@ -166,7 +167,7 @@ export const ActiveWorkoutView = ({
           const previousSets = getPreviousSets(exercise.exerciseId, workouts, activeWorkout.startTime);
 
           return (
-            <div
+                <div
               key={exIndex}
               ref={el => itemRefs.current[exIndex] = el}
               draggable={reordering}
@@ -176,7 +177,23 @@ export const ActiveWorkoutView = ({
               onTouchStart={handleTouchStart(exIndex)}
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
-              className={`mb-4 ${reordering ? 'opacity-70 border-2 border-dashed border-rose-500 rounded-xl p-2' : ''}`}
+                  onClick={(e) => {
+                    // If a swap source is selected, swap with this target when clicking the card
+                    if (selectedSwapIndex !== null) {
+                      e.stopPropagation();
+                      if (selectedSwapIndex === exIndex) {
+                        setSelectedSwapIndex(null);
+                        return;
+                      }
+                      const newExercises = [...activeWorkout.exercises];
+                      const tmp = newExercises[selectedSwapIndex];
+                      newExercises[selectedSwapIndex] = newExercises[exIndex];
+                      newExercises[exIndex] = tmp;
+                      onReorderExercises(newExercises);
+                      setSelectedSwapIndex(null);
+                    }
+                  }}
+                  className={`mb-4 ${reordering ? 'opacity-70 border-2 border-dashed border-rose-500 rounded-xl p-2' : ''} ${selectedSwapIndex === exIndex ? 'ring-2 ring-emerald-500' : ''}`}
             >
               <div className="flex items-center gap-2 mb-2">
                 {reordering && (
@@ -235,6 +252,15 @@ export const ActiveWorkoutView = ({
                     className="block w-full text-left px-4 py-2 text-sm hover:bg-zinc-700 text-blue-400"
                   >
                     Replace
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSelectedSwapIndex(selectedSwapIndex === exIndex ? null : exIndex);
+                      setMenuOpenIndex(null);
+                    }}
+                    className="block w-full text-left px-4 py-2 text-sm hover:bg-zinc-700"
+                  >
+                    Pick to swap
                   </button>
                   <button
                     onClick={() => {

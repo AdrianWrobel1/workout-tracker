@@ -109,6 +109,16 @@ export const CreateExerciseView = ({ exercise, onSave, onCancel, onChange }) => 
             + Add Set
           </button>
         </div>
+        <div className="pt-4">
+          <label className="inline-flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={!!exercise.usesBodyweight}
+              onChange={(e) => onChange({ ...exercise, usesBodyweight: !!e.target.checked })}
+            />
+            <span className="text-sm text-zinc-300">Uses bodyweight (include your profile weight in volume)</span>
+          </label>
+        </div>
       </div>
     </div>
   );

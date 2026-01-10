@@ -33,6 +33,7 @@ export default function App() {
   const [workouts, setWorkouts] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [exercisesDB, setExercisesDB] = useState([]);
+  const [userWeight, setUserWeight] = useState(null);
   const [weeklyGoal, setWeeklyGoal] = useState(4);
 
   const [activeWorkout, setActiveWorkout] = useState(null);
@@ -53,6 +54,7 @@ export default function App() {
   const [selectedExerciseIndex, setSelectedExerciseIndex] = useState(null);
   const [monthOffset, setMonthOffset] = useState(0);
   const [pendingSummary, setPendingSummary] = useState(null);
+  const [returnTo, setReturnTo] = useState(null);
 
   // --- EFFECTS ---
 
@@ -70,6 +72,9 @@ export default function App() {
 
       const savedGoal = localStorage.getItem('weeklyGoal');
       if (savedGoal) setWeeklyGoal(parseInt(savedGoal));
+
+      const savedWeight = localStorage.getItem('userWeight');
+      if (savedWeight) setUserWeight(Number(savedWeight));
 
       // Opcjonalnie: Przywracanie aktywnego treningu (jeśli aplikacja została zamknięta)
       const savedActive = localStorage.getItem('activeWorkout');
@@ -90,6 +95,7 @@ export default function App() {
   useEffect(() => { localStorage.setItem('exercises', JSON.stringify(exercisesDB)); }, [exercisesDB]);
   useEffect(() => { localStorage.setItem('workouts', JSON.stringify(workouts)); }, [workouts]);
   useEffect(() => { localStorage.setItem('templates', JSON.stringify(templates)); }, [templates]);
+  useEffect(() => { if (userWeight !== null) localStorage.setItem('userWeight', String(userWeight)); }, [userWeight]);
   useEffect(() => {
     if (activeWorkout) localStorage.setItem('activeWorkout', JSON.stringify(activeWorkout));
     else localStorage.removeItem('activeWorkout');
@@ -187,7 +193,9 @@ export default function App() {
     (workout.exercises || []).forEach(ex => {
       (ex.sets || []).forEach(s => {
         if (s.completed) {
-          const kg = Number(s.kg) || 0;
+          const baseKg = Number(s.kg) || 0;
+          const exDef = exercisesDB.find(d => d.id === ex.exerciseId) || {};
+          const kg = baseKg + ((exDef.usesBodyweight && userWeight) ? Number(userWeight) : 0);
           const reps = Number(s.reps) || 0;
           const v = kg * reps;
           volume += v;
@@ -217,8 +225,10 @@ export default function App() {
     (workout.exercises || []).forEach(ex => {
       // sum volume per exercise (sum of kg*reps for all sets)
       let exVolume = 0;
+      const exDef = exercisesDB.find(d => d.id === ex.exerciseId) || {};
       (ex.sets || []).forEach(s => {
-        const kg = Number(s.kg) || 0;
+        const baseKg = Number(s.kg) || 0;
+        const kg = baseKg + ((exDef.usesBodyweight && userWeight) ? Number(userWeight) : 0);
         const reps = Number(s.reps) || 0;
         exVolume += kg * reps;
       });
@@ -506,7 +516,8 @@ export default function App() {
           {view === 'history' && (
             <HistoryView
               workouts={workouts}
-              onViewWorkoutDetail={(date) => { setSelectedDate(date); setView('workoutDetail'); }}
+                onViewWorkoutDetail={(date) => { setSelectedDate(date); setView('workoutDetail'); }}
+                onDeleteWorkout={(id) => { if (confirm('Delete this workout?')) setWorkouts(workouts.filter(w => w.id !== id)); }}
             />
           )}
 
@@ -514,7 +525,7 @@ export default function App() {
             <ExercisesView
               exercisesDB={exercisesDB}
               onAddExercise={() => {
-                setEditingExercise({ name: '', category: 'Push', muscles: [], defaultSets: [{ kg: 0, reps: 0 }] });
+                setEditingExercise({ name: '', category: 'Push', muscles: [], defaultSets: [{ kg: 0, reps: 0 }], usesBodyweight: false });
                 setView('createExercise');
               }}
               onEditExercise={(ex) => { setEditingExercise(ex); setView('createExercise'); }}
@@ -538,7 +549,13 @@ export default function App() {
               workouts={workouts}
               exercisesDB={exercisesDB}
               onBack={() => setView('exercises')}
-              onOpenWorkout={(date) => { setSelectedDate(date); setView('workoutDetail'); }}
+              onOpenWorkout={(date) => {
+                // set return context so we can come back to exercise detail
+                setReturnTo({ view: 'exerciseDetail', exerciseId: selectedExerciseId });
+                setSelectedDate(date);
+                setView('workoutDetail');
+              }}
+              userWeight={userWeight}
             />
           )}
 
@@ -547,9 +564,18 @@ export default function App() {
               selectedDate={selectedDate}
               workouts={workouts}
               onBack={() => {
-                // Inteligentny powrót: jeśli byliśmy w historii, wróć do historii
-                if (activeTab === 'history') setView('history');
-                else setView('home');
+                if (returnTo) {
+                  if (returnTo.view === 'exerciseDetail') {
+                    setSelectedExerciseId(returnTo.exerciseId);
+                    setView('exerciseDetail');
+                  } else {
+                    setView(returnTo.view || 'home');
+                  }
+                  setReturnTo(null);
+                } else {
+                  if (activeTab === 'history') setView('history');
+                  else setView('home');
+                }
                 setSelectedDate(null);
               }}
             />
@@ -602,7 +628,7 @@ export default function App() {
             />
           )}
 
-          {view === 'profile' && <ProfileView workouts={workouts} exercisesDB={exercisesDB} />}
+          {view === 'profile' && <ProfileView workouts={workouts} exercisesDB={exercisesDB} userWeight={userWeight} onUserWeightChange={setUserWeight} />}
 
           {view === 'settings' && (
             <SettingsView
@@ -665,7 +691,7 @@ export default function App() {
             }
           }}
           onCreateNew={() => {
-            setEditingExercise({ name: '', category: 'Push', muscles: [], defaultSets: [{ kg: 0, reps: 0 }] });
+            setEditingExercise({ name: '', category: 'Push', muscles: [], defaultSets: [{ kg: 0, reps: 0 }], usesBodyweight: false });
             setShowExerciseSelector(false);
             setView('createExercise');
           }}

@@ -3,7 +3,7 @@ import { ChevronLeft, Trophy } from 'lucide-react';
 import { SimpleLineChart } from '../components/SimpleLineChart';
 import { getExerciseHistory, getExerciseRecords } from '../domain/exercises';
 
-export const ExerciseDetailView = ({ exerciseId, workouts, exercisesDB, onBack, onOpenWorkout }) => {
+export const ExerciseDetailView = ({ exerciseId, workouts, exercisesDB, onBack, onOpenWorkout, userWeight }) => {
   const [activeTab, setActiveTab] = useState('history');
   const [selectedWeek, setSelectedWeek] = useState(null);
 
@@ -31,10 +31,15 @@ export const ExerciseDetailView = ({ exerciseId, workouts, exercisesDB, onBack, 
       return ws;
     };
 
-    [...history].reverse().forEach(h => {
+      [...history].reverse().forEach(h => {
       const ws = getWeekStart(h.date);
       const key = ws.toISOString().substring(0,10);
-      const totalWeight = h.sets.reduce((s, x) => s + (x.kg * x.reps), 0);
+      const exDef = exercisesDB.find(d => d.id === exerciseId) || {};
+      const totalWeight = h.sets.reduce((s, x) => {
+        const baseKg = Number(x.kg) || 0;
+        const kg = baseKg + ((exDef.usesBodyweight && userWeight) ? Number(userWeight) : 0);
+        return s + (kg * x.reps);
+      }, 0);
       const totalReps = h.sets.reduce((s, x) => s + (x.reps || 0), 0);
       if (!map[key]) map[key] = { start: ws, weight: 0, reps: 0 };
       map[key].weight += totalWeight;
