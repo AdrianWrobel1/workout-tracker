@@ -45,6 +45,12 @@ export default function App() {
   const [showCalendar, setShowCalendar] = useState(false);
   const [showExerciseSelector, setShowExerciseSelector] = useState(false);
   const [selectorMode, setSelectorMode] = useState(null); // 'template' | 'activeWorkout'
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportType, setExportType] = useState('all'); // 'all' | 'workouts' | 'exercises'
+  const [exportPeriod, setExportPeriod] = useState('all'); // 'all' | 'last7' | 'last30' | 'last90' | 'custom'
+  const [exportStartDate, setExportStartDate] = useState('');
+  const [exportEndDate, setExportEndDate] = useState('');
+  const [exportExerciseId, setExportExerciseId] = useState(null);
 
   // Selection State
   const [selectedDate, setSelectedDate] = useState(null);
@@ -427,13 +433,80 @@ export default function App() {
   // --- DATA MANAGEMENT ---
 
   const handleExport = () => {
-    const dataStr = JSON.stringify({ workouts, templates, exercisesDB, weeklyGoal }, null, 2);
+    let dataToExport = {};
+
+    // Filter workouts by period
+    let filteredWorkouts = workouts;
+    if (exportPeriod !== 'all') {
+      const now = new Date();
+      let startDate;
+      switch (exportPeriod) {
+        case 'last7':
+          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case 'last30':
+          startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          break;
+        case 'last90':
+          startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+          break;
+        case 'custom':
+          if (exportStartDate && exportEndDate) {
+            startDate = new Date(exportStartDate);
+            const endDate = new Date(exportEndDate);
+            filteredWorkouts = workouts.filter(w => {
+              const workoutDate = new Date(w.date);
+              return workoutDate >= startDate && workoutDate <= endDate;
+            });
+          }
+          break;
+        default:
+          break;
+      }
+      if (startDate && exportPeriod !== 'custom') {
+        filteredWorkouts = workouts.filter(w => new Date(w.date) >= startDate);
+      }
+    }
+
+    // Filter exercises data based on workouts
+    let filteredExercisesDB = exercisesDB;
+    if (exportType === 'exercises') {
+      // For exercise data export, include only exercises that appear in filtered workouts
+      const exerciseIdsInWorkouts = new Set();
+      filteredWorkouts.forEach(workout => {
+        workout.exercises?.forEach(ex => {
+          if (ex.exerciseId) exerciseIdsInWorkouts.add(ex.exerciseId);
+        });
+      });
+      filteredExercisesDB = exercisesDB.filter(ex => exerciseIdsInWorkouts.has(ex.id));
+    } else if (exportType === 'singleExercise' && exportExerciseId) {
+      // For single exercise export, include only the selected exercise
+      filteredExercisesDB = exercisesDB.filter(ex => ex.id === exportExerciseId);
+      // Also filter workouts to only those containing this exercise
+      filteredWorkouts = filteredWorkouts.filter(workout =>
+        workout.exercises?.some(ex => ex.exerciseId === exportExerciseId)
+      );
+    }
+
+    // Build export data
+    if (exportType === 'all') {
+      dataToExport = { workouts: filteredWorkouts, templates, exercisesDB: filteredExercisesDB, weeklyGoal };
+    } else if (exportType === 'workouts') {
+      dataToExport = { workouts: filteredWorkouts };
+    } else if (exportType === 'exercises') {
+      dataToExport = { exercisesDB: filteredExercisesDB, workouts: filteredWorkouts }; // Include workouts for context
+    } else if (exportType === 'singleExercise') {
+      dataToExport = { exercisesDB: filteredExercisesDB, workouts: filteredWorkouts }; // Include workouts for context
+    }
+
+    const dataStr = JSON.stringify(dataToExport, null, 2);
     const blob = new Blob([dataStr], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `workout_backup_${new Date().toISOString().split('T')[0]}.json`;
+    link.download = `workout_export_${exportType}_${new Date().toISOString().split('T')[0]}.json`;
     link.click();
+    setShowExportModal(false);
   };
 
   const handleImport = (e) => {
@@ -637,6 +710,19 @@ export default function App() {
               onExport={handleExport}
               onImport={handleImport}
               onReset={() => { if (confirm('Reset all data?')) { localStorage.clear(); location.reload(); } }}
+              showExportModal={showExportModal}
+              setShowExportModal={setShowExportModal}
+              exportType={exportType}
+              setExportType={setExportType}
+              exportPeriod={exportPeriod}
+              setExportPeriod={setExportPeriod}
+              exportStartDate={exportStartDate}
+              setExportStartDate={setExportStartDate}
+              exportEndDate={exportEndDate}
+              setExportEndDate={setExportEndDate}
+              exportExerciseId={exportExerciseId}
+              setExportExerciseId={setExportExerciseId}
+              exercisesDB={exercisesDB}
             />
           )}
 

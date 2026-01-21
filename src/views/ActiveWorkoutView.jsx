@@ -46,10 +46,10 @@ export const ActiveWorkoutView = ({
   const progressPercent = totalSets > 0 ? (completedSets / totalSets) * 100 : 0;
 
   // Drag handlers (desktop)
-  const handleDragStart = (index) => setDraggedIndex(index);
+  const handleDragStart = (index) => { if (reordering) setDraggedIndex(index); };
   const handleDragOver = (e) => e.preventDefault();
   const handleDrop = (index) => {
-    if (draggedIndex !== null && draggedIndex !== index) {
+    if (reordering && draggedIndex !== null && draggedIndex !== index) {
       const newExercises = [...activeWorkout.exercises];
       const [moved] = newExercises.splice(draggedIndex, 1);
       newExercises.splice(index, 0, moved);
@@ -60,13 +60,15 @@ export const ActiveWorkoutView = ({
 
   // Touch-based reordering (mobile)
   const handleTouchStart = (index) => (e) => {
-    setDraggedIndex(index);
-    // initialize refs array
-    itemRefs.current = itemRefs.current.slice(0, activeWorkout.exercises.length);
+    if (reordering) {
+      setDraggedIndex(index);
+      // initialize refs array
+      itemRefs.current = itemRefs.current.slice(0, activeWorkout.exercises.length);
+    }
   };
 
   const handleTouchMove = (e) => {
-    if (draggedIndex === null) return;
+    if (!reordering || draggedIndex === null) return;
     const touch = e.touches[0];
     if (!touch) return;
     const y = touch.clientY;
