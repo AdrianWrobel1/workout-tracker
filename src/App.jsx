@@ -256,7 +256,7 @@ export default function App() {
     const feedback = generateSessionFeedback(cleanData.totalVolume, cleanData.completedSets, comparison?.trend || '→');
     
     // Pre-calculate PR status
-    const prStatus = detectPRsInWorkout(completedWorkout, workouts);
+    const prStatus = detectPRsInWorkout(completedWorkout, workouts, calculate1RM, getExerciseRecords);
     const hasPR = Object.keys(prStatus).length > 0;
     
     setSelectedTags([]); // reset tag selection

@@ -243,12 +243,10 @@ export const calculateMuscleDistribution = (workout, exercisesDB = []) => {
 /**
  * Detect PRs (Personal Records) in a completed workout
  * Returns an object with exerciseId => PR status (1RM, weight, or reps)
+ * Note: Needs calculate1RM and getExerciseRecords passed as parameters to avoid circular imports
  */
-export const detectPRsInWorkout = (completedWorkout, previousWorkouts) => {
+export const detectPRsInWorkout = (completedWorkout, previousWorkouts, calculate1RM, getExerciseRecords) => {
   if (!completedWorkout?.exercises) return {};
-
-  const { calculate1RM } = require('./calculations');
-  const { getExerciseRecords } = require('./exercises');
 
   const prStatus = {};
 
