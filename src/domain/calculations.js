@@ -30,6 +30,31 @@ export const formatMonth = (dateStr) => {
   return d.toLocaleDateString('pl-PL', { month: 'long', year: 'numeric' });
 };
 
+export const formatLastSetDate = (dateStr) => {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  date.setHours(0, 0, 0, 0);
+  
+  const daysAgo = Math.floor((today - date) / (1000 * 60 * 60 * 24));
+  
+  if (daysAgo === 0) return 'Today';
+  if (daysAgo === 1) return 'Yesterday';
+  if (daysAgo < 7) return `${daysAgo} days ago`;
+  if (daysAgo < 30) {
+    const weeks = Math.floor(daysAgo / 7);
+    return `${weeks} week${weeks > 1 ? 's' : ''} ago`;
+  }
+  if (daysAgo < 365) {
+    const months = Math.floor(daysAgo / 30);
+    return `${months} month${months > 1 ? 's' : ''} ago`;
+  }
+  
+  const years = Math.floor(daysAgo / 365);
+  return `${years} year${years > 1 ? 's' : ''} ago`;
+};
+
 // Compute muscle totals for a workout using the rules provided by the user.
 // Returns an object with axes: Back, Legs, Chest, Arms, Core, Shoulders (normalized 0..1)
 export const computeMuscleTotals = (workout) => {

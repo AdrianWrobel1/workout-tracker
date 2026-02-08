@@ -1,217 +1,404 @@
-import React, { useMemo, useState } from 'react';
-import { formatDate } from '../domain/calculations';
-import { SimpleLineChart } from '../components/SimpleLineChart';
+import React, { useState, useMemo } from 'react';
+import { Settings, BarChart3, Dumbbell, Activity, Calendar, Edit2 } from 'lucide-react';
+import { calculateTotalVolume } from '../domain/calculations';
+import { getChartData, getChartTooltip } from '../domain/profileCharts';
 
-export const ProfileView = ({ workouts = [], exercisesDB = [], userWeight, onUserWeightChange }) => {
-  const [selectedGroup, setSelectedGroup] = useState(null);
-  const [showStatsModal, setShowStatsModal] = useState(false);
+export const ProfileView = ({
+  workouts = [],
+  exercisesDB = [],
+  userWeight,
+  onUserWeightChange,
+  onViewStatistics,
+  onViewExercises,
+  onViewCalendar,
+  onWorkoutClick,
+  onOpenSettings
+}) => {
+  const [hoveredBarIndex, setHoveredBarIndex] = useState(null);
+  const [chartMetric, setChartMetric] = useState('duration'); // 'duration' | 'volume' | 'reps'
+  const [dateRange, setDateRange] = useState('3months'); // '1week' | '1month' | '3months'
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [userName, setUserName] = useState('Athlete');
+  const [isViewingMeasures, setIsViewingMeasures] = useState(false);
+  const [measurements, setMeasurements] = useState({
+    chest: '',
+    waist: '',
+    hips: '',
+    biceps: '',
+    thigh: '',
+    calf: ''
+  });
 
-  const statsByGroup = useMemo(() => {
-    const map = {};
+  // Get date range in days
+  const getDaysFromRange = (range) => {
+    switch (range) {
+      case '1week': return 7;
+      case '1month': return 30;
+      case '3months': return 90;
+      case '1year': return 365;
+      default: return 90;
+    }
+  };
 
-    workouts.forEach(w => {
-      (w.exercises || []).forEach(ex => {
-        const exDef = exercisesDB.find(d => d.id === ex.exerciseId) || {};
-        const groups = (exDef.muscles && exDef.muscles.length > 0) ? exDef.muscles : [ex.category || 'Other'];
-
-        // volume = sum of completed (kg + bodyweight?) * reps
-        const vol = (ex.sets || []).filter(s => s.completed).reduce((suma, s) => {
-          const baseKg = Number(s.kg) || 0;
-          const kg = baseKg + ((exDef.usesBodyweight && userWeight) ? Number(userWeight) : 0);
-          const repsNum = Number(s.reps) || 0;
-          return suma + (kg * repsNum);
-        }, 0);
-        const reps = (ex.sets || []).filter(s => s.completed).reduce((suma, s) => suma + (Number(s.reps) || 0), 0);
-
-        groups.forEach(g => {
-          if (!map[g]) map[g] = { volume: 0, reps: 0, sessions: 0 };
-          map[g].volume += vol;
-          map[g].reps += reps;
-          if (vol > 0) map[g].sessions += 1;
-        });
-      });
+  // Get aggregated chart data
+  const chartData = useMemo(() => {
+    console.log('ProfileView: Getting chart data with:', { 
+      range: dateRange, 
+      metric: chartMetric, 
+      workoutCount: workouts?.length 
     });
+    const data = getChartData({ range: dateRange, metric: chartMetric, workouts });
+    console.log('ProfileView: Chart data received:', { dataLength: data?.length, data });
+    return Array.isArray(data) && data.length > 0 ? data : [];
+  }, [workouts, dateRange, chartMetric]);
 
-    return Object.entries(map)
-      .map(([group, data]) => ({ group, ...data }))
-      .sort((a, b) => b.volume - a.volume);
-  }, [workouts, exercisesDB]);
+  // Calculate total for summary
+  const summaryStats = useMemo(() => {
+    if (chartData.length === 0) {
+      return { total: 0, sessions: 0 };
+    }
+    const total = chartData.reduce((sum, d) => sum + (d.rawValue?.[chartMetric] || 0), 0);
+    const sessions = chartData.reduce((sum, d) => sum + (d.workoutCount || 0), 0);
+    return { total, sessions };
+  }, [chartData, chartMetric]);
+
+  // Format summary text
+  const summaryText = useMemo(() => {
+    if (chartMetric === 'duration') {
+      const hours = Math.round(summaryStats.total / 60);
+      const period = dateRange === '1week' ? 'this week' : dateRange === '1month' ? 'this month' : dateRange === '3months' ? 'last 3 months' : 'this year';
+      return `${hours} hours ${period}`;
+    }
+    return `${summaryStats.sessions} sessions`;
+  }, [summaryStats, chartMetric, dateRange]);
+
+  // Get last 5 workouts
+  const lastWorkouts = useMemo(() => workouts.slice(0, 5), [workouts]);
+
+  // Calculate workout count
+  const workoutCount = workouts.length;
 
   return (
     <div className="min-h-screen bg-black text-white pb-40">
-      {/* Header */}
+      {/* Header with Edit Button */}
       <div className="bg-gradient-to-b from-black to-black/80 border-b border-white/10 p-4 sticky top-0 z-20 shadow-2xl">
-        <h1 className="text-4xl font-black">PROFILE</h1>
-        <p className="text-xs text-slate-400 mt-2 font-semibold tracking-widest">YOUR STATS & INFO</p>
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-black">PROFILE</h1>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setIsEditingName(true)}
+              className="p-2 hover:bg-white/10 rounded-lg transition text-slate-400 hover:text-white"
+              aria-label="Edit nickname"
+            >
+              <Edit2 size={20} />
+            </button>
+            <button
+              onClick={onOpenSettings}
+              className="p-2 hover:bg-white/10 rounded-lg transition text-slate-400 hover:text-white"
+              aria-label="Settings"
+            >
+              <Settings size={20} />
+            </button>
+          </div>
+        </div>
       </div>
 
-      <div className="p-4 space-y-5">
-        {/* Statistics Card */}
-        <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-5">
-          <h2 className="text-sm font-black text-slate-300 uppercase tracking-widest mb-4">Volume by Muscle/Category</h2>
-
-          {statsByGroup.length === 0 ? (
-            <div className="text-slate-500 text-sm py-6 text-center">No training data yet</div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {statsByGroup.slice(0, 12).map((s) => (
-                <button
-                  key={s.group}
-                  onClick={() => { setSelectedGroup(s.group); setShowStatsModal(true); }}
-                  className="text-left bg-slate-800/40 hover:bg-slate-800/60 border border-slate-700/50 hover:border-slate-600/50 p-4 rounded-lg flex justify-between items-center transition-all ui-card-mount-anim"
-                >
-                  <div>
-                    <div className="font-black text-white">{s.group}</div>
-                    <div className="text-xs text-slate-500 mt-1 font-semibold">{s.sessions} sessions</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-black text-blue-400">{s.volume.toLocaleString()} kg</div>
-                    <div className="text-xs text-slate-400 mt-1 font-semibold">{s.reps.toLocaleString()} reps</div>
-                  </div>
-                </button>
-              ))}
+      <div className="p-4 space-y-6">
+        {/* Profile Header Section */}
+        <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-6 animate-chart-fade-in">
+          <div className="flex items-start gap-4">
+            {/* Avatar Placeholder */}
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0">
+              <span className="text-2xl font-black text-white">👤</span>
             </div>
-          )}
+
+            {/* Profile Info */}
+            <div className="flex-1">
+              {isEditingName ? (
+                <div className="flex gap-2 mb-3">
+                  <input
+                    type="text"
+                    value={userName}
+                    onChange={(e) => setUserName(e.target.value)}
+                    className="flex-1 bg-slate-800/50 border border-slate-600/50 rounded-lg px-3 py-2 text-white font-black focus:border-blue-500 focus:outline-none transition"
+                    autoFocus
+                  />
+                  <button
+                    onClick={() => setIsEditingName(false)}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg transition"
+                  >
+                    Done
+                  </button>
+                </div>
+              ) : (
+                <h2 className="text-2xl font-black text-white">{userName}</h2>
+              )}
+              <div className="mt-3 flex gap-6">
+                <div>
+                  <p className="text-xs text-slate-400 font-semibold tracking-widest">WORKOUTS</p>
+                  <p className="text-xl font-black text-blue-400 mt-1">{workoutCount}</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Personal Info Card */}
-        <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-5">
-          <h2 className="text-sm font-black text-slate-300 uppercase tracking-widest mb-4">Personal Info</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <input
-              type="text"
-              placeholder="Your name"
-              className="w-full bg-slate-800/50 border border-slate-600/50 rounded-lg px-4 py-3 text-white font-semibold focus:border-blue-500 focus:outline-none transition placeholder:text-slate-600"
-            />
+        {/* Activity Time Section */}
+        <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-6 animate-chart-fade-in">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm font-bold text-white capitalize">{summaryText}</p>
+            <select
+              value={dateRange}
+              onChange={(e) => setDateRange(e.target.value)}
+              className="text-xs font-bold bg-slate-700/50 border border-slate-600/50 text-slate-300 rounded-lg px-3 py-1.5 focus:border-blue-500 focus:outline-none"
+            >
+              <option value="1week">Last 7 days</option>
+              <option value="1month">Last 30 days</option>
+              <option value="3months">Last 3 months</option>
+              <option value="1year">Last year</option>
+            </select>
+          </div>
+
+          {/* Simple Bar Chart */}
+          <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700/30 mb-4 relative w-full overflow-visible">
+            {chartData.length === 0 ? (
+              <div className="h-40 flex items-center justify-center text-slate-500 font-semibold text-sm">
+                No workouts in this period
+              </div>
+            ) : (
+              <div className="flex items-end justify-between gap-2 h-48 w-full">
+                {chartData.map((data, i) => {
+                  const value = Number(data.value) || 0;
+                  const allValues = chartData.map(d => Number(d.value) || 0);
+                  const max = Math.max(...allValues, 0.1); // Avoid division by 0
+                  const height = (value / max) * 100;
+                  const minHeight = 12; // Minimum 12% so bars are always visible
+
+                  console.log(`Bar ${i}: value=${value}, max=${max}, height=${height}%, minHeight=${minHeight}%`);
+
+                  return (
+                    <div
+                      key={`chart-${i}-${data.label}`}
+                      className="flex-1 flex flex-col items-center gap-2 h-full relative group justify-end"
+                      onMouseEnter={() => setHoveredBarIndex(i)}
+                      onMouseLeave={() => setHoveredBarIndex(null)}
+                    >
+                      {/* Bar Container - fills available space */}
+                      <div className="flex items-end justify-center" style={{ height: `${Math.max(height, minHeight)}%` }}>
+                        <div 
+                          className="w-2/3 bg-gradient-to-t from-cyan-500 via-cyan-400 to-cyan-300 rounded-sm hover:from-cyan-400 hover:via-cyan-300 hover:to-cyan-200 transition-all shadow-lg hover:shadow-xl" 
+                          style={{ 
+                            width: '100%',
+                            height: '100%',
+                            minHeight: '8px',
+                            transitionDuration: '200ms'
+                          }} 
+                        />
+                      </div>
+                      
+                      {/* Tooltip */}
+                      {hoveredBarIndex === i && (
+                        <div className="absolute bottom-full mb-2 bg-slate-900 border border-cyan-400 rounded-lg px-3 py-1.5 text-xs font-bold text-cyan-300 whitespace-nowrap z-20 pointer-events-none shadow-lg">
+                          {getChartTooltip(value, chartMetric)}
+                        </div>
+                      )}
+                      
+                      {/* Date label */}
+                      <span className="text-xs text-slate-500 font-semibold truncate px-0.5 text-center w-full leading-tight">{data.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Metric Toggle */}
+          <div className="flex gap-2">
+            {[
+              { key: 'duration', label: 'Duration' },
+              { key: 'volume', label: 'Volume' },
+              { key: 'reps', label: 'Reps' }
+            ].map(metric => (
+              <button
+                key={metric.key}
+                onClick={() => setChartMetric(metric.key)}
+                className={`flex-1 py-2 px-3 rounded-lg font-bold text-xs uppercase tracking-wider transition-all ${
+                  chartMetric === metric.key
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+                    : 'bg-slate-800/50 text-slate-400 hover:bg-slate-700/50'
+                }`}
+              >
+                {metric.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Dashboard Grid - 4 Tiles */}
+        <div className="grid grid-cols-2 gap-4">
+          <button
+            onClick={onViewStatistics}
+            className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 hover:border-slate-600/50 rounded-xl p-6 text-center transition-all hover:shadow-lg hover:shadow-blue-600/20 ui-card-mount-anim"
+          >
+            <BarChart3 size={32} className="mx-auto mb-3 text-blue-400" />
+            <h3 className="font-black text-white text-sm">Statistics</h3>
+          </button>
+
+          <button
+            onClick={onViewExercises}
+            className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 hover:border-slate-600/50 rounded-xl p-6 text-center transition-all hover:shadow-lg hover:shadow-emerald-600/20 ui-card-mount-anim"
+          >
+            <Dumbbell size={32} className="mx-auto mb-3 text-emerald-400" />
+            <h3 className="font-black text-white text-sm">Exercises</h3>
+          </button>
+
+          <button
+            onClick={() => setIsViewingMeasures(true)}
+            className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 hover:border-slate-600/50 rounded-xl p-6 text-center transition-all hover:shadow-lg hover:shadow-purple-600/20 ui-card-mount-anim"
+          >
+            <Activity size={32} className="mx-auto mb-3 text-purple-400" />
+            <h3 className="font-black text-white text-sm">Measures</h3>
+          </button>
+
+          <button
+            onClick={onViewCalendar}
+            className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 hover:border-slate-600/50 rounded-xl p-6 text-center transition-all hover:shadow-lg hover:shadow-amber-600/20 ui-card-mount-anim"
+          >
+            <Calendar size={32} className="mx-auto mb-3 text-amber-400" />
+            <h3 className="font-black text-white text-sm">Calendar</h3>
+          </button>
+        </div>
+
+        {/* Recent Workouts Section */}
+        {lastWorkouts.length > 0 && (
+          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-6 animate-chart-fade-in">
+            <h2 className="text-sm font-black text-slate-300 uppercase tracking-widest mb-4">Recent Workouts</h2>
+            <div className="space-y-3">
+              {lastWorkouts.map((workout, idx) => {
+                const date = new Date(workout.date);
+                const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', weekday: 'short' });
+                const totalVol = (workout.exercises || []).reduce(
+                  (sum, ex) => sum + calculateTotalVolume(ex.sets || []),
+                  0
+                );
+                const exerciseCount = (workout.exercises || []).length;
+
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => onWorkoutClick && onWorkoutClick(workout.date)}
+                    className="w-full text-left bg-slate-800/40 hover:bg-slate-800/60 border border-slate-700/50 hover:border-slate-600/50 rounded-lg p-4 transition-all"
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <h3 className="font-bold text-white">{workout.name || 'Unnamed Workout'}</h3>
+                        <p className="text-xs text-slate-500 mt-1">{dateStr}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-blue-400">{(totalVol / 1000).toFixed(1)}k</p>
+                        <p className="text-xs text-slate-500">total volume</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-xs text-slate-400">
+                      <span>{workout.duration || 0}m</span>
+                      <span>•</span>
+                      <span>{exerciseCount} exercises</span>
+                    </div>
+
+                    {/* Exercise list - max 3 */}
+                    {exerciseCount > 0 && (
+                      <div className="mt-2 text-xs text-slate-500">
+                        {(workout.exercises || [])
+                          .slice(0, 3)
+                          .map((ex, i) => (
+                            <div key={i}>{ex.name}</div>
+                          ))}
+                        {exerciseCount > 3 && (
+                          <div className="text-blue-400 font-semibold">See {exerciseCount - 3} more exercises</div>
+                        )}
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Body Weight Setting */}
+        <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-6 animate-chart-fade-in">
+          <h2 className="text-sm font-black text-slate-300 uppercase tracking-widest mb-4">Body Weight</h2>
+          <div className="flex gap-3">
             <input
               type="number"
-              placeholder="Age"
-              className="w-full bg-slate-800/50 border border-slate-600/50 rounded-lg px-4 py-3 text-white font-semibold focus:border-blue-500 focus:outline-none transition placeholder:text-slate-600"
-            />
-            <input
-              type="number"
-              placeholder="Weight (kg)"
+              placeholder="Enter your weight in kg"
               value={userWeight ?? ''}
               onChange={(e) => onUserWeightChange && onUserWeightChange(Number(e.target.value) || null)}
-              className="w-full bg-slate-800/50 border border-slate-600/50 rounded-lg px-4 py-3 text-white font-semibold focus:border-blue-500 focus:outline-none transition placeholder:text-slate-600"
+              className="flex-1 bg-slate-800/50 border border-slate-600/50 rounded-lg px-4 py-3 text-white font-semibold focus:border-blue-500 focus:outline-none transition placeholder:text-slate-600"
             />
+            <span className="flex items-center px-4 text-slate-400 font-bold">kg</span>
           </div>
         </div>
-      </div>
 
-      {/* Stats Modal */}
-      {showStatsModal && selectedGroup && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-start justify-center p-4 pt-20">
-            <div className="w-full max-w-2xl bg-gradient-to-br from-slate-900/95 to-black/95 border border-slate-700/50 rounded-2xl p-5 shadow-2xl max-h-[85vh] overflow-y-auto ui-modal-scale ui-fade-scale-anim">
-            <div className="flex justify-between items-center mb-5 pb-4 border-b border-slate-700/50">
-              <h3 className="text-2xl font-black">{selectedGroup}</h3>
-              <button onClick={() => setShowStatsModal(false)} className="p-2 hover:bg-white/10 rounded-lg transition text-slate-400">
-                <span className="text-xl">×</span>
-              </button>
+        {/* Measures Modal */}
+        {isViewingMeasures && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="w-full max-w-sm bg-gradient-to-br from-slate-900 to-slate-800/95 border border-slate-700/50 rounded-2xl p-6 shadow-2xl animate-chart-fade-in">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-lg font-black text-white">Body Measurements</h2>
+                <button
+                  onClick={() => setIsViewingMeasures(false)}
+                  className="text-slate-400 hover:text-slate-200 transition text-2xl font-light w-8 h-8 flex items-center justify-center"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="space-y-3 mb-6 max-h-60 overflow-y-auto">
+                {[
+                  { key: 'chest', label: 'Chest', unit: 'cm' },
+                  { key: 'waist', label: 'Waist', unit: 'cm' },
+                  { key: 'hips', label: 'Hips', unit: 'cm' },
+                  { key: 'biceps', label: 'Biceps', unit: 'cm' },
+                  { key: 'thigh', label: 'Thigh', unit: 'cm' },
+                  { key: 'calf', label: 'Calf', unit: 'cm' }
+                ].map(measure => (
+                  <div key={measure.key} className="flex items-end gap-3">
+                    <div className="flex-1">
+                      <label className="text-xs text-slate-400 font-bold uppercase tracking-wider block mb-1.5">{measure.label}</label>
+                      <input
+                        type="number"
+                        placeholder="0"
+                        value={measurements[measure.key]}
+                        onChange={(e) => setMeasurements(prev => ({ ...prev, [measure.key]: e.target.value }))}
+                        className="w-full bg-slate-800/50 border border-slate-600/50 rounded-lg px-3 py-2.5 text-white font-semibold focus:border-blue-500 focus:outline-none transition placeholder:text-slate-600 text-sm"
+                        inputMode="decimal"
+                      />
+                    </div>
+                    <span className="text-slate-500 font-bold text-sm pb-2.5">{measure.unit}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex gap-3 pt-4 border-t border-slate-700/50">
+                <button
+                  onClick={() => setIsViewingMeasures(false)}
+                  className="flex-1 py-2.5 px-4 bg-slate-700/50 hover:bg-slate-700 text-white font-bold rounded-lg transition text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => setIsViewingMeasures(false)}
+                  className="flex-1 py-2.5 px-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg transition text-sm"
+                >
+                  Save
+                </button>
+              </div>
             </div>
-
-            {/* Charts and Stats */}
-            {(() => {
-              const getWeekStart = (dateStr) => {
-                const d = new Date(dateStr);
-                const day = d.getDay();
-                const diff = d.getDate() - ((day + 6) % 7);
-                const ws = new Date(d);
-                ws.setDate(diff);
-                ws.setHours(0,0,0,0);
-                return ws;
-              };
-
-              const map = {};
-              workouts.forEach(w => {
-                (w.exercises || []).forEach(ex => {
-                  const exDef = exercisesDB.find(d => d.id === ex.exerciseId) || {};
-                  const groups = (exDef.muscles && exDef.muscles.length > 0) ? exDef.muscles : [ex.category || 'Other'];
-                  if (!groups.includes(selectedGroup)) return;
-                  const ws = getWeekStart(w.date);
-                  const key = ws.toISOString().substring(0,10);
-                  const vol = (ex.sets || []).filter(s => s.completed).reduce((suma, s) => suma + (s.kg * s.reps), 0);
-                  if (!map[key]) map[key] = { start: ws, volume: 0, duration: 0 };
-                  map[key].volume += vol;
-                  map[key].duration += (w.duration || 0);
-                });
-              });
-
-              const weeks = Object.values(map).sort((a,b)=>a.start-b.start).map(w=>({ date: w.start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), value: w.volume, duration: w.duration }));
-
-              const now = new Date();
-              const startOfThisWeek = (()=>{ const d=new Date(now); const day=d.getDay(); const diff=d.getDate()-((day+6)%7); d.setDate(diff); d.setHours(0,0,0,0); return d; })();
-              const startOfLastWeek = new Date(startOfThisWeek); startOfLastWeek.setDate(startOfThisWeek.getDate()-7);
-              const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-              const startOfLastMonth = new Date(now.getFullYear(), now.getMonth()-1, 1);
-              const startOfThisQuarter = new Date(now.getFullYear(), Math.floor(now.getMonth()/3)*3, 1);
-              const startOfThisYear = new Date(now.getFullYear(),0,1);
-
-              const periodTotals = (start, end) => {
-                let count=0, duration=0, volume=0;
-                workouts.forEach(w=>{
-                  const wd = new Date(w.date);
-                  if (wd >= start && wd <= (end||now)) {
-                    const vol = (w.exercises||[]).reduce((sum,ex)=>{
-                      const exDef = exercisesDB.find(d => d.id === ex.exerciseId) || {};
-                      const groups = (exDef.muscles && exDef.muscles.length>0)?exDef.muscles:[ex.category||'Other'];
-                      if (!groups.includes(selectedGroup)) return sum;
-                      return sum + (ex.sets||[]).filter(s=>s.completed).reduce((s2,s)=>s2+(s.kg*s.reps),0);
-                    },0);
-                    if (vol>0) { count++; volume+=vol; duration+= (w.duration||0); }
-                  }
-                });
-                return { count, volume, duration };
-              };
-
-              const lastWeekTotals = periodTotals(startOfLastWeek, new Date(startOfThisWeek.getTime()-1));
-              const lastMonthTotals = periodTotals(startOfLastMonth, new Date(startOfThisMonth.getTime()-1));
-              const quarterTotals = periodTotals(startOfThisQuarter, now);
-              const yearTotals = periodTotals(startOfThisYear, now);
-
-              return (
-                <div className="space-y-4">
-                  {/* Charts */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="bg-slate-800/40 border border-slate-700/50 p-4 rounded-lg">
-                      <div className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-3">Volume — Weekly</div>
-                      <SimpleLineChart data={weeks.map(w=>({date:w.date,value:w.value}))} color="#3b82f6" unit="kg" />
-                    </div>
-                    <div className="bg-slate-800/40 border border-slate-700/50 p-4 rounded-lg">
-                      <div className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-3">Time — Weekly</div>
-                      <SimpleLineChart data={weeks.map(w=>({date:w.date,value:w.duration}))} color="#8b5cf6" unit="min" />
-                    </div>
-                  </div>
-
-                  {/* Period Totals */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 border border-blue-500/20 p-3 rounded-lg text-center">
-                      <div className="text-xs text-slate-400 font-semibold mb-1">LAST WEEK</div>
-                      <div className="font-black text-white text-lg">{lastWeekTotals.count}</div>
-                      <div className="text-xs text-blue-400 font-bold mt-1">{lastWeekTotals.volume.toLocaleString()} kg</div>
-                    </div>
-                    <div className="bg-gradient-to-br from-emerald-500/10 to-emerald-600/10 border border-emerald-500/20 p-3 rounded-lg text-center">
-                      <div className="text-xs text-slate-400 font-semibold mb-1">LAST MONTH</div>
-                      <div className="font-black text-white text-lg">{lastMonthTotals.count}</div>
-                      <div className="text-xs text-emerald-400 font-bold mt-1">{lastMonthTotals.volume.toLocaleString()} kg</div>
-                    </div>
-                    <div className="bg-gradient-to-br from-purple-500/10 to-purple-600/10 border border-purple-500/20 p-3 rounded-lg text-center">
-                      <div className="text-xs text-slate-400 font-semibold mb-1">Q THIS YEAR</div>
-                      <div className="font-black text-white text-lg">{quarterTotals.count}</div>
-                      <div className="text-xs text-purple-400 font-bold mt-1">{quarterTotals.volume.toLocaleString()} kg</div>
-                    </div>
-                    <div className="bg-gradient-to-br from-amber-500/10 to-amber-600/10 border border-amber-500/20 p-3 rounded-lg text-center">
-                      <div className="text-xs text-slate-400 font-semibold mb-1">THIS YEAR</div>
-                      <div className="font-black text-white text-lg">{yearTotals.count}</div>
-                      <div className="text-xs text-amber-400 font-bold mt-1">{yearTotals.volume.toLocaleString()} kg</div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };

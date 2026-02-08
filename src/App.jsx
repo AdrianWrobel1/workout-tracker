@@ -26,6 +26,8 @@ import { ExerciseDetailView } from './views/ExerciseDetailView';
 import { HistoryView } from './views/HistoryView';
 import { WorkoutDetailView } from './views/WorkoutDetailView';
 import { ProfileView } from './views/ProfileView';
+import { ProfileStatisticsView } from './views/ProfileStatisticsView';
+import { ProfileCalendarView } from './views/ProfileCalendarView';
 import { SettingsView } from './views/SettingsView';
 import { MonthlyProgressView } from './views/MonthlyProgressView';
 import { ExportDataView } from './views/ExportDataView';
@@ -52,6 +54,7 @@ export default function App() {
   // UI State
   const [selectorMode, setSelectorMode] = useState(null); // 'template' | 'activeWorkout'
   const [historyFilter, setHistoryFilter] = useState('all'); // persist across views
+  const [profileSubview, setProfileSubview] = useState('main'); // 'main' | 'statistics'
   const [exportType, setExportType] = useState('all'); // 'all' | 'workouts' | 'exercises'
   const [exportPeriod, setExportPeriod] = useState('all'); // 'all' | 'last7' | 'last30' | 'last90' | 'custom'
   const [exportStartDate, setExportStartDate] = useState('');
@@ -723,7 +726,7 @@ export default function App() {
           )}
 
           {view === 'activeWorkout' && activeWorkout && (
-            <div data-ui-anim className={`ui-slide-up-anim ${pendingSummary ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+            <div data-ui-anim className={`transition-opacity duration-200 ease-out ${pendingSummary ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
               <ActiveWorkoutView
                 activeWorkout={activeWorkout}
               workouts={workouts}
@@ -762,7 +765,28 @@ export default function App() {
             />
           )}
 
-          {view === 'profile' && <ProfileView workouts={workouts} exercisesDB={exercisesDB} userWeight={userWeight} onUserWeightChange={setUserWeight} />}
+          {view === 'profile' && profileSubview === 'main' && (
+            <ProfileView
+              workouts={workouts}
+              exercisesDB={exercisesDB}
+              userWeight={userWeight}
+              onUserWeightChange={setUserWeight}
+              onViewStatistics={() => setProfileSubview('statistics')}
+              onViewExercises={() => setView('exercises')}
+              onViewCalendar={() => setView('calendar')}
+              onWorkoutClick={(date) => { setSelectedDate(date); setView('workoutDetail'); }}
+              onOpenSettings={() => setView('settings')}
+            />
+          )}
+
+          {view === 'profile' && profileSubview === 'statistics' && (
+            <ProfileStatisticsView
+              workouts={workouts}
+              exercisesDB={exercisesDB}
+              userWeight={userWeight}
+              onBack={() => setProfileSubview('main')}
+            />
+          )}
 
           {view === 'exportData' && (
             <ExportDataView
@@ -913,6 +937,14 @@ export default function App() {
               }}
             />
           )}
+
+          {view === 'calendar' && (
+            <ProfileCalendarView
+              workouts={workouts}
+              onBack={() => setView('profile')}
+              onViewWorkoutDetail={(date) => { setSelectedDate(date); setView('workoutDetail'); }}
+            />
+          )}
           {activeWorkout && isWorkoutMinimized && (
             <MiniWorkoutBar
               workoutName={activeWorkout.name}
@@ -961,7 +993,7 @@ export default function App() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div
             data-ui-anim
-            className={`bg-gradient-to-br from-slate-900/95 to-black/95 text-white p-8 rounded-2xl w-[95%] max-w-md border border-slate-700/50 ui-modal-scale ${summaryVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}
+            className={`bg-gradient-to-br from-slate-900/95 to-black/95 text-white p-8 rounded-2xl w-[95%] max-w-md border border-slate-700/50 ui-modal-scale ${summaryVisible ? 'animate-modal-fade-in' : 'opacity-0 scale-95'}`}
           >
             <div className="flex justify-between items-start mb-6">
               <div>
@@ -999,6 +1031,19 @@ export default function App() {
             <div className="bg-blue-950/30 border border-blue-500/20 rounded-lg p-4 mb-6 text-center">
               <p className="text-lg font-bold text-blue-300">{pendingSummary.feedback}</p>
             </div>
+
+            {/* PR Celebration */}
+            {pendingSummary.completedWorkout.hasPR && (
+              <div className="bg-gradient-to-br from-amber-600/20 to-amber-700/10 border border-amber-500/30 rounded-xl p-4 mb-6 flex items-center justify-center gap-3 animate-pulse-gentle">
+                <span className="text-4xl animate-bounce">🏆</span>
+                <div className="text-center">
+                  <p className="text-xs text-amber-400 font-black uppercase tracking-wider">PERSONAL RECORD!</p>
+                  <p className="text-sm text-amber-300 font-bold mt-1">
+                    {Object.keys(pendingSummary.completedWorkout.prStatus).length} new {Object.keys(pendingSummary.completedWorkout.prStatus).length === 1 ? 'PR' : 'PRs'}
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Radar chart - only if data exists */}
             {(() => {

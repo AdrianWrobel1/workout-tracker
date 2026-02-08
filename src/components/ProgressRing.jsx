@@ -42,7 +42,7 @@ export const ProgressRing = ({ workouts = [] }) => {
   };
   
   return (
-    <div className="flex flex-col items-center">
+    <div className="flex flex-col items-center animate-chart-fade-in">
       <svg width="120" height="120" viewBox="0 0 120 120" className="drop-shadow-lg">
         {/* Background circle */}
         <circle cx="60" cy="60" r="45" fill="none" stroke="#334155" strokeWidth="6" opacity="0.3" />

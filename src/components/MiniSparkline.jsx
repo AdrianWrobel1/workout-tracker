@@ -40,7 +40,7 @@ export const MiniSparkline = ({ workouts = [], metric = 'volume' }) => {
   }).join(' ');
   
   return (
-    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="opacity-75">
+    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="opacity-75 animate-chart-fade-in">
       <polyline
         points={points}
         fill="none"

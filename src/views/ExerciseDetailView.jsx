@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { ChevronLeft, Trophy } from 'lucide-react';
 import { SimpleLineChart } from '../components/SimpleLineChart';
 import { getExerciseHistory, getExerciseRecords, getLastSet, getExerciseTrend, getChartContext } from '../domain/exercises';
+import { formatLastSetDate } from '../domain/calculations';
 
 export const ExerciseDetailView = ({ exerciseId, workouts, exercisesDB, onBack, onOpenWorkout, userWeight }) => {
   const [activeTab, setActiveTab] = useState('history');
@@ -287,7 +288,7 @@ export const ExerciseDetailView = ({ exerciseId, workouts, exercisesDB, onBack, 
               </div>
               <div className="text-xs text-amber-400 font-black uppercase tracking-wider">All-Time Best 1RM</div>
               {records.best1RMDate && (
-                <div className="text-xs text-slate-500 mt-3 font-semibold">Set on {new Date(records.best1RMDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+                <div className="text-xs text-slate-500 mt-3 font-semibold">Set {formatLastSetDate(records.best1RMDate)}</div>
               )}
             </div>
 
@@ -298,7 +299,7 @@ export const ExerciseDetailView = ({ exerciseId, workouts, exercisesDB, onBack, 
                 {records.maxWeight} <span className="text-sm font-normal text-slate-500">kg</span>
               </div>
               {records.maxWeightDate && (
-                <div className="text-xs text-slate-500 mt-2 font-semibold">{new Date(records.maxWeightDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                <div className="text-xs text-slate-500 mt-2 font-semibold">{formatLastSetDate(records.maxWeightDate)}</div>
               )}
             </div>
 
@@ -309,7 +310,7 @@ export const ExerciseDetailView = ({ exerciseId, workouts, exercisesDB, onBack, 
                 {records.maxReps} <span className="text-sm font-normal text-slate-500">reps</span>
               </div>
               {records.maxRepsDate && (
-                <div className="text-xs text-slate-500 mt-2 font-semibold">{new Date(records.maxRepsDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                <div className="text-xs text-slate-500 mt-2 font-semibold">{formatLastSetDate(records.maxRepsDate)}</div>
               )}
             </div>
           </div>

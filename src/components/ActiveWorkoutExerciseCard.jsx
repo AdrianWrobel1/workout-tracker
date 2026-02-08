@@ -27,6 +27,7 @@ export const ActiveWorkoutExerciseCard = ({
           return (
             <div
               key={i}
+              data-set-index={i}
               onTouchStart={(e) => {
                 const t = e.touches[0];
                 touchRefs.current[i] = { startX: t.clientX, startY: t.clientY, longPress: false };
@@ -67,7 +68,7 @@ export const ActiveWorkoutExerciseCard = ({
                 set.warmup
                   ? 'bg-amber-500/10 border-amber-500/30'
                   : 'bg-slate-700/20 border-slate-600/30'
-              } ${set.completed ? 'bg-emerald-500/10 border-emerald-500/30' : ''}`}
+              } ${set.completed ? 'bg-emerald-500/10 border-emerald-500/30 animate-set-complete' : ''}`}
             >
               {/* Set Label */}
               <div className="font-black text-white min-w-[2rem]">{displayLabel}</div>
@@ -79,7 +80,9 @@ export const ActiveWorkoutExerciseCard = ({
                   type="number"
                   value={set.kg ?? 0}
                   onChange={e => onUpdateSet(exerciseIndex, i, 'kg', Number(e.target.value))}
-                  className="bg-slate-800/50 border border-slate-600/50 rounded-lg px-4 py-2 text-center text-sm font-bold w-full focus:border-blue-500 focus:outline-none transition"
+                  className={`bg-slate-800/50 border border-slate-600/50 rounded-lg px-4 py-2 text-center text-sm font-bold w-full focus:border-blue-500 focus:outline-none transition ${
+                    prev && set.kg === prev.kg ? 'opacity-50 text-slate-500' : ''
+                  }`}
                 />
               </div>
 
@@ -90,15 +93,17 @@ export const ActiveWorkoutExerciseCard = ({
                   type="number"
                   value={set.reps ?? 0}
                   onChange={e => onUpdateSet(exerciseIndex, i, 'reps', Number(e.target.value))}
-                  className="bg-slate-800/50 border border-slate-600/50 rounded-lg px-4 py-2 text-center text-sm font-bold w-full focus:border-blue-500 focus:outline-none transition"
+                  className={`bg-slate-800/50 border border-slate-600/50 rounded-lg px-4 py-2 text-center text-sm font-bold w-full focus:border-blue-500 focus:outline-none transition ${
+                    prev && set.reps === prev.reps ? 'opacity-50 text-slate-500' : ''
+                  }`}
                 />
               </div>
 
               {/* Previous Set Reference */}
               {prev && (
                 <div className="flex flex-col gap-1 min-w-[70px]">
-                  <label className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">PREV</label>
-                  <div className="text-xs font-bold text-slate-300 px-2.5 py-2 rounded-lg bg-slate-800/50 border border-slate-700/50 text-center">
+                  <label className="text-[11px] text-slate-500 font-bold uppercase tracking-wider">PREV</label>
+                  <div className="text-xs font-bold text-slate-400 px-2.5 py-2 rounded-lg bg-slate-800/50 border border-slate-700/50 text-center opacity-75">
                     {prev.kg}×{prev.reps}
                   </div>
                 </div>

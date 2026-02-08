@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { GripVertical, MoreVertical } from 'lucide-react';
 import {
   DndContext,
@@ -62,11 +62,27 @@ function SortableExerciseItem({
   };
 
   const previousSets = getPreviousSets(exercise.exerciseId, workouts, activeWorkoutStartTime);
+  
+  // Auto-scroll on new set added
+  const prevSetCountRef = useRef(exercise.sets.length);
+  useEffect(() => {
+    if (exercise.sets.length > prevSetCountRef.current) {
+      // New set was added - scroll to the last set card
+      setTimeout(() => {
+        const lastSetCard = document.querySelector(`[data-exercise-index="${exIndex}"] [data-set-index="${exercise.sets.length - 1}"]`);
+        if (lastSetCard) {
+          lastSetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 50);
+    }
+    prevSetCountRef.current = exercise.sets.length;
+  }, [exercise.sets.length, exIndex]);
 
   return (
     <div
       ref={setNodeRef}
       style={style}
+      data-exercise-index={exIndex}
       className={`bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-4 transition-all duration-200 ease-out ${
         isDragging ? 'ring-2 ring-blue-500 shadow-lg shadow-blue-500/20 scale-102' : ''
       }`}
