@@ -4,15 +4,17 @@
  */
 
 export const calculate1RM = (kg, reps) => {
-  if (!kg || !reps) return 0;
-  if (reps === 1) return kg;
-  return Math.round(kg * (1 + reps / 30));
+  const kgNum = Number(kg) || 0;
+  const repsNum = Number(reps) || 0;
+  if (!kgNum || !repsNum) return 0;
+  if (repsNum === 1) return kgNum;
+  return Math.round(kgNum * (1 + repsNum / 30));
 };
 
 export const calculateTotalVolume = (sets) => {
   return sets
     .filter(s => s.completed)
-    .reduce((sum, s) => sum + (s.kg * s.reps), 0);
+    .reduce((sum, s) => sum + ((Number(s.kg) || 0) * (Number(s.reps) || 0)), 0);
 };
 
 export const formatDate = (dateStr) => {

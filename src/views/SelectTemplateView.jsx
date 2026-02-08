@@ -1,57 +1,47 @@
 import React from 'react';
 import { X } from 'lucide-react';
+import { TemplateCard } from '../components/TemplateCard';
 
 export const SelectTemplateView = ({ templates, onClose, onSelectTemplate, onEditTemplate }) => {
   return (
-    <div className="min-h-screen bg-zinc-900 text-white p-6">
-      <div className="flex items-center justify-between mb-8">
-        <button onClick={onClose} className="p-2 bg-zinc-800 rounded-full">
-          <X size={24} />
-        </button>
-        <h1 className="text-2xl font-bold">Start Workout</h1>
-        <div className="w-10"></div>
+    <div className="min-h-screen bg-black text-white">
+      {/* Header */}
+      <div className="bg-gradient-to-b from-black to-black/80 border-b border-white/10 p-4 sticky top-0 z-20 shadow-2xl">
+        <div className="flex items-center justify-between gap-4">
+          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg transition">
+            <X size={20} />
+          </button>
+          <h1 className="text-3xl font-black flex-1">START WORKOUT</h1>
+        </div>
       </div>
 
-      <div className="space-y-4">
+      <div className="p-4 space-y-3 pb-24">
+        {/* Empty Workout Option */}
         <button
           onClick={() => onSelectTemplate({ id: 'empty', name: 'Empty Workout', exercises: [] })}
-          className="w-full bg-zinc-800 border border-zinc-700 p-5 rounded-2xl text-left hover:bg-zinc-700 transition"
+          className="w-full bg-gradient-to-br from-slate-800/50 to-slate-900/50 border-2 border-dashed border-slate-700/50 hover:border-slate-600/50 p-5 rounded-xl text-left transition-all group ui-fade-scale-anim"
         >
-          <h3 className="font-bold text-lg text-white">Empty Workout</h3>
-          <p className="text-sm text-zinc-500">Start from scratch</p>
+          <h3 className="font-black text-lg text-slate-300 group-hover:text-blue-400 transition">Empty Workout</h3>
+          <p className="text-sm text-slate-500 mt-1">Start from scratch</p>
         </button>
 
-        {templates.map(template => (
-          <div
-            key={template.id}
-            className="w-full bg-zinc-800 p-5 rounded-2xl text-left border border-zinc-800 flex items-start justify-between hover:bg-zinc-700 transition group"
-          >
-            <button
-              onClick={() => onSelectTemplate(template)}
-              className="flex-1 text-left"
-            >
-              <h3 className="font-bold text-lg text-rose-400 mb-1">{template.name}</h3>
-              <p className="text-sm text-zinc-400">{template.exercises.length} exercises</p>
-              <div className="mt-3 flex flex-wrap gap-1">
-                {template.exercises.slice(0, 3).map((ex, i) => (
-                  <span key={i} className="text-[10px] bg-zinc-900 px-2 py-1 rounded text-zinc-500">
-                    {ex.name}
-                  </span>
-                ))}
-                {template.exercises.length > 3 && <span className="text-[10px] text-zinc-600 px-1">...</span>}
-              </div>
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onEditTemplate && onEditTemplate(template);
-              }}
-              className="ml-4 p-2 bg-zinc-700 rounded-lg text-sm text-zinc-300 hover:bg-zinc-600"
-            >
-              Edit
-            </button>
+        {/* Template List */}
+        {templates.length === 0 ? (
+          <div className="text-center py-12 px-4">
+            <p className="text-slate-400 text-sm font-semibold">No templates yet</p>
+            <p className="text-slate-600 text-xs mt-2">Create a template to quickly start workouts</p>
           </div>
-        ))}
+        ) : (
+          templates.map(template => (
+            <TemplateCard
+              key={template.id}
+              template={template}
+              onSelect={onSelectTemplate}
+              onEdit={onEditTemplate}
+              onDelete={null}
+            />
+          ))
+        )}
       </div>
     </div>
   );

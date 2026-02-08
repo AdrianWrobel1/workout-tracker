@@ -26,63 +26,68 @@ export const MonthlyProgressView = ({
   }[month] || '🏋️';
 
   return (
-    <div className="min-h-screen bg-zinc-900 text-white pb-24">
-      <div className="bg-zinc-800 p-4 sticky top-0 z-10 shadow-lg flex items-center gap-4">
-        <button onClick={onBack}>
-          <ChevronLeft size={24} />
+    <div className="min-h-screen bg-black text-white pb-24">
+      {/* Header */}
+      <div className="bg-gradient-to-b from-black to-black/80 border-b border-white/10 p-4 sticky top-0 z-20 shadow-2xl flex items-center gap-4">
+        <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-lg transition">
+          <ChevronLeft size={20} />
         </button>
-        <div>
-          <h1 className="text-2xl font-bold">{monthEmoji} {getMonthLabel(monthOffset)}</h1>
-          <p className="text-xs text-zinc-400">{monthWorkouts.length} workouts</p>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-3xl font-black">{monthEmoji} {getMonthLabel(monthOffset)}</h1>
+          <p className="text-xs text-slate-400 mt-1 font-semibold">{monthWorkouts.length} workouts this month</p>
         </div>
       </div>
 
       <div className="p-4 space-y-3">
-        {monthWorkouts.length === 0 && (
-          <div className="text-center text-zinc-500 mt-10">No workouts this month</div>
-        )}
-
-        {monthWorkouts.map(workout => (
-          <div
-            key={workout.id}
-            className="bg-zinc-800 rounded-xl p-4 border border-zinc-700 hover:bg-zinc-700/50 transition"
-          >
-            <div className="flex justify-between items-start mb-2">
-              <div
-                onClick={() => onViewWorkoutDetail(workout.date)}
-                className="flex-1 cursor-pointer"
-              >
-                <h3 className="text-lg font-bold text-rose-400">{workout.name}</h3>
-                <p className="text-sm text-zinc-400 mb-2">
-                  {new Date(workout.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                </p>
-              </div>
-              <button
-                onClick={() => onDeleteWorkout(workout.id)}
-                className="p-2 text-red-400 hover:bg-red-900/20 rounded-lg transition"
-              >
-                <Trash2 size={18} />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <div className="bg-zinc-900 p-2 rounded">
-                <span className="text-zinc-400">Duration:</span>
-                <span className="text-white ml-2 font-bold">{workout.duration || 0} min</span>
-              </div>
-              <div className="bg-zinc-900 p-2 rounded">
-                <span className="text-zinc-400">Exercises:</span>
-                <span className="text-white ml-2 font-bold">{workout.exercises?.length || 0}</span>
-              </div>
-            </div>
-
-            {workout.note && (
-              <div className="mt-3 bg-amber-900/20 p-2 rounded text-xs text-amber-300">
-                {workout.note}
-              </div>
-            )}
+        {monthWorkouts.length === 0 ? (
+          <div className="text-center text-slate-500 mt-12">
+            <p className="text-sm font-semibold">No workouts this month</p>
           </div>
-        ))}
+        ) : (
+          monthWorkouts.map(workout => (
+            <div
+              key={workout.id}
+              className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-lg p-4 hover:from-slate-800/60 hover:to-slate-900/60 hover:border-slate-600/50 transition-all ui-card-mount-anim"
+            >
+              <div className="flex justify-between items-start gap-3 mb-3">
+                <button
+                  onClick={() => onViewWorkoutDetail(workout.date)}
+                  className="flex-1 text-left hover:opacity-80 transition"
+                >
+                  <h3 className="text-lg font-black text-white">{workout.name}</h3>
+                  <p className="text-xs text-slate-400 mt-1 font-semibold">
+                    {new Date(workout.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                  </p>
+                </button>
+                <button
+                  onClick={() => onDeleteWorkout(workout.id)}
+                  className="p-2 text-red-400 hover:bg-red-600/20 hover:border hover:border-red-500/30 rounded-lg transition"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+
+              {/* Stats */}
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                <div className="bg-slate-800/40 border border-slate-700/50 p-2 rounded-lg">
+                  <span className="text-xs text-slate-500 font-bold">Duration</span>
+                  <div className="text-sm font-black text-white mt-1">{workout.duration || 0} <span className="text-xs font-normal text-slate-400">min</span></div>
+                </div>
+                <div className="bg-slate-800/40 border border-slate-700/50 p-2 rounded-lg">
+                  <span className="text-xs text-slate-500 font-bold">Exercises</span>
+                  <div className="text-sm font-black text-white mt-1">{workout.exercises?.length || 0}</div>
+                </div>
+              </div>
+
+              {/* Note */}
+              {workout.note && (
+                <div className="mt-3 bg-amber-500/10 border border-amber-500/30 p-2 rounded-lg text-xs text-amber-200 font-semibold">
+                  {workout.note}
+                </div>
+              )}
+            </div>
+          ))
+        )}
       </div>
     </div>
   );

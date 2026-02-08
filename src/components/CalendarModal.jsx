@@ -27,15 +27,15 @@ export const CalendarModal = ({ workouts, onClose, onSelectDate }) => {
 
     return (
       <div className="mb-8" key={offset}>
-        <h3 className="text-lg font-semibold mb-4">
+        <h3 className="text-lg font-black mb-4">
           {months[date.getMonth()]} {date.getFullYear()}
         </h3>
-        <div className="grid grid-cols-7 gap-2 mb-2 text-xs text-zinc-500">
-          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
-            <div key={i} className="text-center">{d}</div>
+        <div className="grid grid-cols-7 gap-1 mb-3 text-xs text-slate-500 font-bold">
+          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d, i) => (
+            <div key={i} className="text-center py-2">{d}</div>
           ))}
         </div>
-        <div className="grid grid-cols-7 gap-2">
+        <div className="grid grid-cols-7 gap-1">
           {getDaysInMonth(date).map((day, i) => {
             if (!day) return <div key={i} />;
             const dateObj = new Date(date.getFullYear(), date.getMonth(), day);
@@ -47,10 +47,13 @@ export const CalendarModal = ({ workouts, onClose, onSelectDate }) => {
               <button
                 key={i}
                 onClick={() => { onSelectDate(dateStr); onClose(); }}
-                className={`h-10 rounded-full text-sm font-medium transition
-                  ${isToday ? 'bg-rose-400 text-white' :
-                    hasWorkout ? 'bg-zinc-700 text-white' :
-                    'text-zinc-400 hover:bg-zinc-800'}`}
+                className={`h-10 rounded-lg text-sm font-bold transition ${
+                  isToday
+                    ? 'bg-gradient-to-br from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-600/50'
+                    : hasWorkout
+                    ? 'bg-slate-700/60 border border-slate-600/50 text-white hover:bg-slate-700/80'
+                    : 'text-slate-500 hover:bg-slate-800/50 hover:text-slate-400'
+                }`}
               >
                 {day}
               </button>
@@ -63,10 +66,12 @@ export const CalendarModal = ({ workouts, onClose, onSelectDate }) => {
 
   return (
     <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-      <div className="bg-zinc-900 rounded-3xl p-6 max-w-md w-full max-h-[85vh] overflow-y-auto">
-        <div className="flex justify-between mb-6">
-          <h2 className="text-xl font-bold">Select date</h2>
-          <button onClick={onClose}><X /></button>
+      <div className="bg-gradient-to-br from-slate-900/95 to-black/95 border border-slate-700/50 rounded-2xl p-6 max-w-md w-full max-h-[85vh] overflow-y-auto shadow-2xl ui-modal-scale ui-fade-scale-anim">
+        <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-700/50">
+          <h2 className="text-2xl font-black">SELECT DATE</h2>
+          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg transition text-slate-400">
+            <X size={20} />
+          </button>
         </div>
         {renderMonth(0)}
         {renderMonth(1)}

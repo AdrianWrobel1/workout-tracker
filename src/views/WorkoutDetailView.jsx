@@ -6,57 +6,75 @@ export const WorkoutDetailView = ({ selectedDate, workouts, onBack }) => {
   const dateWorkouts = workouts.filter(w => w.date === selectedDate);
 
   return (
-    <div className="min-h-screen bg-zinc-900 text-white">
-      <div className="bg-zinc-800 p-4 flex items-center gap-4 sticky top-0 z-10 shadow-md">
-        <button onClick={onBack}>
+    <div className="min-h-screen bg-black text-white pb-24">
+      {/* Header */}
+      <div className="bg-gradient-to-b from-black to-black/80 border-b border-white/10 p-4 flex items-center gap-4 sticky top-0 z-20 shadow-2xl">
+        <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-lg transition">
           <ChevronLeft size={24} />
         </button>
-        <h1 className="text-xl font-bold">{formatDate(selectedDate)}</h1>
+        <div>
+          <p className="text-xs text-slate-400 font-semibold tracking-widest">WORKOUT DETAILS</p>
+          <h1 className="text-2xl font-black">{formatDate(selectedDate)}</h1>
+        </div>
       </div>
-      <div className="p-6 space-y-4 pb-24">
+
+      <div className="p-4 space-y-4">
         {dateWorkouts.map(workout => (
-          <div key={workout.id} className="bg-zinc-800 rounded-2xl p-5 border border-zinc-700">
-            <div className="flex justify-between mb-4 border-b border-zinc-700 pb-3">
-              <div>
-                <h2 className="text-2xl font-bold text-white">{workout.name}</h2>
-                <p className="text-sm text-zinc-400 flex items-center gap-2 mt-1">
+          <div key={workout.id} className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-5 ui-card-mount-anim">
+            {/* Workout Header */}
+            <div className="flex justify-between items-start gap-4 mb-4 pb-4 border-b border-slate-700/50">
+              <div className="flex-1 min-w-0">
+                <h2 className="text-2xl font-black text-white">{workout.name}</h2>
+                <p className="text-sm text-slate-400 flex items-center gap-2 mt-2 font-semibold">
                   <Clock size={14} /> {workout.duration || 0} min
                 </p>
               </div>
             </div>
 
+            {/* Workout Note */}
             {workout.note && (
-              <div className="mb-4 bg-zinc-900/50 p-3 rounded-lg text-sm text-zinc-300 italic flex gap-2">
-                <FileText size={16} className="shrink-0 mt-0.5" />
-                {workout.note}
+              <div className="mb-4 bg-amber-500/10 border border-amber-500/30 p-3.5 rounded-lg text-sm text-amber-200 italic flex gap-3">
+                <FileText size={16} className="shrink-0 mt-0.5 text-amber-400" />
+                <span>{workout.note}</span>
               </div>
             )}
 
-            {workout.exercises?.map((ex, i) => (
-              <div key={i} className="mb-4 last:mb-0">
-                <h3 className="text-lg font-semibold text-rose-400 mb-2">{ex.name}</h3>
-                <div className="space-y-1.5 text-sm">
-                  {ex.sets.map((set, j) => (
-                    <div key={j} className="flex gap-3 text-zinc-300 items-center">
-                      <div
-                        className={`w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold
-                          ${set.completed ? 'bg-emerald-500/20 text-emerald-500' : 'bg-zinc-700 text-zinc-500'}`}
-                      >
-                        {j + 1}
-                      </div>
-                      <span className={set.completed ? 'text-white' : 'text-zinc-500'}>
-                        {set.kg} kg × {set.reps}
-                      </span>
-                      {set.completed && (
-                        <span className="text-xs text-zinc-500 ml-auto">
-                          1RM: {calculate1RM(set.kg, set.reps)}
-                        </span>
-                      )}
+            {/* Exercises */}
+            <div className="space-y-4">
+              {workout.exercises?.map((ex, i) => {
+                const completedSets = (ex.sets || []).filter(s => s.completed);
+                if (completedSets.length === 0) return null;
+                
+                return (
+                  <div key={ex.exerciseId || `ex-${i}`} className="bg-slate-800/40 border border-slate-700/50 rounded-lg p-4">
+                    <div className="mb-3">
+                      <h3 className="text-lg font-black text-white">{ex.name}</h3>
+                      <p className="text-xs text-slate-400 mt-1 font-semibold">{ex.category}</p>
                     </div>
-                  ))}
-                </div>
-              </div>
-            ))}
+                    <div className="space-y-2.5">
+                      {completedSets.map((set, j) => (
+                        <div key={`${ex.exerciseId}-${j}-${set.kg}-${set.reps}`} className="flex items-center gap-3 p-2 bg-slate-900/40 rounded-lg border border-slate-700/50">
+                          <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-black bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 min-w-[2rem]">
+                            #{j + 1}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-bold text-white">
+                              {set.kg} <span className="text-slate-400 font-normal">kg</span> × {set.reps}
+                            </p>
+                          </div>
+                          <div className="text-right min-w-fit">
+                            <p className="text-xs text-slate-400 font-semibold">1RM</p>
+                            <p className="text-sm font-black text-blue-400">
+                              {calculate1RM(set.kg, set.reps)} kg
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         ))}
       </div>

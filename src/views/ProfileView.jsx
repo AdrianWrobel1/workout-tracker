@@ -18,9 +18,10 @@ export const ProfileView = ({ workouts = [], exercisesDB = [], userWeight, onUse
         const vol = (ex.sets || []).filter(s => s.completed).reduce((suma, s) => {
           const baseKg = Number(s.kg) || 0;
           const kg = baseKg + ((exDef.usesBodyweight && userWeight) ? Number(userWeight) : 0);
-          return suma + (kg * s.reps);
+          const repsNum = Number(s.reps) || 0;
+          return suma + (kg * repsNum);
         }, 0);
-        const reps = (ex.sets || []).filter(s => s.completed).reduce((suma, s) => suma + (s.reps || 0), 0);
+        const reps = (ex.sets || []).filter(s => s.completed).reduce((suma, s) => suma + (Number(s.reps) || 0), 0);
 
         groups.forEach(g => {
           if (!map[g]) map[g] = { volume: 0, reps: 0, sessions: 0 };
@@ -37,69 +38,79 @@ export const ProfileView = ({ workouts = [], exercisesDB = [], userWeight, onUse
   }, [workouts, exercisesDB]);
 
   return (
-    <div className="min-h-screen bg-zinc-900 text-white pb-40">
-      <div className="bg-zinc-800 p-4 mb-4">
-        <h1 className="text-2xl font-bold">Profile</h1>
+    <div className="min-h-screen bg-black text-white pb-40">
+      {/* Header */}
+      <div className="bg-gradient-to-b from-black to-black/80 border-b border-white/10 p-4 sticky top-0 z-20 shadow-2xl">
+        <h1 className="text-4xl font-black">PROFILE</h1>
+        <p className="text-xs text-slate-400 mt-2 font-semibold tracking-widest">YOUR STATS & INFO</p>
       </div>
 
-      <div className="p-4 space-y-4">
-        <div className="bg-zinc-800 rounded-2xl p-4 border border-zinc-700">
-          <h2 className="text-sm text-zinc-400 mb-3 font-semibold">Statistics — Volume by Muscle/Category</h2>
+      <div className="p-4 space-y-5">
+        {/* Statistics Card */}
+        <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-5">
+          <h2 className="text-sm font-black text-slate-300 uppercase tracking-widest mb-4">Volume by Muscle/Category</h2>
 
-          {statsByGroup.length === 0 && (
-            <div className="text-zinc-500 text-sm">No training data yet.</div>
-          )}
-
-          {statsByGroup.length > 0 && (
+          {statsByGroup.length === 0 ? (
+            <div className="text-slate-500 text-sm py-6 text-center">No training data yet</div>
+          ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {statsByGroup.slice(0, 12).map((s) => (
-                  <button key={s.group} onClick={() => { setSelectedGroup(s.group); setShowStatsModal(true); }} className="text-left bg-zinc-900/30 p-3 rounded-lg border border-zinc-700 flex justify-between items-center hover:bg-zinc-900/50">
-                    <div>
-                      <div className="font-semibold">{s.group}</div>
-                      <div className="text-xs text-zinc-400">{s.sessions} sessions</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-bold text-rose-400">{s.volume} kg</div>
-                      <div className="text-xs text-zinc-400">{s.reps} reps</div>
-                    </div>
-                  </button>
-                ))}
+                <button
+                  key={s.group}
+                  onClick={() => { setSelectedGroup(s.group); setShowStatsModal(true); }}
+                  className="text-left bg-slate-800/40 hover:bg-slate-800/60 border border-slate-700/50 hover:border-slate-600/50 p-4 rounded-lg flex justify-between items-center transition-all ui-card-mount-anim"
+                >
+                  <div>
+                    <div className="font-black text-white">{s.group}</div>
+                    <div className="text-xs text-slate-500 mt-1 font-semibold">{s.sessions} sessions</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-black text-blue-400">{s.volume.toLocaleString()} kg</div>
+                    <div className="text-xs text-slate-400 mt-1 font-semibold">{s.reps.toLocaleString()} reps</div>
+                  </div>
+                </button>
+              ))}
             </div>
           )}
         </div>
 
-        <div className="bg-zinc-800 rounded-2xl p-4 border border-zinc-700">
-          <h2 className="text-sm text-zinc-400 mb-3 font-semibold">Personal Info</h2>
+        {/* Personal Info Card */}
+        <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-5">
+          <h2 className="text-sm font-black text-slate-300 uppercase tracking-widest mb-4">Personal Info</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <input
               type="text"
               placeholder="Your name"
-              className="w-full bg-zinc-900 rounded-xl p-3 text-white border border-transparent focus:border-rose-500 outline-none"
+              className="w-full bg-slate-800/50 border border-slate-600/50 rounded-lg px-4 py-3 text-white font-semibold focus:border-blue-500 focus:outline-none transition placeholder:text-slate-600"
             />
             <input
               type="number"
               placeholder="Age"
-              className="w-full bg-zinc-900 rounded-xl p-3 text-white border border-transparent focus:border-rose-500 outline-none"
+              className="w-full bg-slate-800/50 border border-slate-600/50 rounded-lg px-4 py-3 text-white font-semibold focus:border-blue-500 focus:outline-none transition placeholder:text-slate-600"
             />
             <input
               type="number"
               placeholder="Weight (kg)"
               value={userWeight ?? ''}
               onChange={(e) => onUserWeightChange && onUserWeightChange(Number(e.target.value) || null)}
-              className="w-full bg-zinc-900 rounded-xl p-3 text-white border border-transparent focus:border-rose-500 outline-none"
+              className="w-full bg-slate-800/50 border border-slate-600/50 rounded-lg px-4 py-3 text-white font-semibold focus:border-blue-500 focus:outline-none transition placeholder:text-slate-600"
             />
           </div>
         </div>
       </div>
+
+      {/* Stats Modal */}
       {showStatsModal && selectedGroup && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-start justify-center p-4">
-          <div className="w-full max-w-2xl bg-zinc-900 rounded-2xl p-4 border border-zinc-800 shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-bold">{selectedGroup} — Weekly Statistics</h3>
-              <button onClick={() => setShowStatsModal(false)} className="text-zinc-400">Close</button>
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-start justify-center p-4 pt-20">
+            <div className="w-full max-w-2xl bg-gradient-to-br from-slate-900/95 to-black/95 border border-slate-700/50 rounded-2xl p-5 shadow-2xl max-h-[85vh] overflow-y-auto ui-modal-scale ui-fade-scale-anim">
+            <div className="flex justify-between items-center mb-5 pb-4 border-b border-slate-700/50">
+              <h3 className="text-2xl font-black">{selectedGroup}</h3>
+              <button onClick={() => setShowStatsModal(false)} className="p-2 hover:bg-white/10 rounded-lg transition text-slate-400">
+                <span className="text-xl">×</span>
+              </button>
             </div>
 
-            {/* Aggregate weekly data for selected group */}
+            {/* Charts and Stats */}
             {(() => {
               const getWeekStart = (dateStr) => {
                 const d = new Date(dateStr);
@@ -128,7 +139,6 @@ export const ProfileView = ({ workouts = [], exercisesDB = [], userWeight, onUse
 
               const weeks = Object.values(map).sort((a,b)=>a.start-b.start).map(w=>({ date: w.start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), value: w.volume, duration: w.duration }));
 
-              // Summary counts for last week/month/quarter/year
               const now = new Date();
               const startOfThisWeek = (()=>{ const d=new Date(now); const day=d.getDay(); const diff=d.getDate()-((day+6)%7); d.setDate(diff); d.setHours(0,0,0,0); return d; })();
               const startOfLastWeek = new Date(startOfThisWeek); startOfLastWeek.setDate(startOfThisWeek.getDate()-7);
@@ -161,37 +171,39 @@ export const ProfileView = ({ workouts = [], exercisesDB = [], userWeight, onUse
 
               return (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="bg-zinc-800 p-4 rounded-xl border border-zinc-700">
-                      <div className="text-xs text-zinc-400 mb-2">Volume — weekly</div>
-                      <SimpleLineChart data={weeks.map(w=>({date:w.date,value:w.value}))} color="#f59e0b" unit="kg" />
+                  {/* Charts */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="bg-slate-800/40 border border-slate-700/50 p-4 rounded-lg">
+                      <div className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-3">Volume — Weekly</div>
+                      <SimpleLineChart data={weeks.map(w=>({date:w.date,value:w.value}))} color="#3b82f6" unit="kg" />
                     </div>
-                    <div className="bg-zinc-800 p-4 rounded-xl border border-zinc-700">
-                      <div className="text-xs text-zinc-400 mb-2">Training time — weekly (minutes)</div>
-                      <SimpleLineChart data={weeks.map(w=>({date:w.date,value:w.duration}))} color="#60a5fa" unit="min" />
+                    <div className="bg-slate-800/40 border border-slate-700/50 p-4 rounded-lg">
+                      <div className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-3">Time — Weekly</div>
+                      <SimpleLineChart data={weeks.map(w=>({date:w.date,value:w.duration}))} color="#8b5cf6" unit="min" />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                    <div className="bg-zinc-900/20 p-3 rounded-lg text-center">
-                      <div className="text-xs text-zinc-400">Last week</div>
-                      <div className="font-bold text-white">{lastWeekTotals.count} sessions</div>
-                      <div className="text-sm text-rose-400">{lastWeekTotals.volume} kg</div>
+                  {/* Period Totals */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 border border-blue-500/20 p-3 rounded-lg text-center">
+                      <div className="text-xs text-slate-400 font-semibold mb-1">LAST WEEK</div>
+                      <div className="font-black text-white text-lg">{lastWeekTotals.count}</div>
+                      <div className="text-xs text-blue-400 font-bold mt-1">{lastWeekTotals.volume.toLocaleString()} kg</div>
                     </div>
-                    <div className="bg-zinc-900/20 p-3 rounded-lg text-center">
-                      <div className="text-xs text-zinc-400">Last month</div>
-                      <div className="font-bold text-white">{lastMonthTotals.count} sessions</div>
-                      <div className="text-sm text-rose-400">{lastMonthTotals.volume} kg</div>
+                    <div className="bg-gradient-to-br from-emerald-500/10 to-emerald-600/10 border border-emerald-500/20 p-3 rounded-lg text-center">
+                      <div className="text-xs text-slate-400 font-semibold mb-1">LAST MONTH</div>
+                      <div className="font-black text-white text-lg">{lastMonthTotals.count}</div>
+                      <div className="text-xs text-emerald-400 font-bold mt-1">{lastMonthTotals.volume.toLocaleString()} kg</div>
                     </div>
-                    <div className="bg-zinc-900/20 p-3 rounded-lg text-center">
-                      <div className="text-xs text-zinc-400">This quarter</div>
-                      <div className="font-bold text-white">{quarterTotals.count} sessions</div>
-                      <div className="text-sm text-rose-400">{quarterTotals.volume} kg</div>
+                    <div className="bg-gradient-to-br from-purple-500/10 to-purple-600/10 border border-purple-500/20 p-3 rounded-lg text-center">
+                      <div className="text-xs text-slate-400 font-semibold mb-1">Q THIS YEAR</div>
+                      <div className="font-black text-white text-lg">{quarterTotals.count}</div>
+                      <div className="text-xs text-purple-400 font-bold mt-1">{quarterTotals.volume.toLocaleString()} kg</div>
                     </div>
-                    <div className="bg-zinc-900/20 p-3 rounded-lg text-center">
-                      <div className="text-xs text-zinc-400">This year</div>
-                      <div className="font-bold text-white">{yearTotals.count} sessions</div>
-                      <div className="text-sm text-rose-400">{yearTotals.volume} kg</div>
+                    <div className="bg-gradient-to-br from-amber-500/10 to-amber-600/10 border border-amber-500/20 p-3 rounded-lg text-center">
+                      <div className="text-xs text-slate-400 font-semibold mb-1">THIS YEAR</div>
+                      <div className="font-black text-white text-lg">{yearTotals.count}</div>
+                      <div className="text-xs text-amber-400 font-bold mt-1">{yearTotals.volume.toLocaleString()} kg</div>
                     </div>
                   </div>
                 </div>

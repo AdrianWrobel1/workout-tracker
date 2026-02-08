@@ -1,8 +1,13 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 
 // DOMAIN
 import { calculate1RM } from './domain/calculations';
-import { getExerciseRecords } from './domain/exercises';
+import { getExerciseRecords, getLastCompletedSets, suggestNextWeight } from './domain/exercises';
+import { prepareCleanWorkoutData, compareWorkoutToPrevious, generateSessionFeedback, calculateMuscleDistribution, detectPRsInWorkout } from './domain/workouts';
+
+// HOOKS
+import { useDebouncedLocalStorage, useDebouncedLocalStorageManual } from './hooks/useLocalStorage';
+import { useModals } from './contexts/ModalContext';
 
 // COMPONENTS
 import { MiniWorkoutBar } from './components/MiniWorkoutBar';
@@ -23,9 +28,13 @@ import { WorkoutDetailView } from './views/WorkoutDetailView';
 import { ProfileView } from './views/ProfileView';
 import { SettingsView } from './views/SettingsView';
 import { MonthlyProgressView } from './views/MonthlyProgressView';
+import { ExportDataView } from './views/ExportDataView';
 
 
 export default function App() {
+  // --- CONTEXT ---
+  const { showCalendar, closeCalendar, openCalendar, showExerciseSelector, closeExerciseSelector, openExerciseSelector, showExportModal, closeExportModal } = useModals();
+
   // --- STATE ---
   const [view, setView] = useState('home');
   const [activeTab, setActiveTab] = useState('home');
@@ -35,17 +44,14 @@ export default function App() {
   const [exercisesDB, setExercisesDB] = useState([]);
   const [userWeight, setUserWeight] = useState(null);
   const [weeklyGoal, setWeeklyGoal] = useState(4);
-
   const [activeWorkout, setActiveWorkout] = useState(null);
   const [workoutTimer, setWorkoutTimer] = useState(0);
   const [isWorkoutMinimized, setIsWorkoutMinimized] = useState(false);
-
+  const [selectedTags, setSelectedTags] = useState([]); // for post-workout tag selection
 
   // UI State
-  const [showCalendar, setShowCalendar] = useState(false);
-  const [showExerciseSelector, setShowExerciseSelector] = useState(false);
   const [selectorMode, setSelectorMode] = useState(null); // 'template' | 'activeWorkout'
-  const [showExportModal, setShowExportModal] = useState(false);
+  const [historyFilter, setHistoryFilter] = useState('all'); // persist across views
   const [exportType, setExportType] = useState('all'); // 'all' | 'workouts' | 'exercises'
   const [exportPeriod, setExportPeriod] = useState('all'); // 'all' | 'last7' | 'last30' | 'last90' | 'custom'
   const [exportStartDate, setExportStartDate] = useState('');
@@ -60,6 +66,8 @@ export default function App() {
   const [selectedExerciseIndex, setSelectedExerciseIndex] = useState(null);
   const [monthOffset, setMonthOffset] = useState(0);
   const [pendingSummary, setPendingSummary] = useState(null);
+  const [summaryVisible, setSummaryVisible] = useState(false);
+  const [firstLoad, setFirstLoad] = useState(true);
   const [returnTo, setReturnTo] = useState(null);
 
   // --- EFFECTS ---
@@ -97,15 +105,18 @@ export default function App() {
     }
   }, []);
 
-  // Save Data
-  useEffect(() => { localStorage.setItem('exercises', JSON.stringify(exercisesDB)); }, [exercisesDB]);
-  useEffect(() => { localStorage.setItem('workouts', JSON.stringify(workouts)); }, [workouts]);
-  useEffect(() => { localStorage.setItem('templates', JSON.stringify(templates)); }, [templates]);
-  useEffect(() => { if (userWeight !== null) localStorage.setItem('userWeight', String(userWeight)); }, [userWeight]);
+  // initial skeleton (cold start): show for ~350ms
   useEffect(() => {
-    if (activeWorkout) localStorage.setItem('activeWorkout', JSON.stringify(activeWorkout));
-    else localStorage.removeItem('activeWorkout');
-  }, [activeWorkout]);
+    const t = setTimeout(() => setFirstLoad(false), 350);
+    return () => clearTimeout(t);
+  }, []);
+
+  // Save Data (debounced to prevent excessive localStorage writes)
+  useDebouncedLocalStorage('exercises', exercisesDB, 1000);
+  useDebouncedLocalStorage('workouts', workouts, 1000);
+  useDebouncedLocalStorage('templates', templates, 1000);
+  useDebouncedLocalStorage('userWeight', userWeight, 1000);
+  useDebouncedLocalStorageManual('activeWorkout', activeWorkout, 500);
 
   // Timer
   useEffect(() => {
@@ -120,7 +131,18 @@ export default function App() {
 
   // --- ACTIONS: EXERCISES ---
 
-  const handleSaveExercise = (exercise) => {
+  // Animate summary card on mount (subtle fade+scale)
+  useEffect(() => {
+    if (pendingSummary) {
+      setSummaryVisible(false);
+      const t = setTimeout(() => setSummaryVisible(true), 30);
+      return () => clearTimeout(t);
+    } else {
+      setSummaryVisible(false);
+    }
+  }, [pendingSummary]);
+
+  const handleSaveExercise = useCallback((exercise) => {
     if (exercise.id) {
       setExercisesDB(exercisesDB.map(e => e.id === exercise.id ? exercise : e));
     } else {
@@ -128,17 +150,17 @@ export default function App() {
     }
     setView('exercises');
     setEditingExercise(null);
-  };
+  }, [exercisesDB]);
 
-  const handleDeleteExerciseFromDB = (id) => {
+  const handleDeleteExerciseFromDB = useCallback((id) => {
     if (confirm('Delete this exercise? History will remain.')) {
       setExercisesDB(exercisesDB.filter(e => e.id !== id));
     }
-  };
+  }, [exercisesDB]);
 
   // --- ACTIONS: WORKOUTS ---
 
-  const handleStartWorkout = (template) => {
+  const handleStartWorkout = useCallback((template) => {
     setActiveWorkout({
       templateId: template.id,
       name: template.name,
@@ -159,7 +181,7 @@ export default function App() {
     setWorkoutTimer(0);
     setView('activeWorkout');
     setActiveTab('home');
-  };
+  }, [exercisesDB]);
 
   const computeTemplateDiff = (template, workout) => {
     const tEx = template?.exercises || [];
@@ -216,69 +238,52 @@ export default function App() {
 
   // Compute muscle totals following provided logic (use ALL sets, not only completed)
   const computeMuscleTotals = (workout) => {
-    const groups = {}; // muscle -> totalVolume
-    const mapToAxis = (m) => {
-      if (!m) return null;
-      const s = m.toLowerCase();
-      if (s.includes('chest')) return 'Chest';
-      if (s.includes('back')) return 'Back';
-      if (s.includes('leg')) return 'Legs';
-      if (s.includes('shoulder')) return 'Shoulders';
-      if (s.includes('core') || s.includes('abs') || s.includes('ab')) return 'Core';
-      if (s.includes('trice') || s.includes('bice') || s.includes('arm')) return 'Arms';
-      return null;
-    };
-    (workout.exercises || []).forEach(ex => {
-      // sum volume per exercise (sum of kg*reps for all sets)
-      let exVolume = 0;
-      const exDef = exercisesDB.find(d => d.id === ex.exerciseId) || {};
-      (ex.sets || []).forEach(s => {
-        const baseKg = Number(s.kg) || 0;
-        const kg = baseKg + ((exDef.usesBodyweight && userWeight) ? Number(userWeight) : 0);
-        const reps = Number(s.reps) || 0;
-        exVolume += kg * reps;
-      });
-
-      // if exercise lists muscles, add whole exVolume to each muscle
-      const muscles = ex.muscles || ex.muscles === undefined ? ex.muscles : [];
-      if (ex.muscles && ex.muscles.length > 0) {
-        ex.muscles.forEach(m => {
-          const axis = mapToAxis(m);
-          if (axis) groups[axis] = (groups[axis] || 0) + exVolume;
-        });
-      } else if (ex.category) {
-        const axis = mapToAxis(ex.category);
-        if (axis) groups[axis] = (groups[axis] || 0) + exVolume;
-      }
-    });
-
-    return groups;
+    return calculateMuscleDistribution(workout, exercisesDB);
   };
 
-  const handleFinishWorkout = () => {
+  const handleFinishWorkout = useCallback(() => {
     if (!activeWorkout) return;
-    const completedWorkout = { ...activeWorkout, id: Date.now() };
+    const completedWorkout = { ...activeWorkout, id: Date.now(), date: new Date().toISOString().split('T')[0], tags: [] };
     const template = templates.find(t => t.id === activeWorkout.templateId);
     const baseTemplate = template || activeWorkout.templateSnapshot || null;
     const diff = baseTemplate ? computeTemplateDiff(baseTemplate, activeWorkout) : { changed: true, reasons: ['No template associated for this workout'] };
     const metrics = calcSummaryMetrics(completedWorkout);
     const muscleTotals = computeMuscleTotals(completedWorkout);
-    setPendingSummary({ completedWorkout, templateId: template?.id || null, diff, metrics: { ...metrics, muscleTotals } });
-  };
-  const handleMinimizeWorkout = () => {
+    
+    // Prepare clean data and comparison
+    const cleanData = prepareCleanWorkoutData(completedWorkout, exercisesDB);
+    const comparison = compareWorkoutToPrevious(completedWorkout, workouts);
+    const feedback = generateSessionFeedback(cleanData.totalVolume, cleanData.completedSets, comparison?.trend || '→');
+    
+    // Pre-calculate PR status
+    const prStatus = detectPRsInWorkout(completedWorkout, workouts);
+    const hasPR = Object.keys(prStatus).length > 0;
+    
+    setSelectedTags([]); // reset tag selection
+    setPendingSummary({ 
+      completedWorkout: { ...completedWorkout, prStatus, hasPR }, 
+      templateId: template?.id || null, 
+      diff, 
+      metrics: { ...metrics, muscleTotals },
+      cleanData,
+      comparison,
+      feedback
+    });
+  }, [activeWorkout, templates, workouts, exercisesDB]);
+  const handleMinimizeWorkout = useCallback(() => {
     setIsWorkoutMinimized(true);
     setView('home');
     setActiveTab('home');
-  };
+  }, []);
 
-  const handleMaximizeWorkout = () => {
+  const handleMaximizeWorkout = useCallback(() => {
     setIsWorkoutMinimized(false);
     setView('activeWorkout');
-  };
+  }, []);
 
 
   // Active Workout Modifications
-  const handleUpdateSet = (exIndex, setIndex, field, value) => {
+  const handleUpdateSet = useCallback((exIndex, setIndex, field, value) => {
     const updated = { ...activeWorkout };
     updated.exercises[exIndex].sets[setIndex][field] = value;
     setActiveWorkout(updated);
@@ -296,11 +301,13 @@ export default function App() {
         const histBest = hist.best1RM || 0;
         if (this1RM > histBest) {
           setExercisesDB(prev => prev.map(e => e.id === exId ? { ...e, defaultSets: [{ kg, reps }, ...(e.defaultSets || []).slice(1)] } : e));
+          // subtle haptic for PR
+          if (navigator.vibrate) navigator.vibrate(20);
         }
     }
-  };
+  }, [activeWorkout, workouts]);
 
-  const handleToggleSet = (exIndex, setIndex) => {
+  const handleToggleSet = useCallback((exIndex, setIndex) => {
     const updated = { ...activeWorkout };
     const newVal = !updated.exercises[exIndex].sets[setIndex].completed;
     updated.exercises[exIndex].sets[setIndex].completed = newVal;
@@ -320,82 +327,98 @@ export default function App() {
         }
       }
     }
-  };
+  }, [activeWorkout, workouts]);
 
-  const handleAddSet = (exIndex) => {
+  const handleAddSet = useCallback((exIndex) => {
     const updated = { ...activeWorkout };
     const lastSet = updated.exercises[exIndex].sets.at(-1) || { kg: 0, reps: 0 };
     updated.exercises[exIndex].sets.push({ ...lastSet, completed: false });
     setActiveWorkout(updated);
-  };
+  }, [activeWorkout]);
 
-  const handleAddWarmupSet = (exIndex) => {
+  const handleAddWarmupSet = useCallback((exIndex) => {
     const updated = { ...activeWorkout };
     const firstSet = updated.exercises[exIndex].sets[0] || { kg: 0, reps: 0 };
     // insert before first set so it appears as #0
     updated.exercises[exIndex].sets = [{ ...firstSet, completed: false, warmup: true }, ...updated.exercises[exIndex].sets];
     setActiveWorkout(updated);
-  };
+  }, [activeWorkout]);
 
-  const handleDeleteSet = (exIndex, setIndex) => {
+  const handleDeleteSet = useCallback((exIndex, setIndex) => {
     const updated = { ...activeWorkout };
     if (updated.exercises[exIndex] && updated.exercises[exIndex].sets[setIndex]) {
       updated.exercises[exIndex].sets.splice(setIndex, 1);
       setActiveWorkout(updated);
     }
-  };
+  }, [activeWorkout]);
 
-  const handleToggleWarmup = (exIndex, setIndex) => {
+  const handleToggleWarmup = useCallback((exIndex, setIndex) => {
     const updated = { ...activeWorkout };
     const set = updated.exercises[exIndex].sets[setIndex];
     if (set) {
       set.warmup = !set.warmup;
       setActiveWorkout(updated);
     }
-  };
+  }, [activeWorkout]);
 
-  const handleAddNote = () => {
+  const handleAddNote = useCallback(() => {
     const note = prompt("Workout Note:", activeWorkout.note);
     if (note !== null) setActiveWorkout({ ...activeWorkout, note });
-  };
+  }, [activeWorkout]);
 
-  const handleAddExerciseNote = (exIndex, note) => {
+  const handleAddExerciseNote = useCallback((exIndex, note) => {
     const updated = { ...activeWorkout };
     updated.exercises[exIndex].exerciseNote = note;
     setActiveWorkout(updated);
-  };
+  }, [activeWorkout]);
 
-  const handleDeleteExercise = (exIndex) => {
+  const handleDeleteExercise = useCallback((exIndex) => {
     if (confirm('Delete this exercise?')) {
       const updated = { ...activeWorkout };
       updated.exercises.splice(exIndex, 1);
       setActiveWorkout(updated);
     }
-  };
+  }, [activeWorkout]);
 
-  const handleReorderExercises = (newOrder) => {
+  const handleReorderExercises = useCallback((newOrder) => {
     const updated = { ...activeWorkout };
     updated.exercises = newOrder;
     setActiveWorkout(updated);
-  };
+  }, [activeWorkout]);
 
-  const handleReplaceExercise = (exIndex, newExercise) => {
+  const handleReplaceExercise = useCallback((exIndex, newExercise) => {
+    // Get last completed sets for auto-memory
+    const lastSets = getLastCompletedSets(newExercise.id, workouts);
+    const suggested = suggestNextWeight(lastSets);
+    
+    // Build sets with auto-memory
+    let sets;
+    if (lastSets.length > 0) {
+      sets = lastSets.map(s => ({ kg: Number(s.kg) || 0, reps: Number(s.reps) || 0, completed: false }));
+      if (suggested) {
+        sets = [...sets, { kg: suggested.suggestedKg, reps: suggested.suggestedReps, completed: false }];
+      }
+    } else {
+      sets = newExercise.defaultSets ? [...newExercise.defaultSets] : [{ kg: 0, reps: 0 }];
+      sets = sets.map(s => ({ ...s, completed: false }));
+    }
+    
     const updated = { ...activeWorkout };
     const exData = {
       exerciseId: newExercise.id,
       name: newExercise.name,
       category: newExercise.category,
-      sets: newExercise.defaultSets ? [...newExercise.defaultSets] : [{ kg: 0, reps: 0 }],
+      sets: sets,
       exerciseNote: ''
     };
-    updated.exercises[exIndex] = { ...exData, sets: exData.sets.map(s => ({ ...s, completed: false })) };
+    updated.exercises[exIndex] = exData;
     setActiveWorkout(updated);
-    setShowExerciseSelector(false);
-  };
+    closeExerciseSelector();
+  }, [activeWorkout, workouts, closeExerciseSelector]);
 
   // --- ACTIONS: TEMPLATES ---
 
-  const handleSaveTemplate = () => {
+  const handleSaveTemplate = useCallback(() => {
     if (!editingTemplate.name.trim()) return;
     if (editingTemplate.id) {
       setTemplates(templates.map(t => t.id === editingTemplate.id ? editingTemplate : t));
@@ -403,36 +426,52 @@ export default function App() {
       setTemplates([...templates, { ...editingTemplate, id: Date.now() }]);
     }
     setEditingTemplate(null);
-  };
+  }, [editingTemplate, templates]);
 
   // --- SELECTOR LOGIC ---
 
-  const handleSelectExercise = (exercise) => {
+  const handleSelectExercise = useCallback((exercise) => {
+    // Get last completed sets for auto-memory
+    const lastSets = getLastCompletedSets(exercise.id, workouts);
+    const suggested = suggestNextWeight(lastSets);
+    
+    // Build sets with auto-memory
+    let sets;
+    if (lastSets.length > 0) {
+      sets = lastSets.map(s => ({ kg: Number(s.kg) || 0, reps: Number(s.reps) || 0, completed: false }));
+      if (suggested) {
+        sets = [...sets, { kg: suggested.suggestedKg, reps: suggested.suggestedReps, completed: false }];
+      }
+    } else {
+      sets = exercise.defaultSets ? [...exercise.defaultSets] : [{ kg: 0, reps: 0 }];
+      sets = sets.map(s => ({ ...s, completed: false }));
+    }
+    
     const exData = {
       exerciseId: exercise.id,
       name: exercise.name,
       category: exercise.category,
-      sets: exercise.defaultSets ? [...exercise.defaultSets] : [{ kg: 0, reps: 0 }]
+      sets: sets
     };
 
     if (selectorMode === 'template') {
       setEditingTemplate({
         ...editingTemplate,
-        exercises: [...(editingTemplate.exercises || []), exData]
+        exercises: [...(editingTemplate.exercises || []), { ...exData, sets: exData.sets.map(s => ({ kg: s.kg, reps: s.reps })) }]
       });
     } else if (selectorMode === 'activeWorkout') {
-      const newEx = { ...exData, sets: (exData.sets || [{ kg: 0, reps: 0 }]).map(s => ({ ...s, completed: false })) };
+      const newEx = { ...exData };
       setActiveWorkout(prev => ({
         ...prev,
         exercises: [...(prev?.exercises || []), newEx]
       }));
     }
-    setShowExerciseSelector(false);
-  };
+    closeExerciseSelector();
+  }, [selectorMode, editingTemplate, workouts, closeExerciseSelector]);
 
   // --- DATA MANAGEMENT ---
 
-  const handleExport = () => {
+  const handleExport = useCallback(() => {
     let dataToExport = {};
 
     // Filter workouts by period
@@ -506,10 +545,10 @@ export default function App() {
     link.href = url;
     link.download = `workout_export_${exportType}_${new Date().toISOString().split('T')[0]}.json`;
     link.click();
-    setShowExportModal(false);
-  };
+    closeExportModal();
+  }, [workouts, templates, exercisesDB, weeklyGoal, exportType, exportPeriod, exportStartDate, exportEndDate, exportExerciseId, closeExportModal]);
 
-  const handleImport = (e) => {
+  const handleImport = useCallback((e) => {
     const file = e.target.files[0];
     if (!file) return;
 
@@ -536,8 +575,8 @@ export default function App() {
 
         if (data.exercisesDB) {
           setExercisesDB(prev => {
-            const existingNames = new Set(prev.map(e => e.name));
-            const newOnes = data.exercisesDB.filter(e => !existingNames.has(e.name));
+            const existingIds = new Set(prev.map(e => e.id));
+            const newOnes = data.exercisesDB.filter(e => !existingIds.has(e.id));
             return [...prev, ...newOnes];
           });
         }
@@ -553,18 +592,18 @@ export default function App() {
     };
 
     reader.readAsText(file);
-  };
+  }, []);
 
 
   // --- NAVIGATION HANDLER ---
-  const handleTabChange = (tabId) => {
+  const handleTabChange = useCallback((tabId) => {
     setActiveTab(tabId);
     if (tabId === 'home') setView('home');
     else if (tabId === 'history') setView('history');
     else if (tabId === 'exercises') setView('exercises');
     else if (tabId === 'profile') setView('profile');
     else if (tabId === 'settings') setView('settings');
-  };
+  }, []);
 
   // --- RENDER ---
   return (
@@ -574,23 +613,43 @@ export default function App() {
 
           {/* VIEW ROUTING */}
           {view === 'home' && (
-            <HomeView
-              workouts={workouts}
-              weeklyGoal={weeklyGoal}
-              onStartWorkout={() => setView('selectTemplate')}
-              onManageTemplates={() => { setEditingTemplate({ name: '', exercises: [] }); setView('templates'); }}
-              onOpenCalendar={() => setShowCalendar(true)}
-              onViewHistory={() => { setActiveTab('history'); setView('history'); }}
-              onViewWorkoutDetail={(date) => { setSelectedDate(date); setView('workoutDetail'); }}
-              onOpenMonthlyProgress={(offset) => { setMonthOffset(offset); setView('monthlyProgress'); }}
-            />
+            firstLoad ? (
+              <div className="min-h-screen bg-black text-white pb-28 px-4 py-6">
+                <div className="h-36 bg-slate-800/50 rounded-2xl mb-4 animate-pulse" />
+                <div className="h-14 bg-slate-800/50 rounded-xl mb-3 animate-pulse" />
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div className="h-20 bg-slate-800/40 rounded-xl animate-pulse" />
+                  <div className="h-20 bg-slate-800/40 rounded-xl animate-pulse" />
+                </div>
+                <div className="space-y-3 mt-4">
+                  <div className="h-20 bg-slate-800/40 rounded-xl animate-pulse" />
+                  <div className="h-20 bg-slate-800/40 rounded-xl animate-pulse" />
+                  <div className="h-20 bg-slate-800/40 rounded-xl animate-pulse" />
+                </div>
+              </div>
+            ) : (
+              <HomeView
+                workouts={workouts}
+                weeklyGoal={weeklyGoal}
+                onStartWorkout={() => setView('selectTemplate')}
+                onManageTemplates={() => { setEditingTemplate({ name: '', exercises: [] }); setView('templates'); }}
+                onOpenCalendar={openCalendar}
+                onViewHistory={() => { setActiveTab('history'); setView('history'); }}
+                onViewWorkoutDetail={(date) => { setSelectedDate(date); setView('workoutDetail'); }}
+                onOpenMonthlyProgress={(offset) => { setMonthOffset(offset); setView('monthlyProgress'); }}
+              />
+            )
           )}
 
           {view === 'history' && (
             <HistoryView
               workouts={workouts}
-                onViewWorkoutDetail={(date) => { setSelectedDate(date); setView('workoutDetail'); }}
-                onDeleteWorkout={(id) => { if (confirm('Delete this workout?')) setWorkouts(workouts.filter(w => w.id !== id)); }}
+              onViewWorkoutDetail={(date) => { setSelectedDate(date); setView('workoutDetail'); }}
+              onDeleteWorkout={(id) => { if (confirm('Delete this workout?')) setWorkouts(workouts.filter(w => w.id !== id)); }}
+              onEditWorkout={(updatedWorkout) => { setWorkouts(workouts.map(w => w.id === updatedWorkout.id ? updatedWorkout : w)); }}
+              exercisesDB={exercisesDB}
+              filter={historyFilter}
+              onFilterChange={setHistoryFilter}
             />
           )}
 
@@ -664,8 +723,9 @@ export default function App() {
           )}
 
           {view === 'activeWorkout' && activeWorkout && (
-            <ActiveWorkoutView
-              activeWorkout={activeWorkout}
+            <div data-ui-anim className={`ui-slide-up-anim ${pendingSummary ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+              <ActiveWorkoutView
+                activeWorkout={activeWorkout}
               workouts={workouts}
               workoutTimer={workoutTimer}
               exercisesDB={exercisesDB}
@@ -678,13 +738,14 @@ export default function App() {
               onAddExerciseNote={handleAddExerciseNote}
               onDeleteExercise={handleDeleteExercise}
               onReorderExercises={handleReorderExercises}
-              onReplaceExercise={(exIndex) => { setSelectedExerciseIndex(exIndex); setSelectorMode('activeWorkout'); setShowExerciseSelector(true); }}
-              onAddExercise={() => { setSelectedExerciseIndex(null); setSelectorMode('activeWorkout'); setShowExerciseSelector(true); }}
+              onReplaceExercise={(exIndex) => { setSelectedExerciseIndex(exIndex); setSelectorMode('activeWorkout'); openExerciseSelector(); }}
+              onAddExercise={() => { setSelectedExerciseIndex(null); setSelectorMode('activeWorkout'); openExerciseSelector(); }}
               onMinimize={handleMinimizeWorkout}
               onDeleteSet={handleDeleteSet}
               onToggleWarmup={handleToggleWarmup}
               onAddWarmupSet={handleAddWarmupSet}
-            />
+              />
+            </div>
           )}
 
           {view === 'templates' && (
@@ -697,11 +758,123 @@ export default function App() {
               onDelete={(id) => setTemplates(templates.filter(t => t.id !== id))}
               onChange={setEditingTemplate}
               onSave={handleSaveTemplate}
-              onAddExercise={() => { setSelectedExerciseIndex(null); setSelectorMode('template'); setShowExerciseSelector(true); }}
+              onAddExercise={() => { setSelectedExerciseIndex(null); setSelectorMode('template'); openExerciseSelector(); }}
             />
           )}
 
           {view === 'profile' && <ProfileView workouts={workouts} exercisesDB={exercisesDB} userWeight={userWeight} onUserWeightChange={setUserWeight} />}
+
+          {view === 'exportData' && (
+            <ExportDataView
+              onBack={() => setView('settings')}
+              onExport={(data) => {
+                // Determine workouts to export
+                let workoutsToExport = [];
+                let exercisesToExport = exercisesDB;
+                let templatesToExport = templates;
+
+                if (data.exportMode === 'all') {
+                  // Export everything
+                  workoutsToExport = workouts;
+                } else {
+                  // Export period
+                  workoutsToExport = workouts.filter(w => {
+                    const wDate = new Date(w.date);
+                    const from = new Date(data.fromDate);
+                    const to = new Date(data.toDate);
+                    to.setHours(23, 59, 59, 999);
+                    return wDate >= from && wDate <= to;
+                  });
+                  
+                  // Filter exercises to only those used in filtered workouts
+                  const usedExerciseIds = new Set();
+                  workoutsToExport.forEach(w => {
+                    w.exercises?.forEach(ex => {
+                      if (ex.exerciseId) usedExerciseIds.add(ex.exerciseId);
+                    });
+                  });
+                  exercisesToExport = exercisesDB.filter(e => usedExerciseIds.has(e.id));
+                  templatesToExport = [];
+                }
+
+                let content = '';
+                const filename = data.exportMode === 'all' 
+                  ? `backup_${new Date().toISOString().split('T')[0]}`
+                  : `workouts_${data.fromDate}_to_${data.toDate}`;
+
+                switch(data.format) {
+                  case 'txt':
+                    if (data.exportMode === 'all') {
+                      content = `BACKUP PEŁNY\n`;
+                      content += `Data eksportu: ${new Date().toLocaleString('pl-PL')}\n`;
+                      content += `Treningi: ${workoutsToExport.length}\n`;
+                      content += `Ćwiczenia: ${exercisesToExport.length}\n`;
+                      content += `Szablony: ${templatesToExport.length}\n\n`;
+                      content += `${'─'.repeat(70)}\n\n`;
+                      
+                      content += `SZABLONY TRENINGÓW:\n`;
+                      templatesToExport.forEach((t, idx) => {
+                        content += `${idx + 1}. ${t.name}\n`;
+                        t.exercises?.forEach(ex => {
+                          content += `   • ${ex.name} - ${ex.sets?.length || 0} serii\n`;
+                        });
+                        content += '\n';
+                      });
+                      
+                      content += `\n${'─'.repeat(70)}\n\n`;
+                      content += `ĆWICZENIA:\n`;
+                      exercisesToExport.forEach((e, idx) => {
+                        content += `${idx + 1}. ${e.name} (${e.category})\n`;
+                      });
+                    } else {
+                      content = `EXPORT TRENINGÓW\n`;
+                      content += `Zakres: ${data.fromDate} do ${data.toDate}\n`;
+                      content += `Data eksportu: ${new Date().toLocaleString('pl-PL')}\n`;
+                      content += `Ilość treningów: ${workoutsToExport.length}\n\n`;
+                      content += `${'─'.repeat(70)}\n\n`;
+                    }
+                    
+                    workoutsToExport.forEach((w, idx) => {
+                      content += `${idx + 1}. ${w.name} (${w.date})\n`;
+                      content += `   Czas: ${w.duration || 0} min\n`;
+                      if (w.note) content += `   Notatka: ${w.note}\n`;
+                      if (w.exercises?.length > 0) {
+                        content += `   Ćwiczenia:\n`;
+                        w.exercises.forEach(ex => {
+                          content += `     • ${ex.name}\n`;
+                          const doneSets = (ex.sets || []).filter(s => s.completed);
+                          doneSets.forEach(s => {
+                            content += `       - ${s.kg} kg × ${s.reps} rep${s.reps !== '1' ? 's' : ''}\n`;
+                          });
+                        });
+                      }
+                      content += '\n';
+                    });
+                    break;
+                  case 'json':
+                    const exportData = {
+                      workouts: workoutsToExport,
+                      exercisesDB: exercisesToExport
+                    };
+                    if (data.exportMode === 'all') {
+                      exportData.templates = templatesToExport;
+                    }
+                    content = JSON.stringify(exportData, null, 2);
+                    break;
+                }
+
+                const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                const ext = data.format === 'json' ? 'json' : 'txt';
+                link.download = `${filename}.${ext}`;
+                link.click();
+                URL.revokeObjectURL(url);
+                setView('settings');
+              }}
+            />
+          )}
 
           {view === 'settings' && (
             <SettingsView
@@ -711,7 +884,7 @@ export default function App() {
               onImport={handleImport}
               onReset={() => { if (confirm('Reset all data?')) { localStorage.clear(); location.reload(); } }}
               showExportModal={showExportModal}
-              setShowExportModal={setShowExportModal}
+              setShowExportModal={closeExportModal}
               exportType={exportType}
               setExportType={setExportType}
               exportPeriod={exportPeriod}
@@ -723,6 +896,7 @@ export default function App() {
               exportExerciseId={exportExerciseId}
               setExportExerciseId={setExportExerciseId}
               exercisesDB={exercisesDB}
+              onOpenExportData={() => setView('exportData')}
             />
           )}
 
@@ -759,7 +933,7 @@ export default function App() {
       {showCalendar && (
         <CalendarModal
           workouts={workouts}
-          onClose={() => setShowCalendar(false)}
+          onClose={closeCalendar}
           onSelectDate={(d) => { setSelectedDate(d); setView('workoutDetail'); }}
         />
       )}
@@ -767,7 +941,7 @@ export default function App() {
       {showExerciseSelector && (
         <ExerciseSelectorModal
           exercisesDB={exercisesDB}
-          onClose={() => setShowExerciseSelector(false)}
+          onClose={closeExerciseSelector}
           onSelectExercise={(ex) => {
             if (selectorMode === 'activeWorkout' && selectedExerciseIndex !== null) {
               handleReplaceExercise(selectedExerciseIndex, ex);
@@ -778,118 +952,209 @@ export default function App() {
           }}
           onCreateNew={() => {
             setEditingExercise({ name: '', category: 'Push', muscles: [], defaultSets: [{ kg: 0, reps: 0 }], usesBodyweight: false });
-            setShowExerciseSelector(false);
+            closeExerciseSelector();
             setView('createExercise');
           }}
         />
       )}
       {pendingSummary && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-          <div className="bg-zinc-900 text-white p-6 rounded-xl w-[95%] max-w-2xl border border-zinc-700">
-            <div className="flex justify-between items-start">
-              <h3 className="text-lg font-bold">Workout Summary</h3>
-              <button onClick={() => setPendingSummary(null)} className="text-zinc-400">✕</button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div
+            data-ui-anim
+            className={`bg-gradient-to-br from-slate-900/95 to-black/95 text-white p-8 rounded-2xl w-[95%] max-w-md border border-slate-700/50 ui-modal-scale ${summaryVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}
+          >
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h2 className="text-3xl font-black bg-gradient-to-r from-blue-400 to-blue-300 bg-clip-text text-transparent">
+                  {pendingSummary.cleanData.totalVolume.toLocaleString()}
+                </h2>
+                <p className="text-xs text-slate-400 mt-1 font-semibold tracking-widest">TOTAL VOLUME</p>
+              </div>
+              <button onClick={() => setPendingSummary(null)} className="text-slate-500 hover:text-slate-300 transition">
+                <span className="text-xl">✕</span>
+              </button>
             </div>
 
-            <div className="grid grid-cols-3 gap-4 mt-4 text-center">
-              <div>
-                <div className="text-xs text-zinc-400">Duration</div>
-                <div className="text-2xl font-bold">{pendingSummary.metrics.duration}m</div>
+            {/* Main stats row */}
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="bg-slate-800/40 border border-slate-700/50 rounded-lg p-4">
+                <p className="text-slate-400 text-xs font-semibold tracking-widest mb-2">SETS COMPLETED</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-black text-white">{pendingSummary.cleanData.completedSets}</span>
+                  {pendingSummary.comparison && (
+                    <span className="text-xl" title={`${pendingSummary.comparison.prevVolume ? 'vs ' + Math.round(pendingSummary.comparison.prevVolume / 1000) + 'k prev' : ''}`}>
+                      {pendingSummary.comparison.trend}
+                    </span>
+                  )}
+                </div>
               </div>
-              <div>
-                <div className="text-xs text-zinc-400">Volume</div>
-                <div className="text-2xl font-bold">{pendingSummary.metrics.volume}</div>
-              </div>
-              <div>
-                <div className="text-xs text-zinc-400">Sets</div>
-                <div className="text-2xl font-bold">{pendingSummary.metrics.setsDone}</div>
+              
+              <div className="bg-slate-800/40 border border-slate-700/50 rounded-lg p-4">
+                <p className="text-slate-400 text-xs font-semibold tracking-widest mb-2">DURATION</p>
+                <p className="text-2xl font-black text-white">{pendingSummary.metrics.duration}m</p>
               </div>
             </div>
 
-            <div className="mt-6 flex gap-6">
-              <div className="flex-1">
-                <div className="text-sm text-zinc-300 mb-2">Muscle distribution</div>
-                <div className="flex justify-center">
-                  {/* Radar chart */}
-                  <svg width="220" height="220" viewBox="0 0 220 220">
-                    <g transform="translate(110,110)">
-                      {/* axes and rings */}
-                      {[3, 2, 1].map((r, i) => (
-                        <circle key={i} r={(i + 1) * 30} fill="none" stroke="#2b2b2b" strokeWidth="1" />
-                      ))}
-                      {
-                        (() => {
-                          const groups = ['Back', 'Legs', 'Chest', 'Arms', 'Core', 'Shoulders'];
-                          const totals = groups.map(g => (pendingSummary.metrics.muscleTotals && pendingSummary.metrics.muscleTotals[g]) ? pendingSummary.metrics.muscleTotals[g] : 0);
-                          const max = Math.max(...totals, 1);
-                          const points = totals.map((t, i) => {
+            {/* Feedback text */}
+            <div className="bg-blue-950/30 border border-blue-500/20 rounded-lg p-4 mb-6 text-center">
+              <p className="text-lg font-bold text-blue-300">{pendingSummary.feedback}</p>
+            </div>
+
+            {/* Radar chart - only if data exists */}
+            {(() => {
+              const radarData = pendingSummary.cleanData.radarData || {};
+              const hasData = Object.values(radarData).some(v => v > 0);
+              if (!hasData) return null;
+              
+              return (
+                <div className="mb-6">
+                  <p className="text-xs text-slate-400 font-semibold tracking-widest mb-3">MUSCLE DISTRIBUTION</p>
+                  <div className="flex justify-center">
+                    <svg width="200" height="200" viewBox="0 0 200 200" className="drop-shadow-lg">
+                      <defs>
+                        <filter id="radarGlow">
+                          <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+                          <feMerge>
+                            <feMergeNode in="coloredBlur"/>
+                            <feMergeNode in="SourceGraphic"/>
+                          </feMerge>
+                        </filter>
+                      </defs>
+                      <g transform="translate(100,100)">
+                        {/* Concentric circles */}
+                        {[1, 2, 3].map((r, i) => (
+                          <circle key={i} r={i * 25} fill="none" stroke="#334155" strokeWidth="0.5" opacity="0.5" />
+                        ))}
+                        
+                        {/* Axes and labels */}
+                        {(() => {
+                          const groups = ['Chest', 'Back', 'Legs', 'Shoulders', 'Arms', 'Core'];
+                          const values = groups.map(g => radarData[g] || 0);
+                          
+                          // Already normalized 0-1, just scale to radius
+                          const points = values.map((v, i) => {
                             const angle = (i / groups.length) * Math.PI * 2 - Math.PI / 2;
-                            const radius = (t / max) * 90;
+                            const radius = v * 75;
                             return `${Math.cos(angle) * radius},${Math.sin(angle) * radius}`;
                           }).join(' ');
+                          
                           return (
                             <>
-                              {/* axes lines and labels (no numeric ticks) */}
+                              {/* Axes */}
                               {groups.map((g, i) => {
                                 const angle = (i / groups.length) * Math.PI * 2 - Math.PI / 2;
-                                const x = Math.cos(angle) * 100; const y = Math.sin(angle) * 100;
+                                const x = Math.cos(angle) * 80;
+                                const y = Math.sin(angle) * 80;
                                 return (
                                   <g key={g}>
-                                    <line x1={0} y1={0} x2={x} y2={y} stroke="#2b2b2b" strokeWidth="1" />
-                                    <text x={x * 1.15} y={y * 1.15} fontSize="11" fill="#cfcfcf" textAnchor={Math.abs(x) > 10 ? (x > 0 ? 'start' : 'end') : 'middle'}>{g}</text>
+                                    <line x1={0} y1={0} x2={x} y2={y} stroke="#475569" strokeWidth="0.5" opacity="0.7" />
+                                    <text 
+                                      x={x * 1.25} 
+                                      y={y * 1.25} 
+                                      fontSize="10" 
+                                      fill="#cbd5e1" 
+                                      fontWeight="600"
+                                      textAnchor={Math.abs(x) > 10 ? (x > 0 ? 'start' : 'end') : 'middle'}
+                                      dominantBaseline="middle"
+                                    >
+                                      {g}
+                                    </text>
                                   </g>
                                 );
                               })}
-                              <polygon points={points} fill="#fb718590" stroke="#fb7185" strokeWidth="1" />
+                              
+                              {/* Data polygon with animation */}
+                              <polygon 
+                                points={points} 
+                                fill="#3b82f6" 
+                                fillOpacity="0.2" 
+                                stroke="#3b82f6" 
+                                strokeWidth="1.5"
+                                filter="url(#radarGlow)"
+                                className="animate-pulse"
+                              />
                             </>
                           );
-                        })()
-                      }
-                    </g>
-                  </svg>
+                        })()}
+                      </g>
+                    </svg>
+                  </div>
                 </div>
+              );
+            })()}
+
+            {/* Tag Selection */}
+            <div className="mb-6">
+              <p className="text-xs text-slate-400 font-semibold tracking-widest mb-2">OPTIONAL TAGS</p>
+              <div className="flex flex-wrap gap-2">
+                {['sleep bad', 'cut', 'bulk', 'stress'].map(tag => (
+                  <button
+                    key={tag}
+                    onClick={() => setSelectedTags(prev => 
+                      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+                    )}
+                    className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${
+                      selectedTags.includes(tag)
+                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+                        : 'bg-slate-800/50 border border-slate-700/50 text-slate-400 hover:text-slate-300'
+                    }`}
+                  >
+                    {tag}
+                  </button>
+                ))}
               </div>
+            </div>
 
-              <div className="w-1/3">
-                <div className="text-sm text-zinc-300">Changes</div>
-                <div className="mt-2 text-sm text-zinc-200 bg-zinc-800 p-3 rounded h-40 overflow-auto">
-                  {pendingSummary.diff.changed ? (
-                    <ul className="list-disc list-inside text-sm">
-                      {pendingSummary.diff.reasons.map((r, i) => <li key={i}>{r}</li>)}
-                    </ul>
-                  ) : (
-                    <div className="text-zinc-400">No changes to template detected</div>
-                  )}
-                </div>
-
-                <div className="mt-4 flex flex-col gap-2">
-                  <button onClick={() => setPendingSummary(null)} className="w-full px-3 py-2 rounded bg-zinc-700">Cancel</button>
-                  <button onClick={() => {
-                    // Keep original template: save workout only
-                    setWorkouts([pendingSummary.completedWorkout, ...workouts]);
-                    setActiveWorkout(null);
-                    setWorkoutTimer(0);
-                    setPendingSummary(null);
-                    setView('home');
-                  }} className="w-full px-3 py-2 rounded bg-rose-500">Keep Original Template</button>
-                  <button onClick={() => {
-                    // Update template structure
+            {/* Action buttons */}
+            <div className="flex flex-col gap-2">
+              <button 
+                onClick={() => {
+                  const workoutWithTags = { ...pendingSummary.completedWorkout, tags: selectedTags };
+                  setWorkouts([workoutWithTags, ...workouts]);
+                  setActiveWorkout(null);
+                  setWorkoutTimer(0);
+                  setPendingSummary(null);
+                  setSelectedTags([]);
+                  setView('home');
+                }}
+                className="w-full px-4 py-3 rounded-lg bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold text-sm transition-all duration-200 ease-out ui-press shadow-lg shadow-blue-600/30"
+              >
+                Save Workout
+              </button>
+              
+              {pendingSummary.templateId && (
+                <button 
+                  onClick={() => {
                     if (pendingSummary.templateId) {
                       const ti = templates.findIndex(t => t.id === pendingSummary.templateId);
                       if (ti !== -1) {
                         const newTemplate = { ...templates[ti] };
                         newTemplate.exercises = (pendingSummary.completedWorkout.exercises || []).map(ex => ({ name: ex.name, category: ex.category, sets: ex.sets.map(s => ({ kg: 0, reps: 0 })) }));
-                        const updated = [...templates]; updated[ti] = newTemplate; setTemplates(updated);
+                        const updated = [...templates]; 
+                        updated[ti] = newTemplate; 
+                        setTemplates(updated);
                       }
                     }
-                    setWorkouts([pendingSummary.completedWorkout, ...workouts]);
+                    const workoutWithTags = { ...pendingSummary.completedWorkout, tags: selectedTags };
+                    setWorkouts([workoutWithTags, ...workouts]);
                     setActiveWorkout(null);
                     setWorkoutTimer(0);
                     setPendingSummary(null);
+                    setSelectedTags([]);
                     setView('home');
-                  }} className="w-full px-3 py-2 rounded bg-emerald-500">Update Template</button>
-                </div>
-              </div>
+                  }}
+                  className="w-full px-4 py-3 rounded-lg bg-slate-800/60 hover:bg-slate-700/60 border border-slate-600/50 text-slate-300 hover:text-white font-semibold text-sm transition-all"
+                >
+                  Save & Update Template
+                </button>
+              )}
+              
+              <button 
+                onClick={() => setPendingSummary(null)}
+                className="w-full px-4 py-2 rounded-lg bg-slate-800/40 hover:bg-slate-700/40 text-slate-400 hover:text-slate-300 font-semibold text-sm transition-all"
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>

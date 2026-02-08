@@ -1,50 +1,46 @@
 import React from 'react';
-import { Plus, Edit2, Trash2 } from 'lucide-react';
+import { Plus } from 'lucide-react';
+import { ExerciseCard } from '../components/ExerciseCard';
 
 export const ExercisesView = ({ exercisesDB, onAddExercise, onEditExercise, onDeleteExercise, onViewDetail }) => {
   return (
-    <div className="min-h-screen bg-zinc-900 text-white pb-24 flex flex-col">
-      <div className="bg-zinc-800 p-4 shrink-0 shadow-md z-10">
-        <h1 className="text-2xl font-bold">Exercises</h1>
+    <div className="min-h-screen bg-black text-white pb-24 flex flex-col">
+      {/* Header */}
+      <div className="bg-gradient-to-b from-black to-black/80 border-b border-white/10 p-4 shrink-0 shadow-2xl sticky top-0 z-20">
+        <h1 className="text-4xl font-black">EXERCISES</h1>
+        <p className="text-xs text-slate-400 mt-2 font-semibold tracking-widest">YOUR EXERCISE LIBRARY</p>
       </div>
-      <div className="p-4 grow overflow-y-auto">
+
+      <div className="p-4 grow overflow-y-auto flex flex-col">
+        {/* Add Exercise Button */}
         <button
           onClick={onAddExercise}
-          className="w-full bg-rose-500 hover:bg-rose-600 transition text-white rounded-xl p-4 mb-4 font-semibold flex items-center justify-center gap-2 shadow-lg shadow-rose-900/20"
+          className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 transition text-white rounded-xl p-4 mb-5 font-bold flex items-center justify-center gap-2 shadow-lg shadow-blue-600/50 ui-press"
         >
           <Plus size={20} /> Add Exercise
         </button>
-        <div className="space-y-3">
-          {exercisesDB.map(exercise => (
-            <div
-              key={exercise.id}
-              onClick={() => onViewDetail(exercise.id)}
-              className="bg-zinc-800 rounded-xl p-4 flex justify-between items-center cursor-pointer border border-zinc-800 hover:border-zinc-600 transition"
-            >
-              <div>
-                <h3 className="font-semibold text-lg text-white">{exercise.name}</h3>
-                <p className="text-xs text-zinc-400 uppercase font-bold tracking-wide mt-1">
-                  {exercise.category || '—'} <span className="text-zinc-600">|</span> {exercise.muscles?.join(', ') || '—'}
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={(e) => { e.stopPropagation(); onEditExercise(exercise); }}
-                  className="p-2 bg-zinc-700/50 hover:bg-zinc-700 rounded-lg text-blue-400 transition"
-                >
-                  <Edit2 size={18} />
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); onDeleteExercise(exercise.id); }}
-                  className="p-2 bg-zinc-700/50 hover:bg-zinc-700 rounded-lg text-red-400 transition"
-                >
-                  <Trash2 size={18} />
-                </button>
-              </div>
+
+        {/* Exercise List */}
+        {exercisesDB.length === 0 ? (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <p className="text-slate-400 text-sm font-semibold">No exercises yet</p>
+              <p className="text-slate-600 text-xs mt-2">Create your first exercise to get started</p>
             </div>
-          ))}
-          {exercisesDB.length === 0 && <p className="text-zinc-500 text-center mt-6">Library is empty.</p>}
-        </div>
+          </div>
+        ) : (
+          <div className="space-y-3 flex-1">
+            {exercisesDB.map(exercise => (
+              <ExerciseCard
+                key={exercise.id}
+                exercise={exercise}
+                onViewDetail={() => onViewDetail(exercise.id)}
+                onEditExercise={onEditExercise}
+                onDeleteExercise={onDeleteExercise}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

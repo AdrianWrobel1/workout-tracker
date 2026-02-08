@@ -31,3 +31,54 @@ body {
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 20px);
 }
+
+:root {
+  --anim-duration: 200ms;
+  --anim-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Global animation helpers (non-bouncy, premium feel) */
+[data-ui-anim] {
+  transition: all var(--anim-duration) var(--anim-ease);
+}
+
+/* View entry: slight translateY + fade-in (mount-only via animation)
+   Use class `ui-slide-up-anim` on wrappers that should animate on mount. */
+@keyframes ui-slide-up {
+  from { transform: translateY(8px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+.ui-slide-up-anim {
+  animation: ui-slide-up var(--anim-duration) var(--anim-ease) both;
+}
+
+/* Modal / sheet: subtle fade + scale (0.98 -> 1) */
+@keyframes ui-fade-scale {
+  from { opacity: 0; transform: scale(0.98); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.ui-fade-scale-anim {
+  animation: ui-fade-scale calc(var(--anim-duration) * 1) var(--anim-ease) both;
+}
+
+/* Card mount: very subtle fade (use on cards for initial mount) */
+@keyframes ui-card-mount {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.ui-card-mount-anim {
+  animation: ui-card-mount calc(var(--anim-duration) * 0.9) var(--anim-ease) both;
+}
+
+/* Modal scale+fade helper (keeps old name for consistency) */
+.ui-modal-scale {
+  transition: transform var(--anim-duration) var(--anim-ease), opacity var(--anim-duration) var(--anim-ease);
+}
+
+/* Button press micro interaction */
+.ui-press { transition: transform 140ms var(--anim-ease); }
+.ui-press:active { transform: scale(0.97); }
+
+/* Checkbox micro animation: scale + color transition when checked */
+.ui-checkbox { transition: transform 140ms var(--anim-ease), background-color var(--anim-duration) var(--anim-ease), border-color var(--anim-duration) var(--anim-ease); }
+.ui-checkbox:active { transform: scale(0.98); }

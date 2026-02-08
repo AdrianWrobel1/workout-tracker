@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { ChevronLeft, Trophy } from 'lucide-react';
 import { SimpleLineChart } from '../components/SimpleLineChart';
-import { getExerciseHistory, getExerciseRecords } from '../domain/exercises';
+import { getExerciseHistory, getExerciseRecords, getLastSet, getExerciseTrend, getChartContext } from '../domain/exercises';
 
 export const ExerciseDetailView = ({ exerciseId, workouts, exercisesDB, onBack, onOpenWorkout, userWeight }) => {
   const [activeTab, setActiveTab] = useState('history');
@@ -58,42 +58,87 @@ export const ExerciseDetailView = ({ exerciseId, workouts, exercisesDB, onBack, 
   if (!exerciseDef) return null;
 
   return (
-    <div className="min-h-screen bg-zinc-900 text-white flex flex-col">
-      <div className="bg-zinc-800 p-4 sticky top-0 z-10 shadow-lg">
+    <div className="min-h-screen bg-black text-white flex flex-col">
+      {/* Header */}
+      <div className="bg-gradient-to-b from-black to-black/80 border-b border-white/10 p-4 sticky top-0 z-20 shadow-2xl">
         <div className="flex items-center gap-4 mb-4">
-          <button onClick={onBack} className="p-2 bg-zinc-700 rounded-full hover:bg-zinc-600 transition">
+          <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-lg transition">
             <ChevronLeft size={20} />
           </button>
-          <div>
-            <h1 className="text-xl font-bold leading-tight">{exerciseDef.name}</h1>
-            <p className="text-xs text-zinc-400">
-              {exerciseDef.category} • {exerciseDef.muscles?.join(', ')}
+          <div className="flex-1 min-w-0">
+            <h1 className="text-2xl font-black leading-tight">{exerciseDef.name}</h1>
+            <p className="text-xs text-slate-400 mt-1 font-semibold">
+              {exerciseDef.category} • {exerciseDef.muscles?.join(', ') || 'General'}
             </p>
           </div>
         </div>
 
-        <div className="flex bg-zinc-900/50 p-1 rounded-xl">
+        {/* Tabs */}
+        <div className="flex gap-1 bg-slate-800/50 p-1 rounded-lg border border-slate-700/50">
           {['History', 'Charts', 'Records'].map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab.toLowerCase())}
-              className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all
-                ${activeTab === tab.toLowerCase() ? 'bg-zinc-700 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}
+              className={`flex-1 py-2 px-3 text-xs font-bold rounded transition-all ${
+                activeTab === tab.toLowerCase()
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/50'
+                  : 'text-slate-400 hover:text-slate-300'
+              }`}
             >
               {tab}
             </button>
           ))}
         </div>
       </div>
+
+      {/* Quick Summary Section */}
+      {(() => {
+        const lastSet = getLastSet(exerciseId, workouts);
+        const trend = getExerciseTrend(exerciseId, workouts);
+        
+        if (!lastSet) return null;
+        
+        return (
+          <div className="px-4 py-4 bg-gradient-to-b from-slate-900/40 to-black/20 border-b border-slate-700/30">
+            <div className="grid grid-cols-3 gap-3">
+              {/* Last */}
+              <div className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-4 text-center">
+                <p className="text-xs text-slate-400 font-semibold mb-1">LAST</p>
+                <p className="text-lg font-black text-white">{lastSet.kg}×{lastSet.reps}</p>
+              </div>
+              
+              {/* Best */}
+              <div className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-4 text-center">
+                <p className="text-xs text-slate-400 font-semibold mb-1">BEST (1RM)</p>
+                <p className="text-lg font-black text-white">{records.best1RM}</p>
+              </div>
+              
+              {/* Trend */}
+              <div className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-4 text-center">
+                <p className="text-xs text-slate-400 font-semibold mb-1">TREND</p>
+                <p className={`text-2xl font-black ${
+                  trend === '↑' ? 'text-green-400' : 
+                  trend === '↓' ? 'text-red-400' : 
+                  'text-slate-300'
+                }`}>{trend}</p>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Week Detail Modal */}
       {selectedWeek && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-start justify-center p-4">
-          <div className="w-full max-w-xl bg-zinc-900 rounded-2xl p-4 border border-zinc-800 shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-bold">Week {selectedWeek.date}</h3>
-              <button onClick={() => setSelectedWeek(null)} className="text-zinc-400">Close</button>
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-start justify-center p-4 pt-20">
+          <div className="w-full max-w-xl bg-gradient-to-br from-slate-900/95 to-black/95 border border-slate-700/50 rounded-2xl p-5 shadow-2xl max-h-[80vh] overflow-y-auto ui-modal-scale ui-fade-scale-anim">
+            <div className="flex justify-between items-center mb-5 pb-4 border-b border-slate-700/50">
+              <h3 className="text-2xl font-black">Week {selectedWeek.date}</h3>
+              <button onClick={() => setSelectedWeek(null)} className="p-2 hover:bg-white/10 rounded-lg transition text-slate-400">
+                <span className="text-xl">×</span>
+              </button>
             </div>
             <div className="grid grid-cols-1 gap-3">
-              {/* Build day-by-day breakdown */}
+              {/* Day-by-day breakdown */}
               {(() => {
                 const days = [];
                 const start = new Date(selectedWeek.startISO);
@@ -113,19 +158,24 @@ export const ExerciseDetailView = ({ exerciseId, workouts, exercisesDB, onBack, 
                     mins += (w.duration||0);
                   });
 
-                  days.push({ iso, label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), vol, mins, workouts: dayWorkouts });
+                  days.push({ iso, label: d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }), vol, mins, workouts: dayWorkouts });
                 }
 
                 const maxVol = Math.max(...days.map(d=>d.vol), 1);
                 return days.map((day, idx) => (
-                  <div key={idx} className="flex items-center gap-4 bg-zinc-800 p-3 rounded-lg">
-                    <div className="w-28 text-xs text-zinc-400">{day.label}</div>
-                    <div className="flex-1 h-8 bg-zinc-900 rounded overflow-hidden">
-                      <div style={{ width: `${(day.vol/maxVol)*100}%` }} className="h-full bg-rose-400"></div>
+                  <div key={idx} className="bg-slate-800/40 border border-slate-700/50 p-4 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">{day.label}</span>
+                      <div className="text-right">
+                        <div className="text-sm font-bold text-blue-400">{day.vol.toLocaleString()} kg</div>
+                        <div className="text-xs text-slate-400">{day.mins} min</div>
+                      </div>
                     </div>
-                    <div className="w-28 text-right text-sm">
-                      <div className="font-bold">{day.vol} kg</div>
-                      <div className="text-xs text-zinc-400">{day.mins} min</div>
+                    <div className="w-full h-2 bg-slate-900/50 rounded-full overflow-hidden border border-slate-700/50">
+                      <div
+                        style={{ width: `${(day.vol/maxVol)*100}%` }}
+                        className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full"
+                      />
                     </div>
                   </div>
                 ));
@@ -135,93 +185,132 @@ export const ExerciseDetailView = ({ exerciseId, workouts, exercisesDB, onBack, 
         </div>
       )}
 
+      {/* Content */}
       <div className="p-4 grow overflow-y-auto pb-24">
         {activeTab === 'history' && (
-          <div className="space-y-6">
-            {history.length === 0 && <div className="text-center text-zinc-500 mt-10">No history yet</div>}
-              {history.map((item, i) => {
-              const prevItem = history[i - 1];
-              const currentMonth = item.date.substring(0, 7);
-              const prevMonth = prevItem?.date.substring(0, 7);
-              const showMonth = currentMonth !== prevMonth;
+          <div className="space-y-5">
+            {history.length === 0 ? (
+              <div className="text-center text-slate-500 mt-10 py-6">
+                <p className="text-sm font-semibold">No history yet</p>
+              </div>
+            ) : (
+              history.map((item, i) => {
+                const prevItem = history[i - 1];
+                const currentMonth = item.date.substring(0, 7);
+                const prevMonth = prevItem?.date.substring(0, 7);
+                const showMonth = currentMonth !== prevMonth;
 
-              return (
-                <React.Fragment key={i}>
-                  {showMonth && (
-                    <h3 className="text-sm font-bold text-zinc-500 uppercase tracking-wider sticky top-0 bg-zinc-900 py-2">
-                      {new Date(item.date).toLocaleString('en-US', { month: 'long', year: 'numeric' })}
-                    </h3>
-                  )}
-                  <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700/50">
-                    <div className="flex justify-between items-baseline mb-3">
-                      <span className="font-semibold text-rose-400">
-                        {new Date(item.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
-                      </span>
-                      <span className="text-xs text-zinc-500">1RM: {item.max1RM} kg</span>
+                return (
+                  <React.Fragment key={`${exerciseId}-${item.date}`}>
+                    {showMonth && (
+                        <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest sticky top-0 bg-black/50 py-3 mt-4 first:mt-0">
+                        {new Date(item.date).toLocaleString('en-US', { month: 'long', year: 'numeric' })}
+                      </h3>
+                    )}
+                    <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-lg p-4 hover:border-slate-600/50 transition-all">
+                      <div className="flex justify-between items-baseline mb-3">
+                        <span className="font-black text-blue-400">
+                          {new Date(item.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', weekday: 'short' })}
+                        </span>
+                        <span className="text-xs text-slate-400 font-bold">1RM <span className="text-blue-300">{item.max1RM} kg</span></span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {item.sets.map((set, idx) => (
+                          <button
+                            key={`${item.date}-${set.kg}-${set.reps}-${idx}`}
+                            onClick={() => onOpenWorkout && onOpenWorkout(item.date)}
+                            className="bg-slate-800/60 hover:bg-slate-700/60 px-3 py-2 rounded-lg text-xs border border-slate-700/50 hover:border-slate-600/50 transition"
+                          >
+                            <span className="font-black text-white">{set.kg}</span>
+                            <span className="text-slate-500 mx-1">×</span>
+                            <span className="text-slate-300">{set.reps}</span>
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                      {item.sets.map((set, idx) => (
-                        <button key={idx} onClick={() => onOpenWorkout && onOpenWorkout(item.date)} className="bg-zinc-900 px-3 py-1.5 rounded-lg text-sm border border-zinc-700 hover:bg-zinc-900/60">
-                          <span className="font-bold text-white">{set.kg}</span>
-                          <span className="text-zinc-500 text-xs mx-1">×</span>
-                          <span className="text-zinc-300">{set.reps}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </React.Fragment>
-              );
-            })}
+                  </React.Fragment>
+                );
+              })
+            )}
           </div>
         )}
 
         {activeTab === 'charts' && (
-          <div className="mt-4">
-            <div className="bg-zinc-800 rounded-2xl p-4 mb-4 border border-zinc-700">
-              <h3 className="text-sm text-zinc-400 mb-6 font-medium uppercase tracking-wider">
-                Estimated 1RM Progress
-              </h3>
-              <SimpleLineChart data={chartData} />
+          <div className="space-y-5 mt-2">
+            {/* 1RM Chart */}
+            <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-4">
+              <div className="mb-4">
+                <h3 className="text-xs text-slate-400 font-black uppercase tracking-widest mb-1">Estimated 1RM Progress</h3>
+                <p className="text-xs text-blue-400 font-semibold">{getChartContext(exerciseId, workouts)}</p>
+              </div>
+              <SimpleLineChart data={chartData} color="#3b82f6" />
             </div>
-            <div className="bg-zinc-800 rounded-2xl p-4 mb-4 border border-zinc-700">
-              <h3 className="text-sm text-zinc-400 mb-6 font-medium uppercase tracking-wider">Volume</h3>
+
+            {/* Volume Charts */}
+            <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-4">
+              <h3 className="text-xs text-slate-400 font-black uppercase tracking-widest mb-4">Weekly Volume</h3>
               <div className="space-y-4">
-                <SimpleLineChart data={weeklyVolume.map(d => ({ date: d.date, value: d.weight, startISO: d.startISO, endISO: d.endISO }))} color="#f59e0b" unit="kg" onPointClick={(i, item) => setSelectedWeek(item)} />
-                <SimpleLineChart data={weeklyVolume.map(d => ({ date: d.date, value: d.reps, startISO: d.startISO, endISO: d.endISO }))} color="#60a5fa" unit="reps" onPointClick={(i, item) => setSelectedWeek(item)} />
+                <div>
+                  <label className="text-xs text-slate-500 font-bold mb-2 block">Total Weight (kg)</label>
+                  <SimpleLineChart
+                    data={weeklyVolume.map(d => ({ date: d.date, value: d.weight, startISO: d.startISO, endISO: d.endISO }))}
+                    color="#3b82f6"
+                    unit="kg"
+                    onPointClick={(i, item) => setSelectedWeek(item)}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-500 font-bold mb-2 block">Total Reps</label>
+                  <SimpleLineChart
+                    data={weeklyVolume.map(d => ({ date: d.date, value: d.reps, startISO: d.startISO, endISO: d.endISO }))}
+                    color="#8b5cf6"
+                    unit="reps"
+                    onPointClick={(i, item) => setSelectedWeek(item)}
+                  />
+                </div>
               </div>
             </div>
 
-            <p className="text-xs text-zinc-500 text-center px-4">
-              Charts: top — estimated 1RM; Volume charts show total lifted weight (kg) and total reps per session.
+            <p className="text-xs text-slate-500 text-center px-4 py-2">
+              Charts: 1RM estimated based on completed sets. Volume data is aggregated weekly.
             </p>
           </div>
         )}
 
         {activeTab === 'records' && (
-          <div className="grid grid-cols-2 gap-4 mt-2">
-            <div className="col-span-2 bg-gradient-to-br from-amber-500/20 to-amber-600/5 border border-amber-500/30 rounded-2xl p-6 flex flex-col items-center justify-center text-center">
-              <Trophy className="text-amber-500 mb-2" size={32} />
-              <div className="text-3xl font-bold text-white mb-1">
-                {records.best1RM} <span className="text-base font-normal text-zinc-400">kg</span>
+          <div className="grid grid-cols-2 gap-4 mt-4">
+            {/* Best 1RM */}
+            <div className="col-span-2 bg-gradient-to-br from-amber-600/20 to-amber-700/10 border border-amber-500/30 rounded-xl p-6 flex flex-col items-center justify-center text-center">
+              <Trophy className="text-amber-400 mb-3" size={36} />
+              <div className="text-4xl font-black text-white mb-1">
+                {records.best1RM} <span className="text-lg font-normal text-slate-400">kg</span>
               </div>
-              <div className="text-xs text-amber-400 uppercase font-bold tracking-wider">All-time Best 1RM</div>
-              {records.best1RMDate && <div className="text-xs text-zinc-400 mt-2">Set on {new Date(records.best1RMDate).toLocaleDateString()}</div>}
+              <div className="text-xs text-amber-400 font-black uppercase tracking-wider">All-Time Best 1RM</div>
+              {records.best1RMDate && (
+                <div className="text-xs text-slate-500 mt-3 font-semibold">Set on {new Date(records.best1RMDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+              )}
             </div>
 
-            <div className="bg-zinc-800 rounded-2xl p-5 border border-zinc-700">
-              <div className="text-zinc-400 text-xs uppercase font-bold mb-2">Max Weight</div>
-              <div className="text-2xl font-bold text-white">
-                {records.maxWeight} <span className="text-sm font-normal text-zinc-500">kg</span>
-                {records.maxWeightDate && <div className="text-xs text-zinc-500 mt-2">{new Date(records.maxWeightDate).toLocaleDateString()}</div>}
+            {/* Max Weight */}
+            <div className="bg-gradient-to-br from-blue-600/20 to-blue-700/10 border border-blue-500/30 rounded-lg p-4 text-center">
+              <div className="text-xs text-slate-400 uppercase font-black tracking-wider mb-2">Max Weight</div>
+              <div className="text-3xl font-black text-blue-400">
+                {records.maxWeight} <span className="text-sm font-normal text-slate-500">kg</span>
               </div>
+              {records.maxWeightDate && (
+                <div className="text-xs text-slate-500 mt-2 font-semibold">{new Date(records.maxWeightDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+              )}
             </div>
 
-            <div className="bg-zinc-800 rounded-2xl p-5 border border-zinc-700">
-              <div className="text-zinc-400 text-xs uppercase font-bold mb-2">Max Reps</div>
-              <div className="text-2xl font-bold text-white">
-                {records.maxReps} <span className="text-sm font-normal text-zinc-500">reps</span>
-                {records.maxRepsDate && <div className="text-xs text-zinc-500 mt-2">{new Date(records.maxRepsDate).toLocaleDateString()}</div>}
+            {/* Max Reps */}
+            <div className="bg-gradient-to-br from-purple-600/20 to-purple-700/10 border border-purple-500/30 rounded-lg p-4 text-center">
+              <div className="text-xs text-slate-400 uppercase font-black tracking-wider mb-2">Max Reps</div>
+              <div className="text-3xl font-black text-purple-400">
+                {records.maxReps} <span className="text-sm font-normal text-slate-500">reps</span>
               </div>
+              {records.maxRepsDate && (
+                <div className="text-xs text-slate-500 mt-2 font-semibold">{new Date(records.maxRepsDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+              )}
             </div>
           </div>
         )}

@@ -3,7 +3,6 @@ import { ChevronUp, Clock } from 'lucide-react';
 
 export const MiniWorkoutBar = ({ workoutName, timer, onMaximize }) => {
   
-  // Wbudowana funkcja formatowania czasu (żeby uniknąć błędów importu)
   const formatTime = (seconds) => {
     if (!seconds && seconds !== 0) return "--:--";
     const mins = Math.floor(seconds / 60);
@@ -14,20 +13,20 @@ export const MiniWorkoutBar = ({ workoutName, timer, onMaximize }) => {
   return (
     <div 
       onClick={onMaximize}
-      className="fixed bottom-[70px] left-2 right-2 z-30 bg-zinc-800 border border-zinc-700 rounded-xl p-3 shadow-2xl shadow-black flex justify-between items-center cursor-pointer animate-in slide-in-from-bottom-4 fade-in duration-300"
+      className="fixed bottom-[72px] left-3 right-3 z-30 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 border border-blue-400/50 rounded-lg p-4 shadow-2xl shadow-blue-600/50 flex justify-between items-center cursor-pointer animate-in slide-in-from-bottom-4 fade-in duration-200 transition-all ease-out group"
     >
       <div className="flex flex-col">
-        <span className="text-xs text-rose-400 font-bold uppercase tracking-wider">Active Workout</span>
-        <span className="text-white font-semibold text-sm truncate max-w-[200px]">{workoutName || "Trening"}</span>
+        <span className="text-xs text-blue-100 font-black uppercase tracking-widest">Active Workout</span>
+        <span className="text-white font-black text-sm truncate max-w-[200px]">{workoutName || "Workout"}</span>
       </div>
 
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-1.5 bg-zinc-900 px-2 py-1 rounded-lg">
-          <Clock size={14} className="text-zinc-400 animate-pulse" />
+        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 bg-white/20 px-4 py-2 rounded-lg border border-white/30">
+          <Clock size={14} className="text-white animate-pulse" />
           <span className="font-mono text-sm font-bold text-white">{formatTime(timer)}</span>
         </div>
-        <button className="p-1.5 bg-zinc-700 rounded-full text-white hover:bg-zinc-600 transition">
-          <ChevronUp size={20} />
+        <button className="p-2 bg-white/20 hover:bg-white/30 rounded-lg text-white transition">
+          <ChevronUp size={18} />
         </button>
       </div>
     </div>

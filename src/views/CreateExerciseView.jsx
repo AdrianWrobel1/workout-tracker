@@ -57,7 +57,7 @@ export const CreateExerciseView = ({ exercise, onSave, onCancel, onChange }) => 
           <label className="block text-sm text-zinc-400 mb-2">Default Sets</label>
           <div className="space-y-2">
             {(exercise.defaultSets || [{ kg: 0, reps: 0 }]).map((set, i) => (
-              <div key={i} className="grid grid-cols-[50px_1fr_1fr_40px] gap-2">
+              <div key={`set-${i}-${set.kg}-${set.reps}`} className="grid grid-cols-[50px_1fr_1fr_40px] gap-2">
                 <span className="text-zinc-400 flex items-center justify-center font-mono">{i + 1}</span>
                 <input
                   type="number"
@@ -115,6 +115,7 @@ export const CreateExerciseView = ({ exercise, onSave, onCancel, onChange }) => 
               type="checkbox"
               checked={!!exercise.usesBodyweight}
               onChange={(e) => onChange({ ...exercise, usesBodyweight: !!e.target.checked })}
+              className="ui-checkbox"
             />
             <span className="text-sm text-zinc-300">Uses bodyweight (include your profile weight in volume)</span>
           </label>
