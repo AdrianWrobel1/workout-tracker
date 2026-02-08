@@ -1,13 +1,49 @@
-import React, { useState } from 'react';
-import { Plus, Edit2, Calendar, Check, TrendingUp, Zap, ChevronDown } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Plus, Edit2, Calendar, Check, TrendingUp, Zap, ChevronDown, X } from 'lucide-react';
 import { getWeekWorkouts, getMonthWorkouts, getMonthLabel } from '../domain/workouts';
 import { WeekHeatmap } from '../components/WeekHeatmap';
 import { ProgressRing } from '../components/ProgressRing';
 import { MiniSparkline } from '../components/MiniSparkline';
+import { SimpleLineChart } from '../components/SimpleLineChart';
+import { calculateTotalVolume } from '../domain/calculations';
 import { formatDate } from '../domain/calculations';
 
 const QuickInsightsSection = ({ workouts }) => {
   const [open, setOpen] = useState(false);
+  const [selectedInsight, setSelectedInsight] = useState(null);
+  const [showDetailedChart, setShowDetailedChart] = useState(false);
+
+  // Calculate weekly volume data for last 12 weeks
+  const weeklyChartData = useMemo(() => {
+    const data = [];
+    const today = new Date();
+    
+    for (let i = 11; i >= 0; i--) {
+      const weekEnd = new Date(today);
+      weekEnd.setDate(today.getDate() - (i * 7));
+      weekEnd.setHours(0, 0, 0, 0);
+      
+      const weekStart = new Date(weekEnd);
+      weekStart.setDate(weekEnd.getDate() - 6);
+
+      const weekWorkouts = workouts.filter(w => {
+        const wDate = new Date(w.date);
+        return wDate >= weekStart && wDate <= weekEnd;
+      });
+
+      const weekVolume = weekWorkouts.reduce((sum, w) => {
+        return sum + (w.exercises || []).reduce((exSum, ex) => {
+          return exSum + calculateTotalVolume(ex.sets || []);
+        }, 0);
+      }, 0);
+
+      data.push({
+        date: weekEnd.toISOString().split('T')[0],
+        value: weekVolume
+      });
+    }
+    return data;
+  }, [workouts]);
 
   return (
     <div>
@@ -23,18 +59,135 @@ const QuickInsightsSection = ({ workouts }) => {
       </button>
 
       {open && (
-        <div className="grid grid-cols-2 gap-3 mt-3">
-          <div className="bg-gradient-to-br from-slate-800/60 to-slate-900/60 border border-slate-700/30 rounded-xl p-4 flex justify-center">
-            <ProgressRing workouts={workouts} />
+        <>
+          <div className="grid grid-cols-2 gap-3 mt-3">
+            <button
+              onClick={() => setSelectedInsight('progress')}
+              className="bg-gradient-to-br from-slate-800/60 to-slate-900/60 border border-slate-700/30 hover:border-slate-600/50 rounded-xl p-4 flex justify-center transition-all duration-200 hover:scale-105 active:scale-95"
+            >
+              <ProgressRing workouts={workouts} />
+            </button>
+
+            <button
+              onClick={() => setSelectedInsight('trend')}
+              className="bg-gradient-to-br from-slate-800/60 to-slate-900/60 border border-slate-700/30 hover:border-slate-600/50 rounded-xl p-4 flex flex-col justify-center transition-all duration-200 hover:scale-105 active:scale-95"
+            >
+              <p className="text-xs text-slate-400 font-semibold tracking-widest mb-2">TREND</p>
+              <div className="flex justify-center">
+                <MiniSparkline workouts={workouts} metric="volume" />
+              </div>
+            </button>
           </div>
 
-          <div className="bg-gradient-to-br from-slate-800/60 to-slate-900/60 border border-slate-700/30 rounded-xl p-4 flex flex-col justify-center">
-            <p className="text-xs text-slate-400 font-semibold tracking-widest mb-2">TREND</p>
-            <div className="flex justify-center">
-              <MiniSparkline workouts={workouts} metric="volume" />
+          {/* Insight modals */}
+          {selectedInsight === 'progress' && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+              <div className="bg-slate-900 border border-slate-700 rounded-lg p-6 max-w-sm w-full">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-bold text-white">Weekly Progress</h2>
+                  <button
+                    onClick={() => setSelectedInsight(null)}
+                    className="p-1 hover:bg-slate-800 rounded transition"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="bg-slate-800/50 rounded-lg p-4">
+                  <ProgressRing workouts={workouts} />
+                </div>
+                <p className="text-xs text-slate-400 text-center mt-4">
+                  You're on track with your weekly goal! Keep crushing it 💪
+                </p>
+              </div>
             </div>
-          </div>
-        </div>
+          )}
+
+          {selectedInsight === 'trend' && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+              <div className="bg-slate-900 border border-slate-700 rounded-lg p-6 max-w-sm w-full">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-bold text-white">Volume Trend</h2>
+                  <button
+                    onClick={() => setSelectedInsight(null)}
+                    className="p-1 hover:bg-slate-800 rounded transition"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="bg-slate-800/50 rounded-lg p-4">
+                  <MiniSparkline workouts={workouts} metric="volume" />
+                </div>
+                <button
+                  onClick={() => setShowDetailedChart(true)}
+                  className="w-full mt-4 px-3 py-2 bg-blue-600 hover:bg-blue-500 rounded transition text-sm font-bold"
+                >
+                  See detailed chart →
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Detailed chart modal */}
+          {showDetailedChart && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+              <div className="bg-slate-900 border border-slate-700 rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold text-white">Volume Trend - Last 12 Weeks</h2>
+                  <button
+                    onClick={() => setShowDetailedChart(false)}
+                    className="p-2 hover:bg-slate-800 rounded transition"
+                  >
+                    <X size={20} className="text-slate-400" />
+                  </button>
+                </div>
+
+                {/* Chart */}
+                <div className="bg-slate-800/50 rounded-lg p-6 mb-6 flex flex-col items-center">
+                  {weeklyChartData && weeklyChartData.length > 0 ? (
+                    <SimpleLineChart
+                      data={weeklyChartData}
+                      color="#3b82f6"
+                      unit="volume"
+                    />
+                  ) : (
+                    <div className="w-full h-48 flex items-center justify-center text-slate-400">
+                      Not enough data
+                    </div>
+                  )}
+                </div>
+
+                {/* Stats */}
+                <div className="grid grid-cols-3 gap-3 mb-4">
+                  <div className="bg-slate-800/50 rounded-lg p-3">
+                    <p className="text-xs text-slate-400 font-semibold mb-1">AVG VOLUME</p>
+                    <p className="text-xl font-bold text-white">
+                      {Math.round(weeklyChartData.reduce((sum, w) => sum + w.value, 0) / weeklyChartData.length)}
+                    </p>
+                  </div>
+                  <div className="bg-slate-800/50 rounded-lg p-3">
+                    <p className="text-xs text-slate-400 font-semibold mb-1">PEAK WEEK</p>
+                    <p className="text-xl font-bold text-blue-400">
+                      {Math.max(...weeklyChartData.map(w => w.value))}
+                    </p>
+                  </div>
+                  <div className="bg-slate-800/50 rounded-lg p-3">
+                    <p className="text-xs text-slate-400 font-semibold mb-1">WEEKS ACTIVE</p>
+                    <p className="text-xl font-bold text-emerald-400">
+                      {weeklyChartData.filter(w => w.value > 0).length}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setShowDetailedChart(false)}
+                  className="w-full px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded transition text-sm font-bold"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

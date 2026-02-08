@@ -139,9 +139,7 @@ export const ActiveWorkoutExerciseCard = ({
               {/* Delete Set */}
               {deleteModeActive && (
                 <button
-                  onClick={() => {
-                    if (confirm('Delete this set?')) onDeleteSet && onDeleteSet(exerciseIndex, i);
-                  }}
+                  onClick={() => onDeleteSet && onDeleteSet(exerciseIndex, i)}
                   className="w-10 h-10 rounded-lg flex items-center justify-center bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 transition"
                 >
                   <Trash2 size={16} />
