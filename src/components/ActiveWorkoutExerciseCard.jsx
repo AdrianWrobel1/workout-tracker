@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { Trash2, Medal } from 'lucide-react';
 
 export const ActiveWorkoutExerciseCard = ({
@@ -15,6 +15,39 @@ export const ActiveWorkoutExerciseCard = ({
   // optional: called on long-press (exerciseIndex, setIndex)
   onLongPressSet
 }) => {
+  const [swipedIndex, setSwipedIndex] = useState(null);
+  const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
+  
+  const handleTouchStart = (e, setIndex) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  };
+  
+  const handleTouchMove = (e, setIndex) => {
+    if (!touchStartX.current) return;
+    
+    const currentX = e.touches[0].clientX;
+    const currentY = e.touches[0].clientY;
+    const dx = currentX - touchStartX.current;
+    const dy = currentY - touchStartY.current;
+    
+    // Only handle horizontal swipe, not vertical scroll
+    if (Math.abs(dy) > Math.abs(dx)) return;
+    
+    // Swipe left to reveal delete
+    if (dx < -30) {
+      setSwipedIndex(setIndex);
+    } else if (dx > 10) {
+      setSwipedIndex(null);
+    }
+  };
+  
+  const handleTouchEnd = () => {
+    touchStartX.current = 0;
+    touchStartY.current = 0;
+  };
+  
   return (
     <div>
       <div className="space-y-2">
@@ -22,12 +55,34 @@ export const ActiveWorkoutExerciseCard = ({
           const prev = previousSets && previousSets.length > i ? previousSets[i] : null;
           const nonWarmupBefore = exercise.sets.slice(0, i).filter(s => !s.warmup).length;
           const displayLabel = set.warmup ? '#0' : `#${nonWarmupBefore + 1}`;
+          const isSwipped = swipedIndex === i;
           
           return (
             <div
               key={i}
-              data-set-index={i}
-              className={`flex items-center gap-3 p-4 rounded-lg border transition-all ${
+              className="relative overflow-hidden rounded-lg"
+              onTouchStart={(e) => handleTouchStart(e, i)}
+              onTouchMove={(e) => handleTouchMove(e, i)}
+              onTouchEnd={handleTouchEnd}
+            >
+              {/* Delete button background (revealed on swipe) */}
+              {isSwipped && (
+                <button
+                  onClick={() => {
+                    onDeleteSet(exerciseIndex, i);
+                    setSwipedIndex(null);
+                  }}
+                  className="absolute inset-0 bg-red-500 flex items-center justify-center text-white font-bold px-4 z-0"
+                >
+                  <Trash2 size={20} />
+                </button>
+              )}
+              
+              {/* Set card (slides on swipe) */}
+              <div
+                className={`flex items-center gap-3 p-4 rounded-lg border transition-transform duration-300 ease-out relative z-10 ${
+                  isSwipped ? '-translate-x-full' : ''
+                } ${
                 set.warmup
                   ? 'bg-amber-500/10 border-amber-500/30'
                   : 'bg-slate-700/20 border-slate-600/30'
@@ -127,8 +182,8 @@ export const ActiveWorkoutExerciseCard = ({
                 </button>
               )}
 
-              {/* Delete Set */}
-              {deleteModeActive && (
+              {/* Delete Set - OLD MODE (kept for backward compatibility if deleteModeActive is passed) */}
+              {deleteModeActive && !isSwipped && (
                 <button
                   onClick={() => onDeleteSet && onDeleteSet(exerciseIndex, i)}
                   className="w-10 h-10 rounded-lg flex items-center justify-center bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 transition"
@@ -136,6 +191,7 @@ export const ActiveWorkoutExerciseCard = ({
                   <Trash2 size={16} />
                 </button>
               )}
+              </div>
             </div>
           );
         })}
