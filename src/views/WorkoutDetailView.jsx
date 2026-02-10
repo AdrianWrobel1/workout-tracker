@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronLeft, Clock, FileText } from 'lucide-react';
+import { ChevronLeft, Clock, FileText, Medal } from 'lucide-react';
 import { formatDate, calculate1RM } from '../domain/calculations';
 
 export const WorkoutDetailView = ({ selectedDate, workouts, onBack, exercisesDB = [] }) => {
@@ -62,7 +62,24 @@ export const WorkoutDetailView = ({ selectedDate, workouts, onBack, exercisesDB 
                 return (
                   <div key={ex.exerciseId || `ex-${i}`} className="bg-slate-800/40 border border-slate-700/50 rounded-lg p-4">
                     <div className="mb-3">
-                      <h3 className="text-lg font-black text-white">{ex.name}</h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-lg font-black text-white">{ex.name}</h3>
+                        {(() => {
+                          const hasRecords = completedSets.some(s => s.isBest1RM || s.isBestSetVolume || s.isHeaviestWeight);
+                          if (hasRecords) {
+                            const recordTypes = new Set();
+                            completedSets.forEach(s => {
+                              if (s.isHeaviestWeight) recordTypes.add('Heaviest Weight');
+                              if (s.isBestSetVolume) recordTypes.add('Best Set Volume');
+                              if (s.isBest1RM) recordTypes.add('Best 1RM');
+                            });
+                            return (
+                              <Medal size={20} className="text-yellow-400" title={Array.from(recordTypes).join(', ')} />
+                            );
+                          }
+                          return null;
+                        })()}
+                      </div>
                       <p className="text-xs text-slate-400 mt-1 font-semibold">{ex.category}</p>
                       {(() => {
                         const exFromDB = exercisesDB?.find(e => e.id === ex.exerciseId);
@@ -79,7 +96,18 @@ export const WorkoutDetailView = ({ selectedDate, workouts, onBack, exercisesDB 
                           set.warmup 
                             ? 'bg-amber-500/10 border-amber-500/30' 
                             : 'bg-slate-900/40 border-slate-700/50'
-                        }`}>
+                        } ${set.isBest1RM || set.isBestSetVolume || set.isHeaviestWeight ? 'bg-yellow-500/20 border-yellow-500/40' : ''}`}>
+                          {(set.isBest1RM || set.isBestSetVolume || set.isHeaviestWeight) && !set.warmup && (
+                            <div className="text-yellow-400" title={
+                              [
+                                set.isHeaviestWeight && 'Heaviest Weight',
+                                set.isBestSetVolume && 'Best Set Volume',
+                                set.isBest1RM && 'Best 1RM'
+                              ].filter(Boolean).join(', ')
+                            }>
+                              <Medal size={16} />
+                            </div>
+                          )}
                           {set.warmup && (
                             <div className="px-2 py-0.5 bg-amber-600/30 border border-amber-500/50 rounded text-xs font-bold text-amber-300">
                               WARMUP

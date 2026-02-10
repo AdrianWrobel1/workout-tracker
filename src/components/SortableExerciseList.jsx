@@ -45,6 +45,7 @@ function SortableExerciseItem({
   setDeleteModeIndex,
   warmupModeIndex,
   setWarmupModeIndex,
+  onOpenKeypad,
 }) {
   const {
     attributes,
@@ -218,6 +219,7 @@ function SortableExerciseItem({
         onToggleWarmup={onToggleWarmup}
         deleteModeActive={deleteModeIndex === exIndex}
         warmupModeActive={warmupModeIndex === exIndex}
+        onOpenKeypad={onOpenKeypad}
       />
     </div>
   );
@@ -249,6 +251,7 @@ export function SortableExerciseList({
   setDeleteModeIndex,
   warmupModeIndex,
   setWarmupModeIndex,
+  onOpenKeypad,
 }) {
   // Configure sensors: PointerSensor (desktop), TouchSensor (mobile)
   // Delay touch sensor activation to prevent accidental triggers
@@ -318,6 +321,7 @@ export function SortableExerciseList({
               setDeleteModeIndex={setDeleteModeIndex}
               warmupModeIndex={warmupModeIndex}
               setWarmupModeIndex={setWarmupModeIndex}
+              onOpenKeypad={onOpenKeypad}
             />
           ))}
         </div>

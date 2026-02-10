@@ -54,9 +54,9 @@ export const TemplatesView = ({
               <h3 className="font-black text-white mb-1">{exercise.name}</h3>
               <div className="text-xs text-slate-400 font-semibold mb-3 uppercase tracking-wider">{exercise.sets.length} sets planned</div>
 
-              <div className="space-y-2 mb-3">
+      <div className="space-y-2 mb-3">
                 {exercise.sets.map((set, sIndex) => (
-                  <div key={sIndex} className="flex gap-2">
+                  <div key={sIndex} className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
                     <input
                       type="number"
                       placeholder="kg"
@@ -79,6 +79,16 @@ export const TemplatesView = ({
                       }}
                       className="flex-1 bg-slate-800/50 border border-slate-600/50 rounded-lg p-2 text-sm text-center text-white font-bold focus:border-blue-500 focus:outline-none"
                     />
+                    <button
+                      onClick={() => {
+                        const updated = { ...editingTemplate };
+                        updated.exercises[exIndex].sets.splice(sIndex, 1);
+                        onChange(updated);
+                      }}
+                      className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-600/20 rounded-lg transition border border-slate-700/50 hover:border-red-500/30 sm:flex-shrink-0"
+                    >
+                      <X size={16} />
+                    </button>
                   </div>
                 ))}
               </div>

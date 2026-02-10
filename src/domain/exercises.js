@@ -27,8 +27,10 @@ export const getExerciseRecords = (exerciseId, workouts) => {
   const history = getExerciseHistory(exerciseId, workouts);
   let best1RM = 0;
   let best1RMDate = null;
-  let maxWeight = 0;
-  let maxWeightDate = null;
+  let heaviestWeight = 0;
+  let heaviestWeightDate = null;
+  let bestSetVolume = 0;
+  let bestSetVolumeDate = null;
   let maxReps = 0;
   let maxRepsDate = null;
 
@@ -39,12 +41,42 @@ export const getExerciseRecords = (exerciseId, workouts) => {
       if (s.warmup) return;
       const kg = Number(s.kg) || 0;
       const reps = Number(s.reps) || 0;
-      if (kg > maxWeight) { maxWeight = kg; maxWeightDate = day.date; }
+      
+      if (kg > heaviestWeight) { heaviestWeight = kg; heaviestWeightDate = day.date; }
       if (reps > maxReps) { maxReps = reps; maxRepsDate = day.date; }
+      
+      // Track best set volume (kg × reps as single best)
+      const volume = kg * reps;
+      if (volume > bestSetVolume) { bestSetVolume = volume; bestSetVolumeDate = day.date; }
     });
   });
 
-  return { best1RM, best1RMDate, maxWeight, maxWeightDate, maxReps, maxRepsDate };
+  return { 
+    best1RM, 
+    best1RMDate, 
+    heaviestWeight, 
+    heaviestWeightDate, 
+    bestSetVolume,
+    bestSetVolumeDate,
+    maxReps, 
+    maxRepsDate 
+  };
+};
+
+// Check if a single set achieves any records
+export const checkSetRecords = (kg, reps, exerciseRecords, calculate1RM) => {
+  if (!exerciseRecords || kg === 0 || reps === 0) {
+    return { isBest1RM: false, isBestSetVolume: false, isHeaviestWeight: false };
+  }
+  
+  const thisVolume = kg * reps;
+  const this1RM = calculate1RM(kg, reps);
+  
+  return {
+    isBest1RM: this1RM > (exerciseRecords.best1RM || 0),
+    isBestSetVolume: thisVolume > (exerciseRecords.bestSetVolume || 0),
+    isHeaviestWeight: kg > (exerciseRecords.heaviestWeight || 0)
+  };
 };
 
 // Get last completed sets for auto-memory

@@ -22,7 +22,8 @@ export const ActiveWorkoutView = ({
   onReplaceExercise,
   onDeleteSet,
   onToggleWarmup,
-  onAddWarmupSet
+  onAddWarmupSet,
+  onOpenKeypad
 }) => {
   const [menuOpenIndex, setMenuOpenIndex] = useState(null);
   const [deleteModeIndex, setDeleteModeIndex] = useState(null);
@@ -117,6 +118,7 @@ export const ActiveWorkoutView = ({
           setDeleteModeIndex={setDeleteModeIndex}
           warmupModeIndex={warmupModeIndex}
           setWarmupModeIndex={setWarmupModeIndex}
+          onOpenKeypad={onOpenKeypad}
         />
 
         <button

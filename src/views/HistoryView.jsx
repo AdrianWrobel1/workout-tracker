@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { ChevronRight, Edit2, Trash2, Plus, X as CloseIcon } from 'lucide-react';
+import { ChevronRight, Edit2, Trash2, Plus, X as CloseIcon, Medal } from 'lucide-react';
 import { formatDate, formatMonth, calculateTotalVolume } from '../domain/calculations';
 import { getExerciseRecords } from '../domain/exercises';
 import { WorkoutCard } from '../components/WorkoutCard';
@@ -245,7 +245,25 @@ export const HistoryView = ({ workouts, onViewWorkoutDetail, onDeleteWorkout, on
                       <div key={exIdx} className="space-y-2 p-4 bg-slate-800/40 border border-slate-700/50 rounded-lg">
                         <div className="flex justify-between items-center">
                           <div>
-                            <div className="font-bold text-white">{ex.name}</div>
+                            <div className="flex items-center gap-2">
+                              <div className="font-bold text-white">{ex.name}</div>
+                              {(() => {
+                                const completedSets = (ex.sets || []).filter(s => s.completed);
+                                const hasRecords = completedSets.some(s => s.isBest1RM || s.isBestSetVolume || s.isHeaviestWeight);
+                                if (hasRecords) {
+                                  const recordTypes = new Set();
+                                  completedSets.forEach(s => {
+                                    if (s.isHeaviestWeight) recordTypes.add('Heaviest Weight');
+                                    if (s.isBestSetVolume) recordTypes.add('Best Set Volume');
+                                    if (s.isBest1RM) recordTypes.add('Best 1RM');
+                                  });
+                                  return (
+                                    <Medal size={16} className="text-yellow-400" title={Array.from(recordTypes).join(', ')} />
+                                  );
+                                }
+                                return null;
+                              })()}
+                            </div>
                             <div className="text-xs text-slate-400">{ex.category}</div>
                           </div>
                           <div className="flex gap-2">
@@ -505,7 +523,7 @@ export const HistoryView = ({ workouts, onViewWorkoutDetail, onDeleteWorkout, on
                   <div>
                     <p className="text-xs text-slate-400 font-semibold tracking-widest mb-2">TAGS</p>
                     <div className="flex flex-wrap gap-2">
-                      {['#cut', '#power', '#volume', '#sleep-bad', '#bulk', '#stress'].map(tag => (
+                      {['#cut', '#power', '#volume', '#sleep-bad', '#bulk', '#stress', '#sick'].map(tag => (
                         <button
                           key={tag}
                           onClick={() => {
@@ -615,7 +633,7 @@ export const HistoryView = ({ workouts, onViewWorkoutDetail, onDeleteWorkout, on
               >
                 All
               </button>
-              {['#cut', '#power', '#volume', '#sleep-bad', '#bulk', '#stress'].map(tag => (
+              {['#cut', '#power', '#volume', '#sleep-bad', '#bulk', '#stress', '#sick'].map(tag => (
                 <button
                   key={tag}
                   onClick={() => {

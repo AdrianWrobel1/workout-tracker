@@ -22,7 +22,11 @@ export const SettingsView = ({
   exercisesDB = [],
   onOpenExportData,
   defaultStatsRange = '3months',
-  onDefaultStatsRangeChange
+  onDefaultStatsRangeChange,
+  enablePerformanceAlerts = true,
+  onEnablePerformanceAlertsChange,
+  enableHapticFeedback = false,
+  onEnableHapticFeedbackChange
 }) => {
   return (
     <div className="min-h-screen bg-black text-white pb-24">
@@ -59,6 +63,61 @@ export const SettingsView = ({
             <option value="1year">1 Year</option>
           </select>
           <p className="text-xs text-slate-400 mt-2">This setting applies to Profile and Statistics views</p>
+        </div>
+
+        {/* Performance Alerts Card */}
+        <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-6">
+          <h3 className="font-black text-white mb-4">Performance Alerts</h3>
+          
+          {/* Main Toggle */}
+          <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-700/30">
+            <label className="text-sm font-bold text-white">Enable Performance Alerts</label>
+            <button
+              onClick={() => onEnablePerformanceAlertsChange && onEnablePerformanceAlertsChange(!enablePerformanceAlerts)}
+              className={`w-12 h-7 rounded-full transition-all flex items-center px-1 ${
+                enablePerformanceAlerts
+                  ? 'bg-emerald-600'
+                  : 'bg-slate-600'
+              }`}
+            >
+              <div className={`w-5 h-5 rounded-full bg-white transition-transform ${enablePerformanceAlerts ? 'translate-x-5' : ''}`} />
+            </button>
+          </div>
+
+          {/* Sub-toggles (only shown if alerts are enabled) */}
+          {enablePerformanceAlerts && (
+            <div className="space-y-3 text-sm">
+              <p className="text-xs text-slate-400 font-semibold mb-2">Alert Types</p>
+              <div className="space-y-2 ml-2">
+                <div className="text-slate-300">
+                  <span className="text-slate-400">🏋️ Heaviest Weight</span>
+                </div>
+                <div className="text-slate-300">
+                  <span className="text-slate-400">📦 Best Set Volume</span>
+                </div>
+                <div className="text-slate-300">
+                  <span className="text-slate-400">💪 Best 1RM</span>
+                </div>
+              </div>
+
+              {/* Haptic Toggle */}
+              <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-700/30">
+                <label className="font-bold text-white">Haptic Feedback</label>
+                <button
+                  onClick={() => onEnableHapticFeedbackChange && onEnableHapticFeedbackChange(!enableHapticFeedback)}
+                  className={`w-12 h-7 rounded-full transition-all flex items-center px-1 ${
+                    enableHapticFeedback
+                      ? 'bg-blue-600'
+                      : 'bg-slate-600'
+                  }`}
+                >
+                  <div className={`w-5 h-5 rounded-full bg-white transition-transform ${enableHapticFeedback ? 'translate-x-5' : ''}`} />
+                </button>
+              </div>
+            </div>
+          )}
+          
+          <p className="text-xs text-slate-400 mt-3">Personal record detection only applies from your second workout per exercise</p>
         </div>
 
         {/* Data Management Card */}

@@ -242,29 +242,32 @@ export const calculateMuscleDistribution = (workout, exercisesDB = []) => {
 
 /**
  * Detect PRs (Personal Records) in a completed workout
- * Returns an object with exerciseId => PR status (1RM, weight, or reps)
+ * Tracks 3 independent record types per set: Best 1RM, Best Set Volume, Heaviest Weight
+ * Only detects on 2nd+ workout for each exercise (skip if first time)
+ * Returns: { exerciseId: { recordTypes: ['best1RM', 'bestSetVolume', 'heaviestWeight'], exerciseName: string } }
  * Note: Needs calculate1RM and getExerciseRecords passed as parameters to avoid circular imports
  */
 export const detectPRsInWorkout = (completedWorkout, previousWorkouts, calculate1RM, getExerciseRecords) => {
   if (!completedWorkout?.exercises) return {};
 
-  const prStatus = {};
+  const prDetected = {};
 
   completedWorkout.exercises.forEach(ex => {
     if (!ex.exerciseId) return;
 
-    // Get previous records for this exercise
+    // Get historical records (only from PREVIOUS workouts, not current)
     const previousRecords = getExerciseRecords(ex.exerciseId, previousWorkouts);
-    const prevBest1RM = previousRecords.best1RM || 0;
-    const prevMaxWeight = previousRecords.maxWeight || 0;
-    const prevMaxReps = previousRecords.maxReps || 0;
+    
+    // Skip PR detection if exercise never done before (first time = baseline only)
+    if (!previousRecords.best1RM && !previousRecords.heaviestWeight && !previousRecords.bestSetVolume) {
+      return;
+    }
+
+    const recordTypesThisExercise = new Set();
+    const recordTypesPerSet = {};
 
     // Check all completed sets (excluding warmups)
-    let hasReps1RMPR = false;
-    let hasWeightPR = false;
-    let hasRepsPR = false;
-
-    (ex.sets || []).forEach(set => {
+    (ex.sets || []).forEach((set, setIndex) => {
       if (!set.completed || set.warmup) return;
 
       const kg = Number(set.kg) || 0;
@@ -273,22 +276,43 @@ export const detectPRsInWorkout = (completedWorkout, previousWorkouts, calculate
       if (kg === 0 || reps === 0) return;
 
       const this1RM = calculate1RM(kg, reps);
+      const thisVolume = kg * reps;
 
-      // Check for PR types
-      if (this1RM > prevBest1RM) hasReps1RMPR = true;
-      if (kg > prevMaxWeight) hasWeightPR = true;
-      if (reps > prevMaxReps) hasRepsPR = true;
+      const recordsThisSet = [];
+
+      // Check for 3 independent record types
+      if (this1RM > (previousRecords.best1RM || 0)) {
+        recordsThisSet.push('best1RM');
+        recordTypesThisExercise.add('best1RM');
+        set.isBest1RM = true;
+      }
+      
+      if (thisVolume > (previousRecords.bestSetVolume || 0)) {
+        recordsThisSet.push('bestSetVolume');
+        recordTypesThisExercise.add('bestSetVolume');
+        set.isBestSetVolume = true;
+      }
+      
+      if (kg > (previousRecords.heaviestWeight || 0)) {
+        recordsThisSet.push('heaviestWeight');
+        recordTypesThisExercise.add('heaviestWeight');
+        set.isHeaviestWeight = true;
+      }
+
+      if (recordsThisSet.length > 0) {
+        recordTypesPerSet[setIndex] = recordsThisSet;
+      }
     });
 
-    // Determine primary PR type (1RM > weight > reps)
-    if (hasReps1RMPR) {
-      prStatus[ex.exerciseId] = '1RM';
-    } else if (hasWeightPR) {
-      prStatus[ex.exerciseId] = 'weight';
-    } else if (hasRepsPR) {
-      prStatus[ex.exerciseId] = 'reps';
+    // Only add to prDetected if records were found
+    if (recordTypesThisExercise.size > 0) {
+      prDetected[ex.exerciseId] = {
+        exerciseName: ex.exerciseName,
+        recordTypes: Array.from(recordTypesThisExercise),
+        recordsPerSet: recordTypesPerSet
+      };
     }
   });
 
-  return prStatus;
+  return prDetected;
 };

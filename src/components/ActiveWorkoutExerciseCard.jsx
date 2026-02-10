@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Medal } from 'lucide-react';
 
 export const ActiveWorkoutExerciseCard = ({
   exercise,
@@ -13,7 +13,9 @@ export const ActiveWorkoutExerciseCard = ({
   deleteModeActive = false,
   warmupModeActive = false,
   // optional: called on long-press (exerciseIndex, setIndex)
-  onLongPressSet
+  onLongPressSet,
+  // Keypad handler
+  onOpenKeypad
 }) => {
   const touchRefs = useRef({});
   return (
@@ -68,8 +70,27 @@ export const ActiveWorkoutExerciseCard = ({
                 set.warmup
                   ? 'bg-amber-500/10 border-amber-500/30'
                   : 'bg-slate-700/20 border-slate-600/30'
-              } ${set.completed ? 'bg-emerald-500/10 border-emerald-500/30 animate-set-complete' : ''}`}
+              } ${set.completed ? 'bg-emerald-500/10 border-emerald-500/30 animate-set-complete' : ''} ${
+                set.completed && (set.isBest1RM || set.isBestSetVolume || set.isHeaviestWeight) 
+                  ? 'bg-yellow-500/30 border-yellow-500/50 ring-2 ring-yellow-500/30' 
+                  : (set.isBest1RM || set.isBestSetVolume || set.isHeaviestWeight) 
+                  ? 'bg-emerald-500/20 border-emerald-500/40' 
+                  : ''
+              }`}
             >
+              {/* Medal Icon for PR Sets */}
+              {(set.isBest1RM || set.isBestSetVolume || set.isHeaviestWeight) && (
+                <div className="text-yellow-400 flex-shrink-0" title={
+                  [
+                    set.isHeaviestWeight && 'Heaviest Weight',
+                    set.isBestSetVolume && 'Best Set Volume',
+                    set.isBest1RM && 'Best 1RM'
+                  ].filter(Boolean).join(', ')
+                }>
+                  <Medal size={20} />
+                </div>
+              )}
+
               {/* Set Label */}
               <div className="font-black text-white min-w-[2rem]">{displayLabel}</div>
 
@@ -77,11 +98,13 @@ export const ActiveWorkoutExerciseCard = ({
               <div className="flex flex-col gap-1 flex-1">
                 <label className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">KG</label>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="none"
+                  readOnly
                   value={set.kg === 0 || set.kg === undefined || set.kg === "" ? "" : set.kg}
-                  onChange={e => onUpdateSet(exerciseIndex, i, 'kg', Number(e.target.value) || 0)}
+                  onClick={() => onOpenKeypad && onOpenKeypad(exerciseIndex, i, 'kg')}
                   placeholder={set.suggestedKg ? `${set.suggestedKg}` : (prev?.kg ? `${prev.kg}` : '0')}
-                  className={`bg-slate-800/50 border border-slate-600/50 rounded-lg px-4 py-2 text-center text-sm font-bold w-full focus:border-blue-500 focus:outline-none transition ${
+                  className={`bg-slate-800/50 border border-slate-600/50 rounded-lg px-4 py-2 text-center text-sm font-bold w-full cursor-text focus:border-blue-500 focus:outline-none transition ${
                     (set.kg === 0 || set.kg === undefined || set.kg === "") && !set.completed ? 'text-slate-500 placeholder-slate-600' : 'text-white'
                   } ${set.completed ? 'text-white' : ''}`}
                 />
@@ -91,11 +114,13 @@ export const ActiveWorkoutExerciseCard = ({
               <div className="flex flex-col gap-1 flex-1">
                 <label className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">REPS</label>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="none"
+                  readOnly
                   value={set.reps === 0 || set.reps === undefined || set.reps === "" ? "" : set.reps}
-                  onChange={e => onUpdateSet(exerciseIndex, i, 'reps', Number(e.target.value) || 0)}
+                  onClick={() => onOpenKeypad && onOpenKeypad(exerciseIndex, i, 'reps')}
                   placeholder={set.suggestedReps ? `${set.suggestedReps}` : (prev?.reps ? `${prev.reps}` : '0')}
-                  className={`bg-slate-800/50 border border-slate-600/50 rounded-lg px-4 py-2 text-center text-sm font-bold w-full focus:border-blue-500 focus:outline-none transition ${
+                  className={`bg-slate-800/50 border border-slate-600/50 rounded-lg px-4 py-2 text-center text-sm font-bold w-full cursor-text focus:border-blue-500 focus:outline-none transition ${
                     (set.reps === 0 || set.reps === undefined || set.reps === "") && !set.completed ? 'text-slate-500 placeholder-slate-600' : 'text-white'
                   } ${set.completed ? 'text-white' : ''}`}
                 />

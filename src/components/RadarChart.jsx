@@ -22,7 +22,7 @@ export const RadarChart = ({
   const center = size / 2;
   
   // Maximum radius for the chart (leaving space for labels)
-  const maxRadius = center * 0.82;
+  const maxRadius = center * 0.65;
   
   // Get normalized values (0-1) for each group
   const values = groups.map(g => data[g] || 0);
@@ -47,17 +47,28 @@ export const RadarChart = ({
   // Calculate label positions (slightly outside the chart)
   const getLabelPosition = (index) => {
     const angle = (index / groups.length) * Math.PI * 2 - Math.PI / 2;
-    const labelRadius = center * 0.95;
+    const labelRadius = center * 1.1;
     const x = center + Math.cos(angle) * labelRadius;
     const y = center + Math.sin(angle) * labelRadius;
     
     // Determine text anchor based on position
     let textAnchor = 'middle';
+    let dx = 0;
+    let dy = 0;
+    
+    // Adjust positioning based on quadrant
     if (Math.abs(Math.cos(angle)) > 0.3) {
       textAnchor = Math.cos(angle) > 0 ? 'start' : 'end';
+      dx = Math.cos(angle) > 0 ? 6 : -6; // Offset for left/right positions
     }
     
-    return { x, y, textAnchor };
+    if (Math.sin(angle) > 0.3) {
+      dy = 6; // Offset downward
+    } else if (Math.sin(angle) < -0.3) {
+      dy = -6; // Offset upward
+    }
+    
+    return { x, y, textAnchor, dx, dy };
   };
 
   return (
@@ -127,8 +138,8 @@ export const RadarChart = ({
         return (
           <g key={`label-${i}`}>
             <text
-              x={pos.x}
-              y={pos.y}
+              x={pos.x + pos.dx}
+              y={pos.y + pos.dy}
               fontSize="12"
               fontWeight="600"
               fill="#e4e4e7"
@@ -140,8 +151,8 @@ export const RadarChart = ({
             {/* Show percentage below label if value > 0 */}
             {value > 0 && (
               <text
-                x={pos.x}
-                y={pos.y + 14}
+                x={pos.x + pos.dx}
+                y={pos.y + pos.dy + 14}
                 fontSize="10"
                 fill="#71717a"
                 textAnchor={pos.textAnchor}

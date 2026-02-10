@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 
 // DOMAIN
 import { calculate1RM } from './domain/calculations';
-import { getExerciseRecords, getLastCompletedSets, suggestNextWeight } from './domain/exercises';
+import { getExerciseRecords, getLastCompletedSets, suggestNextWeight, checkSetRecords } from './domain/exercises';
 import { prepareCleanWorkoutData, compareWorkoutToPrevious, generateSessionFeedback, calculateMuscleDistribution, detectPRsInWorkout } from './domain/workouts';
 
 // HOOKS
@@ -14,6 +14,8 @@ import { MiniWorkoutBar } from './components/MiniWorkoutBar';
 import { BottomNav } from './components/BottomNav';
 import { CalendarModal } from './components/CalendarModal';
 import { ExerciseSelectorModal } from './components/ExerciseSelectorModal';
+import { CustomKeypad } from './components/CustomKeypad';
+import { PRBanner } from './components/PRBanner';
 
 // VIEWS
 import { HomeView } from './views/HomeView';
@@ -73,8 +75,19 @@ export default function App() {
   const [summaryVisible, setSummaryVisible] = useState(false);
   const [firstLoad, setFirstLoad] = useState(true);
   const [returnTo, setReturnTo] = useState(null);
+  const [toast, setToast] = useState(null);
   const [exerciseCreateSource, setExerciseCreateSource] = useState(null); // 'activeWorkout' | 'template' | 'exercises' | null
   const [trainingNotes, setTrainingNotes] = useState('');
+  
+  // Keypad State
+  const [activeInput, setActiveInput] = useState(null); // { workoutId, exerciseIndex, setIndex, field: 'kg' | 'reps' | 'rpe' }
+  const [keypadValue, setKeypadValue] = useState('');
+
+  // Performance Alerts State
+  const [enablePerformanceAlerts, setEnablePerformanceAlerts] = useState(true);
+  const [enableHapticFeedback, setEnableHapticFeedback] = useState(false);
+  const [activePRBanner, setActivePRBanner] = useState(null);
+  const [prBannerVisible, setPRBannerVisible] = useState(false);
 
   // --- EFFECTS ---
 
@@ -99,8 +112,36 @@ export default function App() {
       const savedWeight = localStorage.getItem('userWeight');
       if (savedWeight) setUserWeight(Number(savedWeight));
 
+      const savedEnableAlerts = localStorage.getItem('enablePerformanceAlerts');
+      if (savedEnableAlerts !== null) setEnablePerformanceAlerts(JSON.parse(savedEnableAlerts));
+
+      const savedEnableHaptic = localStorage.getItem('enableHapticFeedback');
+      if (savedEnableHaptic !== null) setEnableHapticFeedback(JSON.parse(savedEnableHaptic));
+
       const savedNotes = localStorage.getItem('trainingNotes');
-      if (savedNotes) setTrainingNotes(savedNotes);
+      if (savedNotes && savedNotes.trim()) {
+        try {
+          const parsed = JSON.parse(savedNotes);
+          // Ensure it's a string, not an object or other type
+          if (typeof parsed === 'string') {
+            setTrainingNotes(parsed);
+          } else {
+            // If parsed as something else, reset
+            setTrainingNotes('');
+            localStorage.removeItem('trainingNotes');
+          }
+        } catch (e) {
+          // If parsing fails, assume it's already a plain string
+          // But check if it contains escaped quotes which indicates corruption
+          if (savedNotes.includes('\\"')) {
+            // Corrupted - clear it
+            setTrainingNotes('');
+            localStorage.removeItem('trainingNotes');
+          } else {
+            setTrainingNotes(savedNotes);
+          }
+        }
+      }
 
       // Opcjonalnie: Przywracanie aktywnego treningu (jeśli aplikacja została zamknięta)
       const savedActive = localStorage.getItem('activeWorkout');
@@ -130,6 +171,8 @@ export default function App() {
   useDebouncedLocalStorage('userWeight', userWeight, 1000);
   useDebouncedLocalStorage('defaultStatsRange', defaultStatsRange, 1000);
   useDebouncedLocalStorage('trainingNotes', trainingNotes, 1000);
+  useDebouncedLocalStorage('enablePerformanceAlerts', enablePerformanceAlerts, 300);
+  useDebouncedLocalStorage('enableHapticFeedback', enableHapticFeedback, 300);
   useDebouncedLocalStorageManual('activeWorkout', activeWorkout, 500);
 
   // Timer
@@ -284,6 +327,7 @@ export default function App() {
     const baseTemplate = template || activeWorkout.templateSnapshot || null;
     const diff = baseTemplate ? computeTemplateDiff(baseTemplate, activeWorkout) : { changed: true, reasons: ['No template associated for this workout'] };
     const metrics = calcSummaryMetrics(completedWorkout);
+    completedWorkout.duration = metrics.duration;
     const muscleTotals = computeMuscleTotals(completedWorkout);
     
     // Prepare clean data and comparison
@@ -343,6 +387,61 @@ export default function App() {
     }
   }, [activeWorkout, workouts]);
 
+  // Keypad Handlers
+  const handleOpenKeypad = useCallback((exIndex, setIndex, field) => {
+    if (!activeWorkout) return;
+    const currentValue = activeWorkout.exercises[exIndex]?.sets?.[setIndex]?.[field] || '';
+    setActiveInput({ exerciseIndex: exIndex, setIndex, field });
+    setKeypadValue(currentValue.toString());
+  }, [activeWorkout]);
+
+  const handleCloseKeypad = useCallback(() => {
+    setActiveInput(null);
+    setKeypadValue('');
+  }, []);
+
+  const handleKeypadDone = useCallback(() => {
+    if (!activeInput || !activeWorkout) return;
+    
+    const { exerciseIndex, setIndex, field } = activeInput;
+    const value = keypadValue ? Number(keypadValue) : 0;
+    
+    // Update the set value
+    const updated = { ...activeWorkout };
+    updated.exercises[exerciseIndex].sets[setIndex][field] = value;
+    setActiveWorkout(updated);
+    
+    handleCloseKeypad();
+  }, [activeInput, activeWorkout, keypadValue, handleCloseKeypad]);
+
+  const handleKeypadNext = useCallback(() => {
+    if (!activeInput || !activeWorkout) return;
+    
+    const { exerciseIndex, setIndex, field } = activeInput;
+    const value = keypadValue ? Number(keypadValue) : 0;
+    
+    // Update the current field
+    const updated = { ...activeWorkout };
+    updated.exercises[exerciseIndex].sets[setIndex][field] = value;
+    setActiveWorkout(updated);
+    
+    // Move to next field: kg -> reps -> done
+    if (field === 'kg') {
+      const nextValue = updated.exercises[exerciseIndex].sets[setIndex].reps || '';
+      setActiveInput({ exerciseIndex, setIndex, field: 'reps' });
+      setKeypadValue(nextValue.toString());
+    } else {
+      // After reps, close keypad
+      handleCloseKeypad();
+    }
+  }, [activeInput, activeWorkout, keypadValue, handleCloseKeypad]);
+
+  // Helper to show toast message
+  const showToast = useCallback((message) => {
+    setToast(message);
+    setTimeout(() => setToast(null), 2000);
+  }, []);
+
   const handleToggleSet = useCallback((exIndex, setIndex) => {
     const updated = { ...activeWorkout };
     const set = updated.exercises[exIndex].sets[setIndex];
@@ -350,14 +449,20 @@ export default function App() {
     // Toggle completion
     const newVal = !set.completed;
     
-    // Auto-fill with suggested values if user didn't enter anything
-    if (!set.completed) {
+    // If trying to complete a set
+    if (newVal && !set.completed) {
       const kg = Number(set.kg) || 0;
       const reps = Number(set.reps) || 0;
       const suggestedKg = Number(set.suggestedKg) || 0;
       const suggestedReps = Number(set.suggestedReps) || 0;
       
-      // If user didn't enter values but suggested exists, use suggested
+      // Check if there are no values
+      if (kg === 0 && reps === 0 && suggestedKg === 0 && suggestedReps === 0) {
+        showToast('Please enter kg and reps');
+        return;
+      }
+      
+      // Auto-fill with suggested values if user didn't enter anything
       if (kg === 0 && reps === 0 && (suggestedKg > 0 || suggestedReps > 0)) {
         set.kg = suggestedKg;
         set.reps = suggestedReps;
@@ -369,25 +474,67 @@ export default function App() {
     }
     
     set.completed = newVal;
+
+    // If unchecking, remove medal flags
+    if (!newVal) {
+      set.isBest1RM = false;
+      set.isBestSetVolume = false;
+      set.isHeaviestWeight = false;
+    }
+
     setActiveWorkout(updated);
 
-    // When marking completed, update exercise default in DB
+    // When marking completed, check for PRs and update default exercises
     if (newVal) {
       const exId = updated.exercises[exIndex].exerciseId;
+      const exerciseName = updated.exercises[exIndex].name;
       if (exId) {
         const kg = Number(set.kg) || 0;
         const reps = Number(set.reps) || 0;
-        if (kg > 0 && reps > 0) {
+        if (kg > 0 && reps > 0 && !set.warmup) {
           const this1RM = calculate1RM(kg, reps);
           const hist = getExerciseRecords(exId, workouts);
           const histBest = hist.best1RM || 0;
           if (this1RM > histBest) {
             setExercisesDB(prev => prev.map(e => e.id === exId ? { ...e, defaultSets: [{ kg, reps }, ...(e.defaultSets || []).slice(1)] } : e));
           }
+
+          // Check for PRs using new 3-type system
+          if (enablePerformanceAlerts) {
+            const prRecords = checkSetRecords(kg, reps, hist, calculate1RM);
+            if (prRecords.isBest1RM || prRecords.isBestSetVolume || prRecords.isHeaviestWeight) {
+              // Mark the set with PR flags
+              const recordTypes = [];
+              if (prRecords.isHeaviestWeight) recordTypes.push('heaviestWeight');
+              if (prRecords.isBestSetVolume) recordTypes.push('bestSetVolume');
+              if (prRecords.isBest1RM) recordTypes.push('best1RM');
+              
+              set.isBest1RM = prRecords.isBest1RM;
+              set.isBestSetVolume = prRecords.isBestSetVolume;
+              set.isHeaviestWeight = prRecords.isHeaviestWeight;
+              
+              // Trigger PR banner display
+              setActivePRBanner({
+                exerciseName,
+                recordTypes
+              });
+              setPRBannerVisible(true);
+              
+              // Optional haptic feedback
+              if (enableHapticFeedback && navigator.vibrate) {
+                navigator.vibrate([20, 10, 20]);
+              }
+
+              // Auto-dismiss banner after banner sequence completes (doubled time for mobile)
+              setTimeout(() => {
+                setPRBannerVisible(false);
+              }, 6000);
+            }
+          }
         }
       }
     }
-  }, [activeWorkout, workouts]);
+  }, [activeWorkout, workouts, exercisesDB, enablePerformanceAlerts, enableHapticFeedback, showToast]);
 
   const handleAddSet = useCallback((exIndex) => {
     const updated = { ...activeWorkout };
@@ -717,7 +864,7 @@ export default function App() {
                 trainingNotes={trainingNotes}
                 onTrainingNotesChange={setTrainingNotes}
                 onStartWorkout={() => setView('selectTemplate')}
-                onManageTemplates={() => { setEditingTemplate({ name: '', exercises: [] }); setView('templates'); }}
+                onManageTemplates={() => { setEditingTemplate(null); setView('templates'); }}
                 onOpenCalendar={openCalendar}
                 onViewHistory={() => { setActiveTab('history'); setView('history'); }}
                 onViewWorkoutDetail={(date) => { setSelectedDate(date); setView('workoutDetail'); }}
@@ -838,6 +985,12 @@ export default function App() {
               onDeleteSet={handleDeleteSet}
               onToggleWarmup={handleToggleWarmup}
               onAddWarmupSet={handleAddWarmupSet}
+              onOpenKeypad={handleOpenKeypad}
+              />
+              <PRBanner 
+                prData={activePRBanner}
+                isVisible={prBannerVisible}
+                onAutoClose={() => setPRBannerVisible(false)}
               />
             </div>
           )}
@@ -1014,6 +1167,10 @@ export default function App() {
               onOpenExportData={() => setView('exportData')}
               defaultStatsRange={defaultStatsRange}
               onDefaultStatsRangeChange={setDefaultStatsRange}
+              enablePerformanceAlerts={enablePerformanceAlerts}
+              onEnablePerformanceAlertsChange={setEnablePerformanceAlerts}
+              enableHapticFeedback={enableHapticFeedback}
+              onEnableHapticFeedbackChange={setEnableHapticFeedback}
             />
           )}
 
@@ -1227,7 +1384,7 @@ export default function App() {
             <div className="mb-6">
               <p className="text-xs text-slate-400 font-semibold tracking-widest mb-2">WORKOUT TAGS</p>
               <div className="flex flex-wrap gap-2">
-                {['#cut', '#power', '#volume', '#sleep-bad', '#bulk', '#stress'].map(tag => (
+                {['#cut', '#power', '#volume', '#sleep-bad', '#bulk', '#stress', '#sick'].map(tag => (
                   <button
                     key={tag}
                     onClick={() => setSelectedTags(prev => 
@@ -1298,6 +1455,24 @@ export default function App() {
             </div>
           </div>
         </div>
+      )}
+      
+      {/* Toast Message */}
+      {toast && (
+        <div className="fixed bottom-24 left-4 right-4 bg-red-600 text-white px-4 py-3 rounded-lg shadow-lg animate-pulse">
+          {toast}
+        </div>
+      )}
+      
+      {/* Custom Number Keypad */}
+      {activeInput && (
+        <CustomKeypad
+          value={keypadValue}
+          onValueChange={setKeypadValue}
+          onDone={handleKeypadDone}
+          onNext={activeInput.field === 'kg' ? handleKeypadNext : null}
+          label={activeInput.field.toUpperCase()}
+        />
       )}
     </>
   );

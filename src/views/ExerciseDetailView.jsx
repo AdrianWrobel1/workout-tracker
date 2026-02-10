@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { ChevronLeft, Trophy } from 'lucide-react';
+import { ChevronLeft, Trophy, Medal } from 'lucide-react';
 import { SimpleLineChart } from '../components/SimpleLineChart';
 import { getExerciseHistory, getExerciseRecords, getLastSet, getExerciseTrend, getChartContext } from '../domain/exercises';
 import { formatLastSetDate } from '../domain/calculations';
@@ -220,10 +220,26 @@ export const ExerciseDetailView = ({ exerciseId, workouts, exercisesDB, onBack, 
                           <button
                             key={`${item.date}-${set.kg}-${set.reps}-${idx}`}
                             onClick={() => onOpenWorkout && onOpenWorkout(item.date)}
-                            className="bg-slate-800/60 hover:bg-slate-700/60 px-3 py-2 rounded-lg text-xs border border-slate-700/50 hover:border-slate-600/50 transition"
+                            className={`px-3 py-2 rounded-lg text-xs border transition flex items-center gap-1.5 ${
+                              (set.isBest1RM || set.isBestSetVolume || set.isHeaviestWeight)
+                                ? 'bg-yellow-500/20 border-yellow-500/40 hover:bg-yellow-500/30'
+                                : 'bg-slate-800/60 hover:bg-slate-700/60 border-slate-700/50 hover:border-slate-600/50'
+                            }`}
+                            title={
+                              (set.isBest1RM || set.isBestSetVolume || set.isHeaviestWeight)
+                                ? [
+                                    set.isHeaviestWeight && 'Heaviest Weight',
+                                    set.isBestSetVolume && 'Best Set Volume',
+                                    set.isBest1RM && 'Best 1RM'
+                                  ].filter(Boolean).join(', ')
+                                : ''
+                            }
                           >
+                            {(set.isBest1RM || set.isBestSetVolume || set.isHeaviestWeight) && (
+                              <Medal size={12} className="text-yellow-400" />
+                            )}
                             <span className="font-black text-white">{set.kg}</span>
-                            <span className="text-slate-500 mx-1">×</span>
+                            <span className="text-slate-500">×</span>
                             <span className="text-slate-300">{set.reps}</span>
                           </button>
                         ))}
