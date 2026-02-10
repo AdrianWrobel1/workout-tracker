@@ -18,11 +18,15 @@ export const RadarChart = ({
   // Define muscle groups in order (clockwise from top)
   const groups = ['Chest', 'Back', 'Legs', 'Shoulders', 'Biceps', 'Triceps', 'Core'];
   
-  // Center point
-  const center = size / 2;
+  // Add padding for labels (ensure they always fit)
+  const labelPadding = 40;
+  const totalSize = size + labelPadding * 2;
+  
+  // Center point (adjusted for padding)
+  const center = totalSize / 2;
   
   // Maximum radius for the chart (leaving space for labels)
-  const maxRadius = center * 0.65;
+  const maxRadius = size / 2 * 0.65;
   
   // Get normalized values (0-1) for each group
   const values = groups.map(g => data[g] || 0);
@@ -44,11 +48,11 @@ export const RadarChart = ({
     })
     .join(' ');
   
-  // Calculate label positions (slightly outside the chart, with more padding for longer labels)
+  // Calculate label positions (outside the chart with proper padding)
   const getLabelPosition = (index) => {
     const angle = (index / groups.length) * Math.PI * 2 - Math.PI / 2;
-    // Increased label radius to accommodate longer muscle names
-    const labelRadius = center * 1.35;
+    // Position labels at consistent distance from chart perimeter
+    const labelRadius = maxRadius + labelPadding * 0.7;
     const x = center + Math.cos(angle) * labelRadius;
     const y = center + Math.sin(angle) * labelRadius;
     
@@ -60,20 +64,25 @@ export const RadarChart = ({
     // Adjust positioning based on quadrant
     if (Math.abs(Math.cos(angle)) > 0.3) {
       textAnchor = Math.cos(angle) > 0 ? 'start' : 'end';
-      dx = Math.cos(angle) > 0 ? 8 : -8; // Increased offset for left/right positions
+      dx = Math.cos(angle) > 0 ? 6 : -6;
     }
     
     if (Math.sin(angle) > 0.3) {
-      dy = 8; // Increased offset downward
+      dy = 6;
     } else if (Math.sin(angle) < -0.3) {
-      dy = -8; // Increased offset upward
+      dy = -6;
     }
     
     return { x, y, textAnchor, dx, dy };
   };
 
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+    <svg 
+      width={totalSize} 
+      height={totalSize} 
+      viewBox={`0 0 ${totalSize} ${totalSize}`}
+      style={{ overflow: 'visible' }}
+    >
       {/* Background circles (grid) */}
       {[0.25, 0.5, 0.75, 1].map((scale, i) => (
         <circle

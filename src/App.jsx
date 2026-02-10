@@ -628,6 +628,30 @@ export default function App() {
     closeExerciseSelector();
   }, [activeWorkout, workouts, closeExerciseSelector]);
 
+  // --- SUPERSET HANDLERS ---
+
+  const handleCreateSuperset = useCallback((exIndex1, exIndex2) => {
+    const updated = { ...activeWorkout };
+    const supersetId = `superset_${Date.now()}`;
+    updated.exercises[exIndex1].supersetId = supersetId;
+    updated.exercises[exIndex2].supersetId = supersetId;
+    setActiveWorkout(updated);
+  }, [activeWorkout]);
+
+  const handleRemoveSuperset = useCallback((exIndex) => {
+    const updated = { ...activeWorkout };
+    const supersetId = updated.exercises[exIndex].supersetId;
+    
+    if (supersetId) {
+      // Remove superset from all exercises with this ID
+      updated.exercises = updated.exercises.map(ex => 
+        ex.supersetId === supersetId ? { ...ex, supersetId: null } : ex
+      );
+    }
+    
+    setActiveWorkout(updated);
+  }, [activeWorkout]);
+
   // --- ACTIONS: TEMPLATES ---
 
   const handleSaveTemplate = useCallback(() => {
@@ -986,6 +1010,8 @@ export default function App() {
               onToggleWarmup={handleToggleWarmup}
               onAddWarmupSet={handleAddWarmupSet}
               onOpenKeypad={handleOpenKeypad}
+              onCreateSuperset={handleCreateSuperset}
+              onRemoveSuperset={handleRemoveSuperset}
               />
               <PRBanner 
                 prData={activePRBanner}

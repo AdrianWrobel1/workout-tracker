@@ -1,5 +1,5 @@
-import React, { useRef, useEffect } from 'react';
-import { GripVertical, MoreVertical } from 'lucide-react';
+import React, { useRef, useEffect, useState } from 'react';
+import { GripVertical, MoreVertical, Link2 } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -46,6 +46,9 @@ function SortableExerciseItem({
   warmupModeIndex,
   setWarmupModeIndex,
   onOpenKeypad,
+  allExercises,
+  onCreateSuperset,
+  onRemoveSuperset,
 }) {
   const {
     attributes,
@@ -56,11 +59,32 @@ function SortableExerciseItem({
     isDragging,
   } = useSortable({ id: exercise.exerciseId + '-' + exIndex });
 
+  const [showSupersetModal, setShowSupersetModal] = useState(false);
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
   };
+
+  // Generate consistent color for superset ID
+  const getSupersetColor = (supersetId) => {
+    if (!supersetId) return null;
+    const colors = [
+      { bg: 'bg-purple-500/20', border: 'border-purple-500', accent: 'text-purple-400' },
+      { bg: 'bg-pink-500/20', border: 'border-pink-500', accent: 'text-pink-400' },
+      { bg: 'bg-cyan-500/20', border: 'border-cyan-500', accent: 'text-cyan-400' },
+      { bg: 'bg-indigo-500/20', border: 'border-indigo-500', accent: 'text-indigo-400' },
+      { bg: 'bg-violet-500/20', border: 'border-violet-500', accent: 'text-violet-400' },
+    ];
+    const hash = supersetId.charCodeAt(0) + supersetId.charCodeAt(supersetId.length - 1);
+    return colors[hash % colors.length];
+  };
+
+  const supersetColor = getSupersetColor(exercise.supersetId);
+  const otherSupersetExercises = exercise.supersetId 
+    ? allExercises.filter((ex, idx) => ex.supersetId === exercise.supersetId && idx !== exIndex)
+    : [];
 
   const previousSets = getPreviousSets(exercise.exerciseId, workouts, activeWorkoutStartTime);
   
@@ -86,7 +110,7 @@ function SortableExerciseItem({
       data-exercise-index={exIndex}
       className={`bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-4 transition-all duration-200 ease-out ${
         isDragging ? 'ring-2 ring-blue-500 shadow-lg shadow-blue-500/20 scale-102' : ''
-      }`}
+      } ${supersetColor ? `border-l-4 ${supersetColor.border}` : ''}`}
     >
       <div className="flex items-start justify-between mb-4 gap-3">
         <div className="flex items-start gap-3 flex-1 min-w-0">
@@ -102,6 +126,11 @@ function SortableExerciseItem({
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
+              {exercise.supersetId && (
+                <div className={`p-1 rounded ${supersetColor.bg} flex-shrink-0`}>
+                  <Link2 size={16} className={supersetColor.accent} />
+                </div>
+              )}
               <h3 className="text-lg font-black text-white">{exercise.name}</h3>
               <button
                 onClick={() => {
@@ -188,6 +217,68 @@ function SortableExerciseItem({
               >
                 Delete Sets
               </button>
+              
+              {/* Superset options */}
+              {!exercise.supersetId && allExercises.length > 1 && (
+                <button
+                  onClick={() => {
+                    setShowSupersetModal(true);
+                    setMenuOpenIndex(null);
+                  }}
+                  className="block w-full text-left px-4 py-2 text-sm hover:bg-slate-800 border-t border-slate-700 transition text-purple-400 font-bold"
+                >
+                  Create Superset
+                </button>
+              )}
+              
+              {exercise.supersetId && (
+                <button
+                  onClick={() => {
+                    onRemoveSuperset(exIndex);
+                    setMenuOpenIndex(null);
+                  }}
+                  className="block w-full text-left px-4 py-2 text-sm hover:bg-slate-800 border-t border-slate-700 transition text-purple-300"
+                >
+                  Remove Superset
+                </button>
+              )}
+            </div>
+          )}
+          
+          {/* Superset Modal */}
+          {showSupersetModal && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-end" onClick={() => setShowSupersetModal(false)}>
+              <div className="bg-slate-900 w-full rounded-t-xl border border-slate-700 p-4 max-h-96 overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                <h3 className="text-lg font-black text-white mb-4">Add to Superset</h3>
+                <p className="text-xs text-slate-400 mb-4">Select another exercise to link:</p>
+                
+                <div className="space-y-2">
+                  {allExercises.map((ex, idx) => {
+                    if (idx === exIndex) return null; // Don't show current exercise
+                    return (
+                      <button
+                        key={idx}
+                        onClick={() => {
+                          onCreateSuperset(exIndex, idx);
+                          setShowSupersetModal(false);
+                          setMenuOpenIndex(null);
+                        }}
+                        className="w-full text-left px-4 py-3 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 transition"
+                      >
+                        <div className="font-bold text-white">{ex.name}</div>
+                        <div className="text-xs text-slate-400">{ex.category}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+                
+                <button
+                  onClick={() => setShowSupersetModal(false)}
+                  className="w-full mt-4 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 font-bold transition"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -252,6 +343,8 @@ export function SortableExerciseList({
   warmupModeIndex,
   setWarmupModeIndex,
   onOpenKeypad,
+  onCreateSuperset,
+  onRemoveSuperset,
 }) {
   // Configure sensors: PointerSensor (desktop), TouchSensor (mobile)
   // Delay touch sensor activation to prevent accidental triggers
@@ -322,6 +415,9 @@ export function SortableExerciseList({
               warmupModeIndex={warmupModeIndex}
               setWarmupModeIndex={setWarmupModeIndex}
               onOpenKeypad={onOpenKeypad}
+              allExercises={exercises}
+              onCreateSuperset={onCreateSuperset}
+              onRemoveSuperset={onRemoveSuperset}
             />
           ))}
         </div>

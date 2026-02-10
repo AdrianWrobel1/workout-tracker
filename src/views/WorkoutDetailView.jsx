@@ -70,39 +70,42 @@ export const WorkoutDetailView = ({ selectedDate, workouts, onBack, exercisesDB 
             <div className={isCompact ? "mb-1.5 pb-1.5 border-b border-slate-700/30" : "mb-4"}>
               <h2 className={isCompact ? "text-base font-black text-white" : "text-2xl font-black text-white mb-3"}>{workout.name}</h2>
               
-              {/* Clean Stats Bar - Single Line */}
+              {/* Clean Stats Grid - Responsive 2x2 on mobile, flexible on larger screens */}
               {!isCompact && (
-                <div className="flex items-center justify-between gap-6 py-3 px-4 bg-slate-800/40 rounded-lg border border-slate-700/50">
-                  {/* Time */}
-                  <div className="flex flex-col items-center gap-1 flex-1 text-center">
-                    <span className="text-xs text-slate-400 font-semibold uppercase tracking-wide">Time</span>
-                    <span className="text-lg font-black text-white">{Math.floor(workout.duration / 60)}h {(workout.duration % 60).toString().padStart(2, '0')}m</span>
+                <div className="grid grid-cols-2 gap-2.5 py-3 bg-slate-800/30 rounded-lg border border-slate-700/40">
+                  {/* Time - Top Left */}
+                  <div className="flex items-center gap-2.5 px-3 py-2 rounded hover:bg-slate-700/20 transition">
+                    <Clock size={18} className="text-slate-400 shrink-0" />
+                    <div className="min-w-0">
+                      <div className="text-xs text-slate-500 font-semibold">TIME</div>
+                      <div className="text-base font-black text-white">{Math.floor(workout.duration / 60)}h {(workout.duration % 60).toString().padStart(2, '0')}m</div>
+                    </div>
                   </div>
                   
-                  {/* Volume */}
-                  <div className="flex flex-col items-center gap-1 flex-1 text-center border-l border-r border-slate-700/30 px-4">
-                    <span className="text-xs text-slate-400 font-semibold uppercase tracking-wide">Volume</span>
-                    <span className="text-lg font-black text-blue-400">{(stats.totalVolume / 1000).toFixed(1)}k</span>
+                  {/* Volume - Top Right */}
+                  <div className="flex items-center gap-2.5 px-3 py-2 rounded hover:bg-slate-700/20 transition">
+                    <span className="text-lg leading-none">📊</span>
+                    <div className="min-w-0">
+                      <div className="text-xs text-slate-500 font-semibold">VOLUME</div>
+                      <div className="text-base font-black text-blue-400">{(stats.totalVolume / 1000).toFixed(1)}k</div>
+                    </div>
                   </div>
                   
-                  {/* Sets */}
-                  <div className="flex flex-col items-center gap-1 flex-1 text-center">
-                    <span className="text-xs text-slate-400 font-semibold uppercase tracking-wide">Sets</span>
-                    <span className="text-lg font-black text-white">{stats.totalSets}</span>
+                  {/* Sets - Bottom Left */}
+                  <div className="flex items-center gap-2.5 px-3 py-2 rounded hover:bg-slate-700/20 transition">
+                    <span className="text-lg leading-none">✓</span>
+                    <div className="min-w-0">
+                      <div className="text-xs text-slate-500 font-semibold">SETS</div>
+                      <div className="text-base font-black text-white">{stats.totalSets}</div>
+                    </div>
                   </div>
                   
-                  {/* Records */}
-                  <div className="flex flex-col items-center gap-1 flex-1 text-center border-l border-slate-700/30 pl-4">
-                    <span className="text-xs text-slate-400 font-semibold uppercase tracking-wide">Records</span>
-                    <div className="flex items-center justify-center gap-1.5">
-                      {stats.totalRecords > 0 ? (
-                        <>
-                          <Medal size={16} className="text-amber-400" />
-                          <span className="text-lg font-black text-amber-400">{stats.totalRecords}</span>
-                        </>
-                      ) : (
-                        <span className="text-lg font-black text-slate-500">—</span>
-                      )}
+                  {/* Records - Bottom Right */}
+                  <div className="flex items-center gap-2.5 px-3 py-2 rounded hover:bg-slate-700/20 transition">
+                    <Medal size={18} className={stats.totalRecords > 0 ? "text-amber-400" : "text-slate-600"} />
+                    <div className="min-w-0">
+                      <div className="text-xs text-slate-500 font-semibold">RECORDS</div>
+                      <div className={`text-base font-black ${stats.totalRecords > 0 ? 'text-amber-400' : 'text-slate-600'}`}>{stats.totalRecords || '—'}</div>
                     </div>
                   </div>
                 </div>

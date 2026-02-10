@@ -18,13 +18,16 @@ const recordTypePriority = {
 export const PRBanner = ({ prData, isVisible, onAutoClose }) => {
   const [displayedRecord, setDisplayedRecord] = useState(null);
   const [recordQueue, setRecordQueue] = useState([]);
-  const [isAnimating, setIsAnimating] = useState(false);
+  const [isEntering, setIsEntering] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
 
   // When new PR data arrives, create queue in priority order
   useEffect(() => {
     if (!prData || !isVisible) {
       setRecordQueue([]);
       setDisplayedRecord(null);
+      setIsEntering(false);
+      setIsExiting(false);
       return;
     }
 
@@ -51,27 +54,47 @@ export const PRBanner = ({ prData, isVisible, onAutoClose }) => {
 
   const showNextRecord = (queue) => {
     if (queue.length === 0) {
-      setDisplayedRecord(null);
-      onAutoClose?.();
+      // Start exit animation
+      setIsExiting(true);
+      // Wait for exit animation to complete (400ms) before fully removing
+      setTimeout(() => {
+        setDisplayedRecord(null);
+        setIsExiting(false);
+        onAutoClose?.();
+      }, 400);
       return;
     }
 
-    setIsAnimating(false);
+    // Reset animation states for new record
+    setIsExiting(false);
     const currentRecord = queue[0];
     setDisplayedRecord(currentRecord);
 
-    // Trigger animation start
-    setTimeout(() => setIsAnimating(true), 50);
+    // Trigger enter animation
+    setTimeout(() => setIsEntering(true), 50);
 
-    // Move to next record after display time (1000ms: 100ms fade-in + 900ms hold)
-    const displayTime = 1200;
+    // Wait for enter animation (100ms) + hold time (900ms) = 1000ms total
+    // Then trigger exit animation
+    const displayTime = 1000;
     const timer = setTimeout(() => {
       const remaining = queue.slice(1);
       setRecordQueue(remaining);
+      
       if (remaining.length > 0) {
-        showNextRecord(remaining);
+        // Start exit animation before showing next record
+        setIsExiting(true);
+        // Wait for exit animation to complete
+        setTimeout(() => {
+          showNextRecord(remaining);
+        }, 400);
       } else {
-        onAutoClose?.();
+        // No more records, start final exit animation
+        setIsExiting(true);
+        setTimeout(() => {
+          setDisplayedRecord(null);
+          setIsExiting(false);
+          onAutoClose?.();
+        }, 400);
       }
     }, displayTime);
 
@@ -89,8 +112,13 @@ export const PRBanner = ({ prData, isVisible, onAutoClose }) => {
         bg-gradient-to-r from-emerald-600 to-emerald-500
         rounded-lg shadow-lg p-4
         flex items-center gap-3
-        transform transition-all duration-700 ease-out
-        ${isAnimating ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'}
+        transform transition-all duration-400 ease-out
+        ${isExiting 
+          ? 'translate-y-full opacity-0 pointer-events-none' 
+          : isEntering 
+            ? 'translate-y-0 opacity-100' 
+            : 'translate-y-full opacity-0 pointer-events-none'
+        }
       `}
     >
       <Medal className="w-6 h-6 text-yellow-300 flex-shrink-0" />
