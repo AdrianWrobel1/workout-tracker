@@ -571,6 +571,17 @@ export const HistoryView = ({ workouts, onViewWorkoutDetail, onDeleteWorkout, on
                   onEdit={() => handleEditStart(workout)}
                   onDelete={() => onDeleteWorkout && onDeleteWorkout(workout.id)}
                   showActions={true}
+                  exercisesDB={exercisesDB}
+                  getRecordsFn={(exerciseId, exercise) => {
+                    // Count PRs in this specific exercise
+                    let prCount = 0;
+                    (exercise.sets || []).forEach(set => {
+                      if (set.isBest1RM || set.isBestSetVolume || set.isHeaviestWeight) {
+                        prCount++;
+                      }
+                    });
+                    return { prCount };
+                  }}
                 />
               )}
             </div>
