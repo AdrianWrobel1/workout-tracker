@@ -15,7 +15,6 @@ export const ActiveWorkoutExerciseCard = ({
   // optional: called on long-press (exerciseIndex, setIndex)
   onLongPressSet
 }) => {
-  const touchRefs = useRef({});
   return (
     <div>
       <div className="space-y-2">
@@ -28,42 +27,6 @@ export const ActiveWorkoutExerciseCard = ({
             <div
               key={i}
               data-set-index={i}
-              onTouchStart={(e) => {
-                const t = e.touches[0];
-                touchRefs.current[i] = { startX: t.clientX, startY: t.clientY, longPress: false };
-                // long-press timer
-                touchRefs.current[i].timer = setTimeout(() => {
-                  touchRefs.current[i].longPress = true;
-                  if (onLongPressSet) onLongPressSet(exerciseIndex, i);
-                }, 500);
-              }}
-              onTouchMove={(e) => {
-                const t = e.touches[0];
-                const data = touchRefs.current[i];
-                if (!data) return;
-                const dx = t.clientX - data.startX;
-                const dy = t.clientY - data.startY;
-                if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
-                  // cancel long press if moving
-                  if (data.timer) { clearTimeout(data.timer); data.timer = null; }
-                }
-              }}
-              onTouchEnd={(e) => {
-                const data = touchRefs.current[i];
-                if (!data) return;
-                if (data.timer) { clearTimeout(data.timer); data.timer = null; }
-                if (data.longPress) return; // handled by long press
-                const endX = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0].clientX : data.startX;
-                const dx = endX - data.startX;
-                const threshold = 50; // swipe threshold
-                if (dx > threshold) {
-                  // swipe right -> add new set (copying last)
-                  if (onAddSet) onAddSet(exerciseIndex);
-                } else if (dx < -threshold) {
-                  // swipe left -> delete this set
-                  if (onDeleteSet) onDeleteSet(exerciseIndex, i);
-                }
-              }}
               className={`flex items-center gap-3 p-4 rounded-lg border transition-all ${
                 set.warmup
                   ? 'bg-amber-500/10 border-amber-500/30'
