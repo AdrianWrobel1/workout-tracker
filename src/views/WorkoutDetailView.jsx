@@ -2,7 +2,7 @@ import React from 'react';
 import { ChevronLeft, Clock, FileText } from 'lucide-react';
 import { formatDate, calculate1RM } from '../domain/calculations';
 
-export const WorkoutDetailView = ({ selectedDate, workouts, onBack }) => {
+export const WorkoutDetailView = ({ selectedDate, workouts, onBack, exercisesDB = [] }) => {
   const dateWorkouts = workouts.filter(w => w.date === selectedDate);
 
   return (
@@ -31,6 +31,20 @@ export const WorkoutDetailView = ({ selectedDate, workouts, onBack }) => {
               </div>
             </div>
 
+            {/* Workout Tags */}
+            {workout.tags && workout.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-4">
+                {workout.tags.map(tag => (
+                  <span 
+                    key={tag}
+                    className="text-xs px-2.5 py-1 rounded-full font-bold bg-blue-600/20 text-blue-400 border border-blue-500/30"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+
             {/* Workout Note */}
             {workout.note && (
               <div className="mb-4 bg-amber-500/10 border border-amber-500/30 p-3.5 rounded-lg text-sm text-amber-200 italic flex gap-3">
@@ -50,12 +64,33 @@ export const WorkoutDetailView = ({ selectedDate, workouts, onBack }) => {
                     <div className="mb-3">
                       <h3 className="text-lg font-black text-white">{ex.name}</h3>
                       <p className="text-xs text-slate-400 mt-1 font-semibold">{ex.category}</p>
+                      {(() => {
+                        const exFromDB = exercisesDB?.find(e => e.id === ex.exerciseId);
+                        return exFromDB?.note && (
+                          <div className="mt-2 text-xs bg-blue-500/10 border border-blue-500/30 text-blue-300 px-2 py-1 rounded">
+                            {exFromDB.note}
+                          </div>
+                        );
+                      })()}
                     </div>
                     <div className="space-y-2.5">
                       {completedSets.map((set, j) => (
-                        <div key={`${ex.exerciseId}-${j}-${set.kg}-${set.reps}`} className="flex items-center gap-3 p-2 bg-slate-900/40 rounded-lg border border-slate-700/50">
-                          <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-black bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 min-w-[2rem]">
-                            #{j + 1}
+                        <div key={`${ex.exerciseId}-${j}-${set.kg}-${set.reps}`} className={`flex items-center gap-3 p-2 rounded-lg border transition-all ${
+                          set.warmup 
+                            ? 'bg-amber-500/10 border-amber-500/30' 
+                            : 'bg-slate-900/40 border-slate-700/50'
+                        }`}>
+                          {set.warmup && (
+                            <div className="px-2 py-0.5 bg-amber-600/30 border border-amber-500/50 rounded text-xs font-bold text-amber-300">
+                              WARMUP
+                            </div>
+                          )}
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black min-w-[2rem] ${
+                            set.warmup
+                              ? 'bg-amber-600/20 text-amber-400 border border-amber-500/30'
+                              : 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/30'
+                          }`}>
+                            {set.warmup ? '◐' : `#${j + 1}`}
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="font-bold text-white">

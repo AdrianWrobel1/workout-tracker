@@ -20,7 +20,9 @@ export const SettingsView = ({
   exportExerciseId,
   setExportExerciseId,
   exercisesDB = [],
-  onOpenExportData
+  onOpenExportData,
+  defaultStatsRange = '3months',
+  onDefaultStatsRangeChange
 }) => {
   return (
     <div className="min-h-screen bg-black text-white pb-24">
@@ -41,6 +43,22 @@ export const SettingsView = ({
             className="w-full bg-slate-800/50 border border-slate-600/50 rounded-lg px-4 py-3 text-white font-bold focus:border-blue-500 focus:outline-none transition"
             placeholder="Target workouts per week"
           />
+        </div>
+
+        {/* Default Stats Range Card */}
+        <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-6">
+          <h3 className="font-black text-white mb-3">Default Statistics Range</h3>
+          <select
+            value={defaultStatsRange}
+            onChange={(e) => onDefaultStatsRangeChange && onDefaultStatsRangeChange(e.target.value)}
+            className="w-full bg-slate-800/50 border border-slate-600/50 rounded-lg px-4 py-3 text-white font-bold focus:border-blue-500 focus:outline-none transition"
+          >
+            <option value="1week">7 Days</option>
+            <option value="1month">30 Days</option>
+            <option value="3months">3 Months</option>
+            <option value="1year">1 Year</option>
+          </select>
+          <p className="text-xs text-slate-400 mt-2">This setting applies to Profile and Statistics views</p>
         </div>
 
         {/* Data Management Card */}

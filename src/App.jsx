@@ -46,6 +46,7 @@ export default function App() {
   const [exercisesDB, setExercisesDB] = useState([]);
   const [userWeight, setUserWeight] = useState(null);
   const [weeklyGoal, setWeeklyGoal] = useState(4);
+  const [defaultStatsRange, setDefaultStatsRange] = useState('3months');
   const [activeWorkout, setActiveWorkout] = useState(null);
   const [workoutTimer, setWorkoutTimer] = useState(0);
   const [isWorkoutMinimized, setIsWorkoutMinimized] = useState(false);
@@ -72,6 +73,8 @@ export default function App() {
   const [summaryVisible, setSummaryVisible] = useState(false);
   const [firstLoad, setFirstLoad] = useState(true);
   const [returnTo, setReturnTo] = useState(null);
+  const [exerciseCreateSource, setExerciseCreateSource] = useState(null); // 'activeWorkout' | 'template' | 'exercises' | null
+  const [trainingNotes, setTrainingNotes] = useState('');
 
   // --- EFFECTS ---
 
@@ -90,8 +93,14 @@ export default function App() {
       const savedGoal = localStorage.getItem('weeklyGoal');
       if (savedGoal) setWeeklyGoal(parseInt(savedGoal));
 
+      const savedStatsRange = localStorage.getItem('defaultStatsRange');
+      if (savedStatsRange) setDefaultStatsRange(savedStatsRange);
+
       const savedWeight = localStorage.getItem('userWeight');
       if (savedWeight) setUserWeight(Number(savedWeight));
+
+      const savedNotes = localStorage.getItem('trainingNotes');
+      if (savedNotes) setTrainingNotes(savedNotes);
 
       // Opcjonalnie: Przywracanie aktywnego treningu (jeśli aplikacja została zamknięta)
       const savedActive = localStorage.getItem('activeWorkout');
@@ -119,6 +128,8 @@ export default function App() {
   useDebouncedLocalStorage('workouts', workouts, 1000);
   useDebouncedLocalStorage('templates', templates, 1000);
   useDebouncedLocalStorage('userWeight', userWeight, 1000);
+  useDebouncedLocalStorage('defaultStatsRange', defaultStatsRange, 1000);
+  useDebouncedLocalStorage('trainingNotes', trainingNotes, 1000);
   useDebouncedLocalStorageManual('activeWorkout', activeWorkout, 500);
 
   // Timer
@@ -146,14 +157,36 @@ export default function App() {
   }, [pendingSummary]);
 
   const handleSaveExercise = useCallback((exercise) => {
+    let newExerciseId;
     if (exercise.id) {
       setExercisesDB(exercisesDB.map(e => e.id === exercise.id ? exercise : e));
+      newExerciseId = exercise.id;
     } else {
-      setExercisesDB([...exercisesDB, { ...exercise, id: Date.now() }]);
+      newExerciseId = Date.now();
+      setExercisesDB([...exercisesDB, { ...exercise, id: newExerciseId }]);
     }
-    setView('exercises');
-    setEditingExercise(null);
-  }, [exercisesDB]);
+
+    // If exercise was created from activeWorkout, add it and return
+    if (exerciseCreateSource === 'activeWorkout' && activeWorkout) {
+      const newExercise = { 
+        exerciseId: newExerciseId, 
+        name: exercise.name, 
+        category: exercise.category,
+        sets: exercise.defaultSets?.map(s => ({ kg: 0, reps: 0, completed: false, warmup: false })) || [{ kg: 0, reps: 0, completed: false, warmup: false }]
+      };
+      setActiveWorkout({
+        ...activeWorkout,
+        exercises: [...(activeWorkout.exercises || []), newExercise]
+      });
+      setExerciseCreateSource(null);
+      setEditingExercise(null);
+      setView('activeWorkout');
+    } else {
+      setExerciseCreateSource(null);
+      setView('exercises');
+      setEditingExercise(null);
+    }
+  }, [exercisesDB, exerciseCreateSource, activeWorkout]);
 
   const handleDeleteExerciseFromDB = useCallback((id) => {
     if (confirm('Delete this exercise? History will remain.')) {
@@ -312,21 +345,45 @@ export default function App() {
 
   const handleToggleSet = useCallback((exIndex, setIndex) => {
     const updated = { ...activeWorkout };
-    const newVal = !updated.exercises[exIndex].sets[setIndex].completed;
-    updated.exercises[exIndex].sets[setIndex].completed = newVal;
+    const set = updated.exercises[exIndex].sets[setIndex];
+    
+    // Toggle completion
+    const newVal = !set.completed;
+    
+    // Auto-fill with suggested values if user didn't enter anything
+    if (!set.completed) {
+      const kg = Number(set.kg) || 0;
+      const reps = Number(set.reps) || 0;
+      const suggestedKg = Number(set.suggestedKg) || 0;
+      const suggestedReps = Number(set.suggestedReps) || 0;
+      
+      // If user didn't enter values but suggested exists, use suggested
+      if (kg === 0 && reps === 0 && (suggestedKg > 0 || suggestedReps > 0)) {
+        set.kg = suggestedKg;
+        set.reps = suggestedReps;
+      } else if (kg === 0 || reps === 0) {
+        // Fill in suggested if one is missing
+        if (kg === 0) set.kg = suggestedKg;
+        if (reps === 0) set.reps = suggestedReps;
+      }
+    }
+    
+    set.completed = newVal;
     setActiveWorkout(updated);
 
     // When marking completed, update exercise default in DB
     if (newVal) {
       const exId = updated.exercises[exIndex].exerciseId;
       if (exId) {
-        const kg = Number(updated.exercises[exIndex].sets[setIndex].kg) || 0;
-        const reps = Number(updated.exercises[exIndex].sets[setIndex].reps) || 0;
-        const this1RM = calculate1RM(kg, reps);
-        const hist = getExerciseRecords(exId, workouts);
-        const histBest = hist.best1RM || 0;
-        if (this1RM > histBest) {
-          setExercisesDB(prev => prev.map(e => e.id === exId ? { ...e, defaultSets: [{ kg, reps }, ...(e.defaultSets || []).slice(1)] } : e));
+        const kg = Number(set.kg) || 0;
+        const reps = Number(set.reps) || 0;
+        if (kg > 0 && reps > 0) {
+          const this1RM = calculate1RM(kg, reps);
+          const hist = getExerciseRecords(exId, workouts);
+          const histBest = hist.best1RM || 0;
+          if (this1RM > histBest) {
+            setExercisesDB(prev => prev.map(e => e.id === exId ? { ...e, defaultSets: [{ kg, reps }, ...(e.defaultSets || []).slice(1)] } : e));
+          }
         }
       }
     }
@@ -370,10 +427,15 @@ export default function App() {
   }, [activeWorkout]);
 
   const handleAddExerciseNote = useCallback((exIndex, note) => {
-    const updated = { ...activeWorkout };
-    updated.exercises[exIndex].exerciseNote = note;
-    setActiveWorkout(updated);
-  }, [activeWorkout]);
+    // Update the exercise note in exercisesDB (single source of truth)
+    const exercise = activeWorkout?.exercises[exIndex];
+    if (exercise?.exerciseId) {
+      const updatedDB = exercisesDB.map(ex => 
+        ex.id === exercise.exerciseId ? { ...ex, note: note } : ex
+      );
+      setExercisesDB(updatedDB);
+    }
+  }, [activeWorkout, exercisesDB]);
 
   const handleDeleteExercise = useCallback((exIndex) => {
     if (confirm('Delete this exercise?')) {
@@ -438,16 +500,34 @@ export default function App() {
     const lastSets = getLastCompletedSets(exercise.id, workouts);
     const suggested = suggestNextWeight(lastSets);
     
-    // Build sets with auto-memory
+    // Build sets with suggested values as placeholder hints
     let sets;
     if (lastSets.length > 0) {
-      sets = lastSets.map(s => ({ kg: Number(s.kg) || 0, reps: Number(s.reps) || 0, completed: false }));
+      sets = lastSets.map(s => ({ 
+        kg: 0, 
+        reps: 0, 
+        completed: false,
+        suggestedKg: Number(s.kg) || 0,
+        suggestedReps: Number(s.reps) || 0
+      }));
       if (suggested) {
-        sets = [...sets, { kg: suggested.suggestedKg, reps: suggested.suggestedReps, completed: false }];
+        sets = [...sets, { 
+          kg: 0, 
+          reps: 0, 
+          completed: false,
+          suggestedKg: suggested.suggestedKg,
+          suggestedReps: suggested.suggestedReps
+        }];
       }
     } else {
       sets = exercise.defaultSets ? [...exercise.defaultSets] : [{ kg: 0, reps: 0 }];
-      sets = sets.map(s => ({ ...s, completed: false }));
+      sets = sets.map(s => ({ 
+        kg: 0, 
+        reps: 0, 
+        completed: false,
+        suggestedKg: Number(s.kg) || 0,
+        suggestedReps: Number(s.reps) || 0
+      }));
     }
     
     const exData = {
@@ -634,6 +714,8 @@ export default function App() {
               <HomeView
                 workouts={workouts}
                 weeklyGoal={weeklyGoal}
+                trainingNotes={trainingNotes}
+                onTrainingNotesChange={setTrainingNotes}
                 onStartWorkout={() => setView('selectTemplate')}
                 onManageTemplates={() => { setEditingTemplate({ name: '', exercises: [] }); setView('templates'); }}
                 onOpenCalendar={openCalendar}
@@ -674,7 +756,15 @@ export default function App() {
               exercise={editingExercise}
               onChange={setEditingExercise}
               onSave={() => handleSaveExercise(editingExercise)}
-              onCancel={() => { setView('exercises'); setEditingExercise(null); }}
+              onCancel={() => { 
+                setExerciseCreateSource(null);
+                setEditingExercise(null);
+                if (exerciseCreateSource === 'activeWorkout') {
+                  setView('activeWorkout');
+                } else {
+                  setView('exercises');
+                }
+              }}
             />
           )}
 
@@ -698,6 +788,7 @@ export default function App() {
             <WorkoutDetailView
               selectedDate={selectedDate}
               workouts={workouts}
+              exercisesDB={exercisesDB}
               onBack={() => {
                 if (returnTo) {
                   if (returnTo.view === 'exerciseDetail') {
@@ -921,6 +1012,8 @@ export default function App() {
               setExportExerciseId={setExportExerciseId}
               exercisesDB={exercisesDB}
               onOpenExportData={() => setView('exportData')}
+              defaultStatsRange={defaultStatsRange}
+              onDefaultStatsRangeChange={setDefaultStatsRange}
             />
           )}
 
@@ -983,7 +1076,9 @@ export default function App() {
             }
           }}
           onCreateNew={() => {
+            const source = selectorMode === 'activeWorkout' ? 'activeWorkout' : 'exercises';
             setEditingExercise({ name: '', category: 'Push', muscles: [], defaultSets: [{ kg: 0, reps: 0 }], usesBodyweight: false });
+            setExerciseCreateSource(source);
             closeExerciseSelector();
             setView('createExercise');
           }}
@@ -1130,9 +1225,9 @@ export default function App() {
 
             {/* Tag Selection */}
             <div className="mb-6">
-              <p className="text-xs text-slate-400 font-semibold tracking-widest mb-2">OPTIONAL TAGS</p>
+              <p className="text-xs text-slate-400 font-semibold tracking-widest mb-2">WORKOUT TAGS</p>
               <div className="flex flex-wrap gap-2">
-                {['sleep bad', 'cut', 'bulk', 'stress'].map(tag => (
+                {['#cut', '#power', '#volume', '#sleep-bad', '#bulk', '#stress'].map(tag => (
                   <button
                     key={tag}
                     onClick={() => setSelectedTags(prev => 

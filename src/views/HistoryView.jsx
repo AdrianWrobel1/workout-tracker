@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { ChevronRight, Edit2, Trash2, Plus, X as CloseIcon } from 'lucide-react';
 import { formatDate, formatMonth, calculateTotalVolume } from '../domain/calculations';
 import { getExerciseRecords } from '../domain/exercises';
@@ -12,6 +12,21 @@ export const HistoryView = ({ workouts, onViewWorkoutDetail, onDeleteWorkout, on
   const [useExerciseDB, setUseExerciseDB] = useState(false);
   const [expandedExerciseIdx, setExpandedExerciseIdx] = useState(null);
   const [tagFilter, setTagFilter] = useState(null); // null for all, or specific tag
+  const [showTagDropdown, setShowTagDropdown] = useState(false);
+  const tagDropdownRef = useRef(null);
+
+  // Close tag dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (tagDropdownRef.current && !tagDropdownRef.current.contains(e.target)) {
+        setShowTagDropdown(false);
+      }
+    };
+    if (showTagDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showTagDropdown]);
 
   // Smart filter logic
   const hasPR = (workout) => {
@@ -225,7 +240,7 @@ export const HistoryView = ({ workouts, onViewWorkoutDetail, onDeleteWorkout, on
                     />
                   </div>
                   
-                  <div className="max-h-96 overflow-y-auto space-y-2.5 bg-black/20 p-4 rounded-lg">
+                  <div className="overflow-y-auto space-y-2.5 bg-black/20 p-4 rounded-lg">
                     {current.exercises?.map((ex, exIdx) => (
                       <div key={exIdx} className="space-y-2 p-4 bg-slate-800/40 border border-slate-700/50 rounded-lg">
                         <div className="flex justify-between items-center">
@@ -254,7 +269,7 @@ export const HistoryView = ({ workouts, onViewWorkoutDetail, onDeleteWorkout, on
                         {expandedExerciseIdx === exIdx && (
                           <div className="bg-slate-900/50 p-4 rounded-lg border-l-2 border-blue-500 space-y-2">
                             <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Add set</label>
-                            <div className="flex gap-2 items-end">
+                            <div className="flex flex-col sm:flex-row gap-2 items-end">
                               <input 
                                 type="number" 
                                 placeholder="kg"
@@ -265,9 +280,10 @@ export const HistoryView = ({ workouts, onViewWorkoutDetail, onDeleteWorkout, on
                                   setEditData(updated);
                                   setExpandedExerciseIdx(null);
                                 }}
-                                className="flex-1 bg-slate-800/50 border border-slate-600/50 text-white px-3 py-2 rounded text-sm focus:border-blue-500 focus:outline-none"
+                                className="w-full sm:flex-1 bg-slate-800/50 border border-slate-600/50 text-white px-3 py-2 rounded text-sm focus:border-blue-500 focus:outline-none"
                               />
-                              <span className="text-slate-500 font-bold">×</span>
+                              <span className="hidden sm:inline text-slate-500 font-bold">×</span>
+                              <span className="sm:hidden text-slate-500 font-bold text-center w-full">×</span>
                               <input 
                                 type="number" 
                                 placeholder="reps"
@@ -281,7 +297,7 @@ export const HistoryView = ({ workouts, onViewWorkoutDetail, onDeleteWorkout, on
                                     setExpandedExerciseIdx(null);
                                   }
                                 }}
-                                className="flex-1 bg-slate-800/50 border border-slate-600/50 text-white px-3 py-2 rounded text-sm focus:border-blue-500 focus:outline-none"
+                                className="w-full sm:flex-1 bg-slate-800/50 border border-slate-600/50 text-white px-3 py-2 rounded text-sm focus:border-blue-500 focus:outline-none"
                               />
                               <button
                                 onClick={() => {
@@ -289,7 +305,7 @@ export const HistoryView = ({ workouts, onViewWorkoutDetail, onDeleteWorkout, on
                                   updated.exercises[exIdx].sets.push({ kg: 0, reps: 0, completed: false });
                                   setEditData(updated);
                                 }}
-                                className="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded font-bold text-xs transition"
+                                className="w-full sm:w-auto px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded font-bold text-xs transition"
                               >
                                 ✓
                               </button>
@@ -485,6 +501,35 @@ export const HistoryView = ({ workouts, onViewWorkoutDetail, onDeleteWorkout, on
                     rows={2}
                   />
 
+                  {/* Tags Section */}
+                  <div>
+                    <p className="text-xs text-slate-400 font-semibold tracking-widest mb-2">TAGS</p>
+                    <div className="flex flex-wrap gap-2">
+                      {['#cut', '#power', '#volume', '#sleep-bad', '#bulk', '#stress'].map(tag => (
+                        <button
+                          key={tag}
+                          onClick={() => {
+                            const updated = { ...current };
+                            const currentTags = updated.tags || [];
+                            if (currentTags.includes(tag)) {
+                              updated.tags = currentTags.filter(t => t !== tag);
+                            } else {
+                              updated.tags = [...currentTags, tag];
+                            }
+                            setEditData(updated);
+                          }}
+                          className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
+                            (current.tags || []).includes(tag)
+                              ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+                              : 'bg-slate-800/50 border border-slate-700/50 text-slate-400 hover:text-slate-300'
+                          }`}
+                        >
+                          {tag}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   <div className="flex gap-2">
                     <button 
                       onClick={handleEditCancel}
@@ -547,20 +592,47 @@ export const HistoryView = ({ workouts, onViewWorkoutDetail, onDeleteWorkout, on
         </div>
         
         {/* Tag Filters */}
-        <div className="flex gap-2 mt-3 overflow-x-auto pb-2 no-scrollbar">
-          {['sleep bad', 'cut', 'bulk', 'stress'].map(tag => (
-            <button
-              key={tag}
-              onClick={() => setTagFilter(tagFilter === tag ? null : tag)}
-              className={`text-xs font-bold px-4 py-2 rounded-full transition-all whitespace-nowrap ${
-                tagFilter === tag
-                  ? 'bg-amber-600 text-white shadow-lg shadow-amber-600/30'
-                  : 'bg-slate-800/50 border border-slate-700/50 text-slate-400 hover:text-slate-300'
-              }`}
-            >
-              #{tag}
-            </button>
-          ))}
+        <div className="relative mt-3" ref={tagDropdownRef}>
+          <button
+            onClick={() => setShowTagDropdown(!showTagDropdown)}
+            className="w-full bg-slate-800/50 border border-slate-600/50 hover:bg-slate-700/50 text-white rounded-lg px-4 py-3 text-sm font-bold flex items-center justify-between transition"
+          >
+            <span>Tags: {tagFilter || 'All'}</span>
+            <span className={`text-xs transition-transform ${showTagDropdown ? 'rotate-180' : ''}`}>▾</span>
+          </button>
+          {showTagDropdown && (
+            <div className="absolute top-full left-0 right-0 mt-2 bg-slate-900/95 border border-slate-700/50 rounded-lg shadow-lg z-50">
+              <button
+                onClick={() => {
+                  setTagFilter(null);
+                  setShowTagDropdown(false);
+                }}
+                className={`w-full text-left px-4 py-3 text-sm font-semibold transition-colors ${
+                  tagFilter === null
+                    ? 'bg-blue-600/30 text-white'
+                    : 'text-slate-300 hover:bg-slate-800/50'
+                }`}
+              >
+                All
+              </button>
+              {['#cut', '#power', '#volume', '#sleep-bad', '#bulk', '#stress'].map(tag => (
+                <button
+                  key={tag}
+                  onClick={() => {
+                    setTagFilter(tag);
+                    setShowTagDropdown(false);
+                  }}
+                  className={`w-full text-left px-4 py-3 text-sm font-semibold transition-colors ${
+                    tagFilter === tag
+                      ? 'bg-blue-600/30 text-white'
+                      : 'text-slate-300 hover:bg-slate-800/50'
+                  }`}
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

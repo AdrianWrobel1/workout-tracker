@@ -47,7 +47,7 @@ export const WorkoutCard = React.memo(({
           </div>
           <ChevronRight className="text-slate-600" size={20} />
         </div>
-        <div className="flex flex-wrap gap-1">
+        <div className="flex flex-wrap gap-1 mb-3">
           {workout.exercises?.slice(0, 3).map((ex, i) => (
             <span key={`${workout.id}-${ex.exerciseId}-${i}`} className="text-xs bg-slate-700/50 text-slate-300 px-2.5 py-1 rounded-full font-semibold">
               {ex.name}
@@ -59,6 +59,20 @@ export const WorkoutCard = React.memo(({
             </span>
           )}
         </div>
+
+        {/* Tags */}
+        {workout.tags && workout.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {workout.tags.map(tag => (
+              <span 
+                key={tag}
+                className="text-xs px-2 py-1 rounded-full font-bold bg-blue-600/20 text-blue-400 border border-blue-500/30"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

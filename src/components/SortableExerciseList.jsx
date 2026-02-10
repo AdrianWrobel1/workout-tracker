@@ -100,13 +100,30 @@ function SortableExerciseItem({
           </button>
 
           <div className="flex-1 min-w-0">
-            <h3 className="text-lg font-black text-white">{exercise.name}</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-black text-white">{exercise.name}</h3>
+              <button
+                onClick={() => {
+                  const exFromDB = exercisesDB?.find(e => e.id === exercise.exerciseId);
+                  const currentNote = exFromDB?.note || '';
+                  const newNote = prompt('Exercise note:', currentNote);
+                  if (newNote !== null) onAddExerciseNote(exIndex, newNote);
+                }}
+                className="p-1 hover:bg-blue-500/20 rounded text-blue-400 hover:text-blue-300 transition flex-shrink-0"
+                title="Edit exercise note"
+              >
+                📝
+              </button>
+            </div>
             <p className="text-xs text-slate-400 mt-1 font-semibold">{exercise.category}</p>
-            {exercise.exerciseNote && (
-              <div className="mt-2 text-xs bg-amber-500/10 border border-amber-500/30 text-amber-400 px-2 py-1 rounded">
-                {exercise.exerciseNote}
-              </div>
-            )}
+            {(() => {
+              const exFromDB = exercisesDB?.find(e => e.id === exercise.exerciseId);
+              return exFromDB?.note && (
+                <div className="mt-2 text-xs bg-blue-500/10 border border-blue-500/30 text-blue-300 px-2 py-1 rounded">
+                  {exFromDB.note}
+                </div>
+              );
+            })()}
           </div>
         </div>
 
@@ -123,16 +140,6 @@ function SortableExerciseItem({
 
           {menuOpenIndex === exIndex && (
             <div className="absolute right-0 mt-2 bg-slate-900 border border-slate-700 rounded-lg mb-4 overflow-hidden shadow-xl z-40">
-              <button
-                onClick={() => {
-                  const note = prompt('Exercise note:', exercise.exerciseNote || '');
-                  if (note !== null) onAddExerciseNote(exIndex, note);
-                  setMenuOpenIndex(null);
-                }}
-                className="block w-full text-left px-4 py-2 text-sm hover:bg-slate-800 border-b border-slate-700 transition"
-              >
-                Edit Note
-              </button>
               <button
                 onClick={() => {
                   onReplaceExercise(exIndex);

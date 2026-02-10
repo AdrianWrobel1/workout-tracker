@@ -196,6 +196,8 @@ const QuickInsightsSection = ({ workouts }) => {
 export const HomeView = ({
   workouts,
   weeklyGoal,
+  trainingNotes,
+  onTrainingNotesChange,
   onStartWorkout,
   onManageTemplates,
   onOpenCalendar,
@@ -271,6 +273,17 @@ export const HomeView = ({
         </div>
         {/* Quick Insights (collapsible) placed under Templates/Calendar as requested */}
         <QuickInsightsSection workouts={workouts} />
+      </div>
+
+      {/* Training Notes */}
+      <div className="px-4 py-4">
+        <p className="text-slate-400 text-xs font-semibold tracking-widest mb-2">TRAINING NOTES</p>
+        <textarea
+          value={trainingNotes}
+          onChange={(e) => onTrainingNotesChange(e.target.value)}
+          placeholder="Zapisz wszystko: co dołożyć, co nie weszło, co bolało, pomysły na kolejne treningi…"
+          className="w-full h-24 bg-slate-800/50 border border-slate-700/50 text-white rounded-lg p-4 font-semibold text-sm placeholder-slate-600 focus:border-blue-500 focus:outline-none transition resize-none"
+        />
       </div>
 
       {/* Recent Workouts */}
