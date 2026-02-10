@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { ChevronLeft, Clock, FileText, Medal, LayoutGrid, List } from 'lucide-react';
-import { formatDate, calculate1RM } from '../domain/calculations';
+import { formatDate, calculate1RM, calculateTotalVolume } from '../domain/calculations';
 
 export const WorkoutDetailView = ({ selectedDate, workouts, onBack, exercisesDB = [] }) => {
   const [isCompact, setIsCompact] = useState(() => {
@@ -39,17 +39,87 @@ export const WorkoutDetailView = ({ selectedDate, workouts, onBack, exercisesDB 
       </div>
 
       <div className={isCompact ? "p-2 space-y-1.5" : "p-4 space-y-4"}>
-        {dateWorkouts.map(workout => (
-          <div key={workout.id} className={isCompact ? "bg-slate-800/40 border border-slate-700/50 rounded p-2" : "bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-5 ui-card-mount-anim"}>
+        {dateWorkouts.map(workout => {
+          // Calculate workout stats
+          const stats = useMemo(() => {
+            let totalVolume = 0;
+            let totalSets = 0;
+            let totalRecords = 0;
+            
+            (workout.exercises || []).forEach(ex => {
+              const completedSets = (ex.sets || []).filter(s => s.completed);
+              totalSets += completedSets.length;
+              
+              completedSets.forEach(set => {
+                const kg = Number(set.kg) || 0;
+                const reps = Number(set.reps) || 0;
+                totalVolume += kg * reps;
+                
+                if (set.isBest1RM || set.isBestSetVolume || set.isHeaviestWeight) {
+                  totalRecords++;
+                }
+              });
+            });
+            
+            return { totalVolume, totalSets, totalRecords };
+          }, [workout.exercises]);
+          
+          return (
+            <div key={workout.id} className={isCompact ? "bg-slate-800/40 border border-slate-700/50 rounded p-2" : "bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-5 ui-card-mount-anim"}>
             {/* Workout Header */}
-            <div className={isCompact ? "mb-1.5 pb-1.5 border-b border-slate-700/30" : "flex justify-between items-start gap-4 mb-4 pb-4 border-b border-slate-700/50"}>
-              <div className="flex-1 min-w-0">
-                <h2 className={isCompact ? "text-base font-black text-white" : "text-2xl font-black text-white"}>{workout.name}</h2>
-                <p className={isCompact ? "text-xs text-slate-500 mt-0.5 font-semibold" : "text-sm text-slate-400 flex items-center gap-2 mt-2 font-semibold"}>
-                  <Clock size={isCompact ? 12 : 14} className={isCompact ? "" : "inline"} /> {workout.duration || 0} min
+            <div className={isCompact ? "mb-1.5 pb-1.5 border-b border-slate-700/30" : "mb-4"}>
+              <h2 className={isCompact ? "text-base font-black text-white" : "text-2xl font-black text-white mb-3"}>{workout.name}</h2>
+              
+              {/* Clean Stats Bar - Single Line */}
+              {!isCompact && (
+                <div className="flex items-center justify-between gap-6 py-3 px-4 bg-slate-800/40 rounded-lg border border-slate-700/50">
+                  {/* Time */}
+                  <div className="flex flex-col items-center gap-1 flex-1 text-center">
+                    <span className="text-xs text-slate-400 font-semibold uppercase tracking-wide">Time</span>
+                    <span className="text-lg font-black text-white">{Math.floor(workout.duration / 60)}h {(workout.duration % 60).toString().padStart(2, '0')}m</span>
+                  </div>
+                  
+                  {/* Volume */}
+                  <div className="flex flex-col items-center gap-1 flex-1 text-center border-l border-r border-slate-700/30 px-4">
+                    <span className="text-xs text-slate-400 font-semibold uppercase tracking-wide">Volume</span>
+                    <span className="text-lg font-black text-blue-400">{(stats.totalVolume / 1000).toFixed(1)}k</span>
+                  </div>
+                  
+                  {/* Sets */}
+                  <div className="flex flex-col items-center gap-1 flex-1 text-center">
+                    <span className="text-xs text-slate-400 font-semibold uppercase tracking-wide">Sets</span>
+                    <span className="text-lg font-black text-white">{stats.totalSets}</span>
+                  </div>
+                  
+                  {/* Records */}
+                  <div className="flex flex-col items-center gap-1 flex-1 text-center border-l border-slate-700/30 pl-4">
+                    <span className="text-xs text-slate-400 font-semibold uppercase tracking-wide">Records</span>
+                    <div className="flex items-center justify-center gap-1.5">
+                      {stats.totalRecords > 0 ? (
+                        <>
+                          <Medal size={16} className="text-amber-400" />
+                          <span className="text-lg font-black text-amber-400">{stats.totalRecords}</span>
+                        </>
+                      ) : (
+                        <span className="text-lg font-black text-slate-500">—</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Compact version - just the name and time */}
+              {isCompact && (
+                <p className="text-xs text-slate-500 mt-1 font-semibold">
+                  <Clock size={12} className="inline mr-1" /> {Math.floor(workout.duration / 60)}h {(workout.duration % 60).toString().padStart(2, '0')}m
                 </p>
-              </div>
+              )}
             </div>
+
+            {/* Separator reduced for new layout */}
+            {!isCompact && (
+              <div className="mb-4 pb-4 border-b border-slate-700/50" />
+            )}
 
             {/* Workout Tags - Hide in compact */}
             {!isCompact && workout.tags && workout.tags.length > 0 && (
@@ -182,7 +252,8 @@ export const WorkoutDetailView = ({ selectedDate, workouts, onBack, exercisesDB 
               })}
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

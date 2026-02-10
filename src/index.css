@@ -79,15 +79,13 @@ body {
 .ui-press { transition: transform 140ms var(--anim-ease); }
 .ui-press:active { transform: scale(0.97); }
 
-/* PR Set bounce animation - celebratory bounce when set is marked with records */
+/* PR Set bounce animation - smooth, subtle bounce within card bounds */
 @keyframes pr-bounce {
   0%, 100% { transform: translateY(0); }
-  25% { transform: translateY(-6px); }
-  50% { transform: translateY(0); }
-  75% { transform: translateY(-3px); }
+  50% { transform: translateY(-2px); }
 }
 .animate-pr-bounce {
-  animation: pr-bounce 0.6s cubic-bezier(0.36, 0, 0.66, -0.56) forwards;
+  animation: pr-bounce 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
 }
 
 /* Checkbox micro animation: scale + color transition when checked */

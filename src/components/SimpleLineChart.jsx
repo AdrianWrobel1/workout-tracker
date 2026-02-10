@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 
 export const SimpleLineChart = ({ data, color = "#fb7185", unit = 'kg', onPointClick }) => {
   const [hoverIndex, setHoverIndex] = useState(null);
+  const [selectedIndex, setSelectedIndex] = useState(null);
 
   if (!data || data.length < 2) {
     return (
@@ -51,12 +52,29 @@ export const SimpleLineChart = ({ data, color = "#fb7185", unit = 'kg', onPointC
               style={{ cursor: 'pointer' }}
               onMouseEnter={() => setHoverIndex(i)}
               onMouseLeave={() => setHoverIndex(null)}
-              onClick={() => onPointClick && onPointClick(i, p.d)}
+              onClick={() => {
+                setSelectedIndex(selectedIndex === i ? null : i);
+                onPointClick && onPointClick(i, p.d);
+              }}
             />
           </g>
         ))}
 
-        {/* Tooltip removed per user request */}
+        {/* Data tooltip - show on click */}
+        {selectedIndex !== null && (() => {
+          const p = pointsArr[selectedIndex];
+          const item = data[selectedIndex];
+          const tooltipWidth = 110;
+          const tx = Math.min(Math.max(p.x + 6, padding), width - padding - tooltipWidth);
+          const ty = p.y - 32 < padding ? p.y + 8 : p.y - 32;
+          return (
+            <g>
+              <rect x={tx} y={ty} width={tooltipWidth} height={26} rx={6} fill="#0f1720" stroke="#374151" />
+              <text x={tx + 8} y={ty + 9} fontSize="11" fill="#f8fafc">{item.date}</text>
+              <text x={tx + 8} y={ty + 20} fontSize="12" fill={color} fontWeight="bold">{item.value} {unit}</text>
+            </g>
+          );
+        })()}
       </svg>
       <div className="flex justify-between text-xs text-zinc-500 mt-2 px-2">
         <span>{data[0].date}</span>
