@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { ChevronLeft } from 'lucide-react';
 import { RadarChart } from '../components/RadarChart';
+import { UnifiedChart } from '../components/UnifiedChart';
 import { calculateTotalVolume } from '../domain/calculations';
 import { getChartData } from '../domain/profileCharts';
 
@@ -207,6 +208,21 @@ export const ProfileStatisticsView = ({ workouts = [], exercisesDB = [], userWei
             <p className="text-3xl font-black text-amber-400">{(stats.avgSessionVolume / 1000).toFixed(1)}k</p>
             <p className="text-xs text-slate-500 mt-2">kg</p>
           </div>
+        </div>
+
+        {/* Overall 1RM Trend Chart */}
+        <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-4">
+          <h2 className="text-sm font-black text-slate-300 uppercase tracking-widest mb-4">Overall 1RM Trend</h2>
+          <UnifiedChart
+            workouts={workouts}
+            exerciseId={null}
+            metric="weight"
+            timePeriod={timePeriod}
+            color="#3b82f6"
+            unit="kg"
+            userWeight={userWeight}
+            exercisesDB={exercisesDB}
+          />
         </div>
 
         {/* Muscle Group Breakdown */}

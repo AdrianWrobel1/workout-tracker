@@ -1,60 +1,17 @@
 import React, { useState, useMemo } from 'react';
 import { ChevronLeft, Trophy, Medal } from 'lucide-react';
-import { SimpleLineChart } from '../components/SimpleLineChart';
+import { UnifiedChart } from '../components/UnifiedChart';
 import { getExerciseHistory, getExerciseRecords, getLastSet, getExerciseTrend, getChartContext } from '../domain/exercises';
 import { formatLastSetDate } from '../domain/calculations';
 
 export const ExerciseDetailView = ({ exerciseId, workouts, exercisesDB, onBack, onOpenWorkout, userWeight }) => {
   const [activeTab, setActiveTab] = useState('history');
   const [selectedWeek, setSelectedWeek] = useState(null);
+  const [chartPeriod, setChartPeriod] = useState('3months');
 
   const exerciseDef = exercisesDB.find(e => e.id === exerciseId);
   const history = useMemo(() => getExerciseHistory(exerciseId, workouts), [exerciseId, workouts]);
   const records = useMemo(() => getExerciseRecords(exerciseId, workouts), [exerciseId, workouts]);
-  const chartData = useMemo(() => {
-    return [...history].reverse().map(h => ({
-      date: new Date(h.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      value: h.max1RM
-    }));
-  }, [history]);
-
-  // Aggregate volume by week (week starting Monday)
-  const weeklyVolume = useMemo(() => {
-    const map = {}; // weekKey -> { start: Date, weight, reps }
-
-    const getWeekStart = (dateStr) => {
-      const d = new Date(dateStr);
-      const day = d.getDay();
-      const diff = d.getDate() - ((day + 6) % 7); // Monday as start
-      const ws = new Date(d);
-      ws.setDate(diff);
-      ws.setHours(0,0,0,0);
-      return ws;
-    };
-
-      [...history].reverse().forEach(h => {
-      const ws = getWeekStart(h.date);
-      const key = ws.toISOString().substring(0,10);
-      const exDef = exercisesDB.find(d => d.id === exerciseId) || {};
-      const totalWeight = h.sets.reduce((s, x) => {
-        const baseKg = Number(x.kg) || 0;
-        const kg = baseKg + ((exDef.usesBodyweight && userWeight) ? Number(userWeight) : 0);
-        return s + (kg * x.reps);
-      }, 0);
-      const totalReps = h.sets.reduce((s, x) => s + (x.reps || 0), 0);
-      if (!map[key]) map[key] = { start: ws, weight: 0, reps: 0 };
-      map[key].weight += totalWeight;
-      map[key].reps += totalReps;
-    });
-
-    return Object.values(map).sort((a,b) => a.start - b.start).map(w => {
-      const start = w.start;
-      const end = new Date(start);
-      end.setDate(end.getDate() + 6);
-      const label = `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}-${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
-      return { date: label, weight: w.weight, reps: w.reps, startISO: start.toISOString().substring(0,10), endISO: end.toISOString().substring(0,10) };
-    });
-  }, [history]);
 
   if (!exerciseDef) return null;
 
@@ -254,43 +211,55 @@ export const ExerciseDetailView = ({ exerciseId, workouts, exercisesDB, onBack, 
 
         {activeTab === 'charts' && (
           <div className="space-y-5 mt-2">
+            {/* Time Period Selector */}
+            <div className="flex gap-2 px-4">
+              {['7days', '3months', '1year'].map(period => (
+                <button
+                  key={period}
+                  onClick={() => setChartPeriod(period)}
+                  className={`flex-1 py-2 px-3 text-xs font-bold rounded-lg transition-all ${
+                    chartPeriod === period
+                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+                      : 'bg-slate-800/50 text-slate-400 hover:bg-slate-700/50'
+                  }`}
+                >
+                  {period === '7days' ? 'Last 7d' : period === '3months' ? 'Last 3m' : 'Last Year'}
+                </button>
+              ))}
+            </div>
+
             {/* 1RM Chart */}
             <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-4">
               <div className="mb-4">
                 <h3 className="text-xs text-slate-400 font-black uppercase tracking-widest mb-1">Estimated 1RM Progress</h3>
                 <p className="text-xs text-blue-400 font-semibold">{getChartContext(exerciseId, workouts)}</p>
               </div>
-              <SimpleLineChart data={chartData} color="#3b82f6" />
+              <UnifiedChart
+                workouts={workouts}
+                exerciseId={exerciseId}
+                metric="weight"
+                timePeriod={chartPeriod}
+                color="#3b82f6"
+                unit="kg"
+                userWeight={userWeight}
+                exercisesDB={exercisesDB}
+              />
             </div>
 
-            {/* Volume Charts */}
+            {/* Volume Chart */}
             <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-4">
-              <h3 className="text-xs text-slate-400 font-black uppercase tracking-widest mb-4">Weekly Volume</h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="text-xs text-slate-500 font-bold mb-2 block">Total Weight (kg)</label>
-                  <SimpleLineChart
-                    data={weeklyVolume.map(d => ({ date: d.date, value: d.weight, startISO: d.startISO, endISO: d.endISO }))}
-                    color="#3b82f6"
-                    unit="kg"
-                    onPointClick={(i, item) => setSelectedWeek(item)}
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-slate-500 font-bold mb-2 block">Total Reps</label>
-                  <SimpleLineChart
-                    data={weeklyVolume.map(d => ({ date: d.date, value: d.reps, startISO: d.startISO, endISO: d.endISO }))}
-                    color="#8b5cf6"
-                    unit="reps"
-                    onPointClick={(i, item) => setSelectedWeek(item)}
-                  />
-                </div>
-              </div>
+              <h3 className="text-xs text-slate-400 font-black uppercase tracking-widest mb-4">Total Volume</h3>
+              <UnifiedChart
+                workouts={workouts}
+                exerciseId={exerciseId}
+                metric="volume"
+                timePeriod={chartPeriod}
+                color="#10b981"
+                unit="kg"
+                userWeight={userWeight}
+                exercisesDB={exercisesDB}
+              />
             </div>
-
-            <p className="text-xs text-slate-500 text-center px-4 py-2">
-              Charts: 1RM estimated based on completed sets. Volume data is aggregated weekly.
-            </p>
           </div>
         )}
 

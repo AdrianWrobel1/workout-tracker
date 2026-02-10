@@ -253,7 +253,7 @@ function aggregateWeekly(workouts, metric, exerciseId, userWeight, exercisesDB) 
       const value = values.length > 0 
         ? (metric === 'volume' 
           ? Math.round(values.reduce((a, b) => a + b, 0)) // Sum for volume
-          : Math.max(...values) // Max for weight)
+          : Math.max(...values)) // Max for weight
         : 0;
       return {
         label: `W${getWeekNumber(new Date(date))}`,
