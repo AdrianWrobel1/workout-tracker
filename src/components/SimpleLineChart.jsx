@@ -56,20 +56,7 @@ export const SimpleLineChart = ({ data, color = "#fb7185", unit = 'kg', onPointC
           </g>
         ))}
 
-        {hoverIndex !== null && (() => {
-          const p = pointsArr[hoverIndex];
-          const item = data[hoverIndex];
-          const tooltipWidth = 110;
-          const tx = Math.min(Math.max(p.x + 6, padding), width - padding - tooltipWidth);
-          const ty = p.y - 32 < padding ? p.y + 8 : p.y - 32;
-          return (
-            <g>
-              <rect x={tx} y={ty} width={tooltipWidth} height={26} rx={6} fill="#0f1720" stroke="#374151" />
-              <text x={tx + 8} y={ty + 9} fontSize="11" fill="#f8fafc">{item.date}</text>
-              <text x={tx + 8} y={ty + 20} fontSize="12" fill={color} fontWeight="bold">{item.value} {unit}</text>
-            </g>
-          );
-        })()}
+        {/* Tooltip removed per user request */}
       </svg>
       <div className="flex justify-between text-xs text-zinc-500 mt-2 px-2">
         <span>{data[0].date}</span>
