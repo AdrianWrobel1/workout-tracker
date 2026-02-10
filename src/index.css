@@ -79,6 +79,17 @@ body {
 .ui-press { transition: transform 140ms var(--anim-ease); }
 .ui-press:active { transform: scale(0.97); }
 
+/* PR Set bounce animation - celebratory bounce when set is marked with records */
+@keyframes pr-bounce {
+  0%, 100% { transform: translateY(0); }
+  25% { transform: translateY(-6px); }
+  50% { transform: translateY(0); }
+  75% { transform: translateY(-3px); }
+}
+.animate-pr-bounce {
+  animation: pr-bounce 0.6s cubic-bezier(0.36, 0, 0.66, -0.56) forwards;
+}
+
 /* Checkbox micro animation: scale + color transition when checked */
 .ui-checkbox { transition: transform 140ms var(--anim-ease), background-color var(--anim-duration) var(--anim-ease), border-color var(--anim-duration) var(--anim-ease); }
 .ui-checkbox:active { transform: scale(0.98); }
