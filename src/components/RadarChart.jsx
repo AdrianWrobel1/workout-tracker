@@ -16,7 +16,7 @@ export const RadarChart = ({
   strokeColor = '#fb7185' 
 }) => {
   // Define muscle groups in order (clockwise from top)
-  const groups = ['Back', 'Legs', 'Chest', 'Arms', 'Core', 'Shoulders'];
+  const groups = ['Chest', 'Back', 'Legs', 'Shoulders', 'Biceps', 'Triceps', 'Core'];
   
   // Center point
   const center = size / 2;
@@ -44,10 +44,11 @@ export const RadarChart = ({
     })
     .join(' ');
   
-  // Calculate label positions (slightly outside the chart)
+  // Calculate label positions (slightly outside the chart, with more padding for longer labels)
   const getLabelPosition = (index) => {
     const angle = (index / groups.length) * Math.PI * 2 - Math.PI / 2;
-    const labelRadius = center * 1.1;
+    // Increased label radius to accommodate longer muscle names
+    const labelRadius = center * 1.35;
     const x = center + Math.cos(angle) * labelRadius;
     const y = center + Math.sin(angle) * labelRadius;
     
@@ -59,13 +60,13 @@ export const RadarChart = ({
     // Adjust positioning based on quadrant
     if (Math.abs(Math.cos(angle)) > 0.3) {
       textAnchor = Math.cos(angle) > 0 ? 'start' : 'end';
-      dx = Math.cos(angle) > 0 ? 6 : -6; // Offset for left/right positions
+      dx = Math.cos(angle) > 0 ? 8 : -8; // Increased offset for left/right positions
     }
     
     if (Math.sin(angle) > 0.3) {
-      dy = 6; // Offset downward
+      dy = 8; // Increased offset downward
     } else if (Math.sin(angle) < -0.3) {
-      dy = -6; // Offset upward
+      dy = -8; // Increased offset upward
     }
     
     return { x, y, textAnchor, dx, dy };
@@ -135,12 +136,16 @@ export const RadarChart = ({
         const pos = getLabelPosition(i);
         const value = values[i];
         
+        // Responsive font size: smaller on mobile
+        const fontSize = size < 240 ? 10 : 12;
+        const percentFontSize = size < 240 ? 8 : 10;
+        
         return (
           <g key={`label-${i}`}>
             <text
               x={pos.x + pos.dx}
               y={pos.y + pos.dy}
-              fontSize="12"
+              fontSize={fontSize}
               fontWeight="600"
               fill="#e4e4e7"
               textAnchor={pos.textAnchor}
@@ -152,8 +157,8 @@ export const RadarChart = ({
             {value > 0 && (
               <text
                 x={pos.x + pos.dx}
-                y={pos.y + pos.dy + 14}
-                fontSize="10"
+                y={pos.y + pos.dy + 12}
+                fontSize={percentFontSize}
                 fill="#71717a"
                 textAnchor={pos.textAnchor}
                 dominantBaseline="middle"

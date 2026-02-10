@@ -30,7 +30,7 @@ export const ProfileStatisticsView = ({ workouts = [], exercisesDB = [], userWei
     const now = new Date();
 
     const groups = {};
-    const muscleGroups = ['Chest', 'Back', 'Legs', 'Shoulders', 'Arms', 'Core'];
+    const muscleGroups = ['Chest', 'Back', 'Legs', 'Shoulders', 'Biceps', 'Triceps', 'Core'];
 
     workouts.forEach(w => {
       const workoutDate = new Date(w.date);
@@ -248,7 +248,8 @@ function normalizeMuscleName(muscle) {
   if (s.includes('back') || s.includes('lat')) return 'Back';
   if (s.includes('leg') || s.includes('quad') || s.includes('ham')) return 'Legs';
   if (s.includes('shoulder') || s.includes('delt')) return 'Shoulders';
-  if (s.includes('arm') || s.includes('bicep') || s.includes('trice')) return 'Arms';
+  if (s.includes('bicep')) return 'Biceps';
+  if (s.includes('tricep') || s.includes('trice')) return 'Triceps';
   if (s.includes('core') || s.includes('abs')) return 'Core';
   return muscle;
 }

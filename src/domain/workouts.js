@@ -162,14 +162,15 @@ export const mapCategoryToMuscles = (category) => {
   const cat = category.toLowerCase().trim();
   
   // Multi-muscle categories
-  if (cat.includes('push')) return ['Chest', 'Shoulders', 'Arms'];
-  if (cat.includes('pull')) return ['Back', 'Arms'];
+  if (cat.includes('push')) return ['Chest', 'Shoulders', 'Triceps'];
+  if (cat.includes('pull')) return ['Back', 'Biceps'];
   if (cat.includes('legs') || cat.includes('leg')) return ['Legs'];
   if (cat.includes('chest') || cat.includes('pec')) return ['Chest'];
   if (cat.includes('back') || cat.includes('lat')) return ['Back'];
   if (cat.includes('shoulder') || cat.includes('delt')) return ['Shoulders'];
-  if (cat.includes('arms') || cat.includes('arm') || cat.includes('bicep') || cat.includes('tricep')) return ['Arms'];
-  if (cat.includes('core') || cat.includes('abs') || cat.includes('ab')) return ['Core'];
+  if (cat.includes('bicep')) return ['Biceps'];
+  if (cat.includes('tricep') || cat.includes('trice')) return ['Triceps'];
+  if (cat.includes('cores') || cat.includes('abs') || cat.includes('ab')) return ['Core'];
   
   return ['Other'];
 };
@@ -181,11 +182,12 @@ export const calculateMuscleDistribution = (workout, exercisesDB = []) => {
     'Back': 0,
     'Legs': 0,
     'Shoulders': 0,
-    'Arms': 0,
+    'Biceps': 0,
+    'Triceps': 0,
     'Core': 0
   };
   
-  const axes = ['Chest', 'Back', 'Legs', 'Shoulders', 'Arms', 'Core'];
+  const axes = ['Chest', 'Back', 'Legs', 'Shoulders', 'Biceps', 'Triceps', 'Core'];
   
   (workout.exercises || []).forEach(ex => {
     const exDef = exercisesDB.find(e => e.id === ex.exerciseId) || {};

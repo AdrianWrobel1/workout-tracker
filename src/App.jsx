@@ -1325,7 +1325,7 @@ export default function App() {
                         
                         {/* Axes and labels */}
                         {(() => {
-                          const groups = ['Chest', 'Back', 'Legs', 'Shoulders', 'Arms', 'Core'];
+                          const groups = ['Chest', 'Back', 'Legs', 'Shoulders', 'Biceps', 'Triceps', 'Core'];
                           const values = groups.map(g => radarData[g] || 0);
                           
                           // Already normalized 0-1, just scale to radius
