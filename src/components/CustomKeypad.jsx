@@ -1,9 +1,9 @@
 import React from 'react';
-import { Delete, Check, ChevronRight } from 'lucide-react';
+import { Delete, ChevronRight } from 'lucide-react';
 
 /**
  * Custom numeric keypad for kg/reps/rpe input
- * Appears at bottom of screen, replaces system keyboard
+ * Bottom sheet style - non-invasive, minimal UX
  */
 export const CustomKeypad = ({
   value = '',
@@ -11,13 +11,10 @@ export const CustomKeypad = ({
   onDone,
   onNext = null,
   label = '',
-  showPlusMinus = false,
-  onPlus = null,
-  onMinus = null
 }) => {
   const handleNumClick = (num) => {
     const newValue = value + num;
-    // Limit to reasonable values (2-3 digits)
+    // Limit to reasonable values (3 digits max)
     if (newValue.length <= 3) {
       onValueChange(newValue);
     }
@@ -28,99 +25,80 @@ export const CustomKeypad = ({
   };
 
   return (
-    <div className="fixed inset-x-0 bottom-24 z-50 bg-gradient-to-t from-slate-950 to-slate-900 border-t border-slate-700 px-4 py-4 shadow-2xl animate-in slide-in-from-bottom-2">
-      {/* Current Value Display */}
-      <div className="mb-4">
-        {label && <p className="text-xs text-slate-400 font-semibold tracking-widest mb-2">{label}</p>}
-        <div className="bg-slate-800/50 border border-slate-600 rounded-lg p-3 text-right">
-          <p className="text-2xl font-black text-white">{value || '0'}</p>
+    <div className="fixed inset-x-0 bottom-0 z-50 bg-slate-900/95 backdrop-blur-sm border-t border-slate-700/50 px-3 py-2 shadow-2xl animate-in slide-in-from-bottom-1 duration-200">
+      {/* Compact Header with Value Display */}
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex-1 min-w-0">
+          {label && <p className="text-xs text-slate-500 font-semibold">{label}</p>}
+          <p className="text-xl font-black text-white">{value || '0'}</p>
         </div>
+        <button
+          onClick={onDone}
+          className="px-3 py-1 bg-slate-700/50 hover:bg-slate-600/50 border border-slate-600/50 text-slate-300 hover:text-white text-xs font-bold rounded transition-colors ml-2"
+        >
+          ✕
+        </button>
       </div>
 
-      {/* Keypad Grid */}
-      <div className="grid grid-cols-3 gap-2 mb-3">
-        {/* Row 1: 1-3 */}
+      {/* Compact Keypad Grid - 3 columns, minimal gaps */}
+      <div className="grid grid-cols-4 gap-1">
+        {/* 1-3 */}
         {[1, 2, 3].map((num) => (
           <button
             key={num}
             onClick={() => handleNumClick(num.toString())}
-            className="bg-slate-700 hover:bg-slate-600 active:bg-slate-500 text-white font-bold py-3 rounded-lg transition-colors text-lg"
+            className="bg-slate-800/60 hover:bg-slate-700/60 active:bg-slate-600/60 text-white font-bold py-2 rounded text-sm transition-colors"
           >
             {num}
           </button>
         ))}
+        <button
+          onClick={handleBackspace}
+          className="bg-red-600/20 hover:bg-red-600/30 active:bg-red-600/40 text-red-400 border border-red-600/30 font-bold py-2 rounded text-xs transition-colors"
+        >
+          ⌫
+        </button>
 
-        {/* Row 2: 4-6 */}
+        {/* 4-6 */}
         {[4, 5, 6].map((num) => (
           <button
             key={num}
             onClick={() => handleNumClick(num.toString())}
-            className="bg-slate-700 hover:bg-slate-600 active:bg-slate-500 text-white font-bold py-3 rounded-lg transition-colors text-lg"
+            className="bg-slate-800/60 hover:bg-slate-700/60 active:bg-slate-600/60 text-white font-bold py-2 rounded text-sm transition-colors"
           >
             {num}
           </button>
         ))}
+        {onNext && (
+          <button
+            onClick={onNext}
+            className="bg-blue-600/60 hover:bg-blue-600/70 active:bg-blue-700/70 text-white font-bold py-2 rounded text-xs transition-colors row-span-2 flex items-center justify-center"
+          >
+            <span className="text-lg">→</span>
+          </button>
+        )}
 
-        {/* Row 3: 7-9 */}
+        {/* 7-9 */}
         {[7, 8, 9].map((num) => (
           <button
             key={num}
             onClick={() => handleNumClick(num.toString())}
-            className="bg-slate-700 hover:bg-slate-600 active:bg-slate-500 text-white font-bold py-3 rounded-lg transition-colors text-lg"
+            className="bg-slate-800/60 hover:bg-slate-700/60 active:bg-slate-600/60 text-white font-bold py-2 rounded text-sm transition-colors"
           >
             {num}
           </button>
         ))}
 
-        {/* Row 4: 0, Backspace, and action button */}
+        {/* 0 - spans 2 columns */}
         <button
           onClick={() => handleNumClick('0')}
-          className="col-span-1 bg-slate-700 hover:bg-slate-600 active:bg-slate-500 text-white font-bold py-3 rounded-lg transition-colors text-lg"
+          className="col-span-2 bg-slate-800/60 hover:bg-slate-700/60 active:bg-slate-600/60 text-white font-bold py-2 rounded text-sm transition-colors"
         >
           0
         </button>
-
-        <button
-          onClick={handleBackspace}
-          className="bg-red-600/30 hover:bg-red-600/40 active:bg-red-600/50 text-red-400 border border-red-600/40 font-bold py-3 rounded-lg transition-colors flex items-center justify-center"
-        >
-          <Delete size={18} />
-        </button>
-
-        {onNext ? (
-          <button
-            onClick={onNext}
-            className="bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold py-3 rounded-lg transition-colors flex items-center justify-center"
-          >
-            <ChevronRight size={20} />
-          </button>
-        ) : (
-          <button
-            onClick={onDone}
-            className="bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold py-3 rounded-lg transition-colors flex items-center justify-center"
-          >
-            <Check size={20} />
-          </button>
-        )}
       </div>
-
-      {/* Plus/Minus buttons for RPE */}
-      {showPlusMinus && (
-        <div className="flex gap-2">
-          <button
-            onClick={onMinus}
-            className="flex-1 bg-slate-700 hover:bg-slate-600 active:bg-slate-500 text-white font-bold py-2 rounded-lg transition-colors"
-          >
-            −
-          </button>
-          <button
-            onClick={onPlus}
-            className="flex-1 bg-slate-700 hover:bg-slate-600 active:bg-slate-500 text-white font-bold py-2 rounded-lg transition-colors"
-          >
-            +
-          </button>
-        </div>
-      )}
     </div>
   );
 };
+
+export default CustomKeypad;

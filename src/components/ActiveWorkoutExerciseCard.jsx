@@ -141,13 +141,13 @@ export const ActiveWorkoutExerciseCard = ({
                 onClick={() => {
                   // Haptic feedback
                   if (navigator.vibrate) {
-                    navigator.vibrate(10);
+                    navigator.vibrate([10, 5, 10]);
                   }
                   onToggleSet(exerciseIndex, i);
                 }}
                 className={`w-10 h-10 rounded-lg font-bold transition-all flex items-center justify-center border ${
                   set.completed
-                    ? 'bg-emerald-600 border-emerald-500 text-white shadow-lg shadow-emerald-600/50 scale-105'
+                    ? 'bg-emerald-600 border-emerald-500 text-white shadow-lg shadow-emerald-600/50 scale-105 animate-bounce'
                     : 'bg-slate-700/50 border-slate-600/50 text-slate-400 hover:bg-slate-600/50'
                 } ui-press`}
               >

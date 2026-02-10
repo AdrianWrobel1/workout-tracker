@@ -89,8 +89,8 @@ export const PRBanner = ({ prData, isVisible, onAutoClose }) => {
         bg-gradient-to-r from-emerald-600 to-emerald-500
         rounded-lg shadow-lg p-4
         flex items-center gap-3
-        transform transition-all duration-700
-        ${isAnimating ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}
+        transform transition-all duration-700 ease-out
+        ${isAnimating ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'}
       `}
     >
       <Medal className="w-6 h-6 text-yellow-300 flex-shrink-0" />
