@@ -995,7 +995,7 @@ export default function App() {
                   // Set new timeout to clear undo option after 5 seconds
                   undoTimeoutRef.current = setTimeout(() => {
                     setDeletedWorkout(null);
-                  }, 5000);
+                  }, 10000);
                 }
               }}
               onEditWorkout={(updatedWorkout) => { setWorkouts(workouts.map(w => w.id === updatedWorkout.id ? updatedWorkout : w)); }}
@@ -1254,12 +1254,15 @@ export default function App() {
                     break;
                 }
 
-                const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+                const blob = new Blob([content], { 
+                  type: data.format === 'json' ? 'application/json;charset=utf-8' : 'text/plain;charset=utf-8'
+                });
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement('a');
                 link.href = url;
                 const ext = data.format === 'json' ? 'json' : 'txt';
                 link.download = `${filename}.${ext}`;
+                link.setAttribute('type', blob.type);
                 link.click();
                 URL.revokeObjectURL(url);
                 setView('settings');
@@ -1709,15 +1712,18 @@ export default function App() {
 
       {/* Undo Deleted Workout Toast */}
       {deletedWorkout && (
-        <div className="fixed bottom-24 left-4 right-4 bg-slate-800 border border-slate-700 text-white px-4 py-3 rounded-lg shadow-lg flex items-center justify-between z-40 animate-pulse">
-          <span className="text-sm font-semibold">Workout deleted</span>
+        <div className="fixed bottom-24 left-4 right-4 bg-slate-800 border-2 border-slate-700 text-white px-6 py-4 rounded-xl shadow-xl flex items-center justify-between z-40 animate-pulse">
+          <div>
+            <p className="text-base font-bold">Workout deleted</p>
+            <p className="text-xs text-slate-400 mt-1">Undo within 10 seconds</p>
+          </div>
           <button
             onClick={() => {
               setWorkouts([deletedWorkout, ...workouts]);
               setDeletedWorkout(null);
               if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
             }}
-            className="ml-4 px-4 py-1.5 bg-blue-600 hover:bg-blue-500 rounded font-bold text-xs transition-colors"
+            className="ml-4 px-5 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg font-bold text-sm transition-colors flex-shrink-0"
           >
             Undo
           </button>
