@@ -14,7 +14,6 @@ export const ProfileView = ({
   onWorkoutClick,
   onOpenSettings
 }) => {
-  const [hoveredBarIndex, setHoveredBarIndex] = useState(null);
   const [chartMetric, setChartMetric] = useState('duration'); // 'duration' | 'volume' | 'reps'
   const [dateRange, setDateRange] = useState('3months'); // '1week' | '1month' | '3months'
   const [isEditingName, setIsEditingName] = useState(false);
@@ -29,16 +28,7 @@ export const ProfileView = ({
     calf: ''
   });
 
-  // Get date range in days
-  const getDaysFromRange = (range) => {
-    switch (range) {
-      case '1week': return 7;
-      case '1month': return 30;
-      case '3months': return 90;
-      case '1year': return 365;
-      default: return 90;
-    }
-  };
+
 
   // Map date range format (ProfileView uses '1week' format, UnifiedChart uses '7days')
   const getUnifiedChartPeriod = (range) => {

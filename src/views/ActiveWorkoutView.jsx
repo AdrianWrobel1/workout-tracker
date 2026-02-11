@@ -62,14 +62,12 @@ export const ActiveWorkoutView = ({
             <div className="text-sm font-black">{formatTime(workoutTimer)}</div>
           </div>
 
-          <div className="flex items-center">
-            <button
-              onClick={onCancel}
-              className="p-2 hover:bg-red-500/10 rounded-lg transition-colors hover:text-red-400"
-            >
-              <X size={20} />
-            </button>
-          </div>
+          <button
+            onClick={onCancel}
+            className="p-2 hover:bg-red-500/10 rounded-lg transition-colors hover:text-red-400"
+          >
+            <X size={20} />
+          </button>
         </div>
 
         {/* Workout Title */}

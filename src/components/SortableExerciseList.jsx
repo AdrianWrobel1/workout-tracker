@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { GripVertical, MoreVertical, Link2 } from 'lucide-react';
+import { GripVertical, MoreVertical, Link2, Edit2, Flame, Zap, Trash, Link, Minus } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -169,79 +169,102 @@ function SortableExerciseItem({
           </button>
 
           {menuOpenIndex === exIndex && (
-            <div className="absolute right-0 mt-2 bg-slate-900 border border-slate-700 rounded-lg mb-4 overflow-hidden shadow-xl z-40">
-              <button
-                onClick={() => {
-                  onReplaceExercise(exIndex);
-                  setMenuOpenIndex(null);
-                }}
-                className="block w-full text-left px-4 py-2 text-sm hover:bg-slate-800 border-b border-slate-700 transition text-blue-400"
-              >
-                Replace
-              </button>
-              <button
-                onClick={() => {
-                  onAddWarmupSet(exIndex);
-                  setMenuOpenIndex(null);
-                }}
-                className="block w-full text-left px-4 py-2 text-sm hover:bg-slate-800 border-b border-slate-700 transition text-amber-400"
-              >
-                Add Warmup
-              </button>
-              <button
-                onClick={() => {
-                  setWarmupModeIndex(warmupModeIndex === exIndex ? null : exIndex);
-                  setMenuOpenIndex(null);
-                }}
-                className="block w-full text-left px-4 py-2 text-sm hover:bg-slate-800 border-b border-slate-700 transition"
-              >
-                Edit Warmup
-              </button>
-              <button
-                onClick={() => {
-                  if (confirm('Delete this exercise?')) {
-                    onDeleteExercise(exIndex);
-                  }
-                  setMenuOpenIndex(null);
-                }}
-                className="block w-full text-left px-4 py-2 text-sm hover:bg-slate-800 transition text-red-400"
-              >
-                Delete Exercise
-              </button>
-              <button
-                onClick={() => {
-                  setDeleteModeIndex(deleteModeIndex === exIndex ? null : exIndex);
-                  setMenuOpenIndex(null);
-                }}
-                className="block w-full text-left px-4 py-2 text-sm hover:bg-slate-800 transition text-red-500"
-              >
-                Delete Sets
-              </button>
-              
-              {/* Superset options */}
-              {!exercise.supersetId && allExercises.length > 1 && (
+            <div className="absolute right-0 mt-2 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-40 w-56 overflow-hidden">
+              {/* Exercise Actions Section */}
+              <div className="p-2">
+                <div className="text-xs font-bold text-slate-500 uppercase tracking-widest px-3 py-2">Exercise</div>
                 <button
                   onClick={() => {
-                    setShowSupersetModal(true);
+                    onReplaceExercise(exIndex);
                     setMenuOpenIndex(null);
                   }}
-                  className="block w-full text-left px-4 py-2 text-sm hover:bg-slate-800 border-t border-slate-700 transition text-purple-400 font-bold"
+                  className="flex items-center gap-3 w-full text-left px-3 py-2.5 text-sm hover:bg-slate-800 rounded-lg transition text-blue-400 font-medium"
                 >
-                  Create Superset
+                  <Edit2 size={16} className="flex-shrink-0" />
+                  <span>Replace Exercise</span>
                 </button>
-              )}
+              </div>
               
-              {exercise.supersetId && (
+              {/* Warmup Section */}
+              <div className="border-t border-slate-700 p-2">
+                <div className="text-xs font-bold text-slate-500 uppercase tracking-widest px-3 py-2">Warmup</div>
                 <button
                   onClick={() => {
-                    onRemoveSuperset(exIndex);
+                    onAddWarmupSet(exIndex);
                     setMenuOpenIndex(null);
                   }}
-                  className="block w-full text-left px-4 py-2 text-sm hover:bg-slate-800 border-t border-slate-700 transition text-purple-300"
+                  className="flex items-center gap-3 w-full text-left px-3 py-2.5 text-sm hover:bg-slate-800 rounded-lg transition text-amber-400 font-medium"
                 >
-                  Remove Superset
+                  <Flame size={16} className="flex-shrink-0" />
+                  <span>Add Warmup Set</span>
                 </button>
-              )}
+                <button
+                  onClick={() => {
+                    setWarmupModeIndex(warmupModeIndex === exIndex ? null : exIndex);
+                    setMenuOpenIndex(null);
+                  }}
+                  className="flex items-center gap-3 w-full text-left px-3 py-2.5 text-sm hover:bg-slate-800 rounded-lg transition text-amber-300 font-medium"
+                >
+                  <Zap size={16} className="flex-shrink-0" />
+                  <span>Edit Warmup Sets</span>
+                </button>
+              </div>
+              
+              {/* Superset Section */}
+              <div className="border-t border-slate-700 p-2">
+                <div className="text-xs font-bold text-slate-500 uppercase tracking-widest px-3 py-2">Superset</div>
+                {!exercise.supersetId && allExercises.length > 1 && (
+                  <button
+                    onClick={() => {
+                      setShowSupersetModal(true);
+                      setMenuOpenIndex(null);
+                    }}
+                    className="flex items-center gap-3 w-full text-left px-3 py-2.5 text-sm hover:bg-slate-800 rounded-lg transition text-purple-400 font-medium"
+                  >
+                    <Link size={16} className="flex-shrink-0" />
+                    <span>Create Superset</span>
+                  </button>
+                )}
+                {exercise.supersetId && (
+                  <button
+                    onClick={() => {
+                      onRemoveSuperset(exIndex);
+                      setMenuOpenIndex(null);
+                    }}
+                    className="flex items-center gap-3 w-full text-left px-3 py-2.5 text-sm hover:bg-slate-800 rounded-lg transition text-purple-300 font-medium"
+                  >
+                    <Minus size={16} className="flex-shrink-0" />
+                    <span>Remove Superset</span>
+                  </button>
+                )}
+              </div>
+              
+              {/* Delete Section */}
+              <div className="border-t border-slate-700 p-2">
+                <div className="text-xs font-bold text-slate-500 uppercase tracking-widest px-3 py-2">Delete</div>
+                <button
+                  onClick={() => {
+                    setDeleteModeIndex(deleteModeIndex === exIndex ? null : exIndex);
+                    setMenuOpenIndex(null);
+                  }}
+                  className="flex items-center gap-3 w-full text-left px-3 py-2.5 text-sm hover:bg-red-500/20 rounded-lg transition text-red-400 font-medium mb-2"
+                >
+                  <Trash size={16} className="flex-shrink-0" />
+                  <span>Delete Sets</span>
+                </button>
+                <button
+                  onClick={() => {
+                    if (confirm('Delete this exercise?')) {
+                      onDeleteExercise(exIndex);
+                    }
+                    setMenuOpenIndex(null);
+                  }}
+                  className="flex items-center gap-3 w-full text-left px-3 py-2.5 text-sm hover:bg-red-500/20 rounded-lg transition text-red-500 font-bold"
+                >
+                  <Trash size={16} className="flex-shrink-0" />
+                  <span>Delete Exercise</span>
+                </button>
+              </div>
             </div>
           )}
           
@@ -286,13 +309,32 @@ function SortableExerciseItem({
 
       {/* Delete mode - Toggle delete buttons on individual sets */}
       {deleteModeIndex === exIndex && (
-        <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
-          <p className="text-sm font-bold text-red-400 mb-2">Delete mode active - tap trash button or swipe left to delete:</p>
+        <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg flex items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-bold text-red-400">🗑️ Delete mode active</p>
+            <p className="text-xs text-red-300 mt-1">Tap trash button or swipe left to delete sets</p>
+          </div>
           <button
             onClick={() => setDeleteModeIndex(null)}
-            className="w-full px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm font-bold rounded transition"
+            className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded transition flex-shrink-0"
           >
-            Close delete mode
+            Done
+          </button>
+        </div>
+      )}
+
+      {/* Warmup mode - Toggle warmup on individual sets */}
+      {warmupModeIndex === exIndex && (
+        <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg flex items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-bold text-amber-400">🔥 Warmup edit mode</p>
+            <p className="text-xs text-amber-300 mt-1">Toggle warmup sets or swipe to delete</p>
+          </div>
+          <button
+            onClick={() => setWarmupModeIndex(null)}
+            className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold rounded transition flex-shrink-0"
+          >
+            Done
           </button>
         </div>
       )}

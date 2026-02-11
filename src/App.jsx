@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 
 // DOMAIN
 import { calculate1RM } from './domain/calculations';
@@ -88,6 +88,10 @@ export default function App() {
   const [enableHapticFeedback, setEnableHapticFeedback] = useState(false);
   const [activePRBanner, setActivePRBanner] = useState(null);
   const [prBannerVisible, setPRBannerVisible] = useState(false);
+
+  // Undo deleted workout
+  const [deletedWorkout, setDeletedWorkout] = useState(null);
+  const undoTimeoutRef = useRef(null);
 
   // P6 FIX: Clear keypad state when view changes to prevent stale values on reopening
   useEffect(() => {
@@ -871,8 +875,12 @@ export default function App() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `workout_export_${exportType}_${new Date().toISOString().split('T')[0]}.json`;
+    // Ensure filename ends exactly with .json and not .json.txt
+    const filename = `workout_export_${exportType}_${new Date().toISOString().split('T')[0]}.json`;
+    link.download = filename;
+    link.setAttribute('type', blob.type);
     link.click();
+    URL.revokeObjectURL(url);
     closeExportModal();
   }, [workouts, templates, exercisesDB, weeklyGoal, exportType, exportPeriod, exportStartDate, exportEndDate, exportExerciseId, closeExportModal]);
 
@@ -975,7 +983,21 @@ export default function App() {
             <HistoryView
               workouts={workouts}
               onViewWorkoutDetail={(date) => { setSelectedDate(date); setView('workoutDetail'); }}
-              onDeleteWorkout={(id) => { if (confirm('Delete this workout?')) setWorkouts(workouts.filter(w => w.id !== id)); }}
+              onDeleteWorkout={(id) => {
+                const workoutToDelete = workouts.find(w => w.id === id);
+                if (workoutToDelete) {
+                  setWorkouts(workouts.filter(w => w.id !== id));
+                  setDeletedWorkout(workoutToDelete);
+                  
+                  // Clear existing timeout
+                  if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
+                  
+                  // Set new timeout to clear undo option after 5 seconds
+                  undoTimeoutRef.current = setTimeout(() => {
+                    setDeletedWorkout(null);
+                  }, 5000);
+                }
+              }}
               onEditWorkout={(updatedWorkout) => { setWorkouts(workouts.map(w => w.id === updatedWorkout.id ? updatedWorkout : w)); }}
               exercisesDB={exercisesDB}
               filter={historyFilter}
@@ -1682,6 +1704,23 @@ export default function App() {
       {toast && (
         <div className="fixed bottom-24 left-4 right-4 bg-red-600 text-white px-4 py-3 rounded-lg shadow-lg animate-pulse">
           {toast}
+        </div>
+      )}
+
+      {/* Undo Deleted Workout Toast */}
+      {deletedWorkout && (
+        <div className="fixed bottom-24 left-4 right-4 bg-slate-800 border border-slate-700 text-white px-4 py-3 rounded-lg shadow-lg flex items-center justify-between z-40 animate-pulse">
+          <span className="text-sm font-semibold">Workout deleted</span>
+          <button
+            onClick={() => {
+              setWorkouts([deletedWorkout, ...workouts]);
+              setDeletedWorkout(null);
+              if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
+            }}
+            className="ml-4 px-4 py-1.5 bg-blue-600 hover:bg-blue-500 rounded font-bold text-xs transition-colors"
+          >
+            Undo
+          </button>
         </div>
       )}
       
