@@ -1,5 +1,5 @@
 import React from 'react';
-import { Edit2, Trash2 } from 'lucide-react';
+import { Edit2, Trash2, Star } from 'lucide-react';
 
 /**
  * Memoized exercise card component
@@ -9,7 +9,8 @@ export const ExerciseCard = React.memo(({
   exercise,
   onViewDetail,
   onEditExercise,
-  onDeleteExercise
+  onDeleteExercise,
+  onToggleFavorite
 }) => {
   return (
     <div
@@ -35,6 +36,15 @@ export const ExerciseCard = React.memo(({
           </div>
         </div>
         <div className="flex gap-2">
+          {onToggleFavorite && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onToggleFavorite(exercise.id); }}
+              className={`p-2 border rounded-lg transition ${exercise.isFavorite ? 'bg-yellow-500/20 border-yellow-500/30 text-yellow-400' : 'bg-slate-700/20 hover:bg-slate-700/30 border-slate-600/50 text-slate-400'}`}
+              title={exercise.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+            >
+              <Star size={16} fill={exercise.isFavorite ? 'currentColor' : 'none'} />
+            </button>
+          )}
           {onEditExercise && (
             <button
               onClick={(e) => { e.stopPropagation(); onEditExercise(exercise); }}
@@ -63,7 +73,8 @@ export const ExerciseCard = React.memo(({
     prevProps.exercise.id === nextProps.exercise.id &&
     prevProps.exercise.name === nextProps.exercise.name &&
     prevProps.exercise.category === nextProps.exercise.category &&
-    JSON.stringify(prevProps.exercise.muscles) === JSON.stringify(nextProps.exercise.muscles)
+    JSON.stringify(prevProps.exercise.muscles) === JSON.stringify(nextProps.exercise.muscles) &&
+    prevProps.exercise.isFavorite === nextProps.exercise.isFavorite
   );
 });
 

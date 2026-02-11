@@ -175,7 +175,7 @@ export const mapCategoryToMuscles = (category) => {
   return ['Other'];
 };
 
-// Calculate muscle distribution for radar - includes ALL sets regardless of completed status
+// Calculate muscle distribution for radar - includes COMPLETED sets only
 export const calculateMuscleDistribution = (workout, exercisesDB = []) => {
   const muscleVolumes = {
     'Chest': 0,
@@ -200,18 +200,15 @@ export const calculateMuscleDistribution = (workout, exercisesDB = []) => {
       muscles = mapCategoryToMuscles(ex.category);
     }
     
-    // Calculate volume for this exercise (ALL sets, not just completed)
+    // Calculate volume for this exercise (completed sets only, exclude warmups)
     let exVolume = 0;
     (ex.sets || []).forEach(s => {
-      const kg = Number(s.kg) || 0;
-      const reps = Number(s.reps) || 0;
-      exVolume += kg * reps;
+      if (s.completed && !s.warmup) {
+        const kg = Number(s.kg) || 0;
+        const reps = Number(s.reps) || 0;
+        exVolume += kg * reps;
+      }
     });
-    
-    // Ensure minimum volume (1) so radar is never empty
-    if (exVolume === 0 && (ex.sets || []).length > 0) {
-      exVolume = 1;
-    }
     
     // Add volume to each mapped muscle
     // Filter to valid axes only

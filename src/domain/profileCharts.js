@@ -176,7 +176,7 @@ function aggregateByWeek(workouts, startDate, endDate) {
             date: weekStartISO,
             weekStart: weekStart,
             weekNum: weekNum,
-            label: `W${weekNum}`,
+            label: formatWeekLabel(weekStartISO),
             duration: 0,
             volume: 0,
             reps: 0,
@@ -204,7 +204,7 @@ function aggregateByWeek(workouts, startDate, endDate) {
         date: weekStartISO,
         weekStart: weekStart,
         weekNum: weekNum,
-        label: `W${weekNum}`,
+        label: formatWeekLabel(weekStartISO),
         duration: 0,
         volume: 0,
         reps: 0,
@@ -329,6 +329,14 @@ function getWeekNumber(date) {
   d.setUTCDate(d.getUTCDate() + 4 - dayNum);
   const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
   return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+}
+
+/**
+ * Format week label with date
+ */
+function formatWeekLabel(dateStr) {
+  const date = new Date(dateStr + 'T00:00:00');
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 /**

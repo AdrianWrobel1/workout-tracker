@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { aggregateDaily, aggregateWeekly, aggregateMonthly, getNiceInterval, formatDateShort, formatWeekStart, formatMonth } from '../domain/chartAggregation';
 
 /**
  * Unified Chart Component - Mobile-first line chart for all fitness data
@@ -38,6 +39,9 @@ export const UnifiedChart = ({
       case '7days':
         start = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
         break;
+      case '30days':
+        start = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        break;
       case '3months':
         start = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
         break;
@@ -64,10 +68,17 @@ export const UnifiedChart = ({
     // Extract time buckets based on period
     if (timePeriod === '7days') {
       return aggregateDaily(filtered, metric, exerciseId, userWeight, exercisesDB);
+    } else if (timePeriod === '30days') {
+      return aggregateWeekly(filtered, metric, exerciseId, userWeight, exercisesDB);
     } else if (timePeriod === '3months') {
       return aggregateWeekly(filtered, metric, exerciseId, userWeight, exercisesDB);
     } else {
-      return aggregateMonthly(filtered, metric, exerciseId, userWeight, exercisesDB);
+      const monthly = aggregateMonthly(filtered, metric, exerciseId, userWeight, exercisesDB);
+      // For yearly view, show only quarterly months (Mar, Jun, Sep, Dec)
+      return monthly.filter(item => {
+        const date = new Date(item.date + 'T00:00:00');
+        return [3, 6, 9, 12].includes(date.getMonth() + 1);
+      });
     }
   }, [workouts, exerciseId, metric, timePeriod, userWeight, exercisesDB]);
 
@@ -79,17 +90,44 @@ export const UnifiedChart = ({
     );
   }
 
-  const height = 200;
+  const height = 240;
   const width = 350;
-  const padding = 20;
+  const leftPadding = 40;
+  const rightPadding = 16;
+  const topPadding = 16;
+  const bottomPadding = 20;
 
   const maxVal = Math.max(...chartData.map(d => d.value));
   const minVal = Math.min(...chartData.map(d => d.value));
-  const range = maxVal - minVal || 1;
+  
+  // Dynamic scaling: add 5% margin below min and above max
+  const margin = (maxVal - minVal) * 0.05 || maxVal * 0.1 || 1;
+  const scaledMin = Math.max(0, minVal - margin);
+  const scaledMax = maxVal + margin;
+  const range = scaledMax - scaledMin || 1;
+
+  // Generate nice Y-axis ticks (3-5 values)
+  const generateYTicks = () => {
+    const targetTicks = 4;
+    const niceInterval = getNiceInterval(range, targetTicks);
+    const tickMin = Math.floor(scaledMin / niceInterval) * niceInterval;
+    const ticks = [];
+    
+    for (let i = tickMin; i <= scaledMax; i += niceInterval) {
+      if (ticks.length <= 5) {
+        ticks.push(i);
+      }
+    }
+    
+    return ticks.length > 0 ? ticks : [scaledMin, (scaledMin + scaledMax) / 2, scaledMax];
+  };
+
+  const yTicks = generateYTicks();
 
   const pointsArr = chartData.map((d, i) => {
-    const x = padding + (i / (chartData.length - 1)) * (width - 2 * padding);
-    const y = height - padding - ((d.value - minVal) / range) * (height - 2 * padding);
+    const x = leftPadding + (i / (chartData.length - 1)) * (width - leftPadding - rightPadding);
+    const chartHeight = height - topPadding - bottomPadding;
+    const y = topPadding + chartHeight - ((d.value - scaledMin) / range) * chartHeight;
     return { x, y, d };
   });
   
@@ -98,9 +136,46 @@ export const UnifiedChart = ({
   return (
     <div className="w-full overflow-hidden">
       <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto">
-        {/* Grid lines */}
-        <line x1={padding} y1={padding} x2={width - padding} y2={padding} stroke="#3f3f46" strokeDasharray="4" />
-        <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} stroke="#3f3f46" />
+        {/* Horizontal grid lines at Y ticks */}
+        {yTicks.map((tick, i) => {
+          const chartHeight = height - topPadding - bottomPadding;
+          const y = topPadding + chartHeight - ((tick - scaledMin) / range) * chartHeight;
+          return (
+            <line
+              key={`gridline-${i}`}
+              x1={leftPadding}
+              y1={y}
+              x2={width - rightPadding}
+              y2={y}
+              stroke="#334155"
+              strokeWidth="0.5"
+              opacity="0.12"
+              strokeDasharray="2,2"
+            />
+          );
+        })}
+        
+        {/* Y-axis labels */}
+        {yTicks.map((tick, i) => {
+          const chartHeight = height - topPadding - bottomPadding;
+          const y = topPadding + chartHeight - ((tick - scaledMin) / range) * chartHeight;
+          return (
+            <text
+              key={`ylabel-${i}`}
+              x={leftPadding - 6}
+              y={y + 4}
+              fontSize="11"
+              fill="#94a3b8"
+              textAnchor="end"
+              dominantBaseline="middle"
+            >
+              {formatYAxisLabel(tick)}
+            </text>
+          );
+        })}
+        
+        {/* Y-axis line */}
+        <line x1={leftPadding} y1={topPadding} x2={leftPadding} y2={height - bottomPadding} stroke="#475569" strokeWidth="0.5" opacity="0.5" />
         
         {/* Chart line */}
         <polyline
@@ -115,6 +190,7 @@ export const UnifiedChart = ({
         {/* Data points */}
         {pointsArr.map((p, i) => (
           <g key={i}>
+            {/* Chart data points - 4px radius with 24px invisible tap zone for mobile */}
             <circle
               cx={p.x}
               cy={p.y}
@@ -122,6 +198,17 @@ export const UnifiedChart = ({
               fill="#0b0b0c"
               stroke={color}
               strokeWidth="2"
+              style={{ cursor: 'pointer' }}
+              onMouseEnter={() => setHoverIndex(i)}
+              onMouseLeave={() => setHoverIndex(null)}
+              onClick={() => setSelectedPointIndex(selectedPointIndex === i ? null : i)}
+            />
+            {/* Invisible larger tap zone for easier mobile interaction (24px radius) */}
+            <circle
+              cx={p.x}
+              cy={p.y}
+              r="24"
+              fill="transparent"
               style={{ cursor: 'pointer' }}
               onMouseEnter={() => setHoverIndex(i)}
               onMouseLeave={() => setHoverIndex(null)}
@@ -135,8 +222,8 @@ export const UnifiedChart = ({
           const p = pointsArr[selectedPointIndex];
           const item = chartData[selectedPointIndex];
           const tooltipWidth = 110;
-          const tx = Math.min(Math.max(p.x + 6, padding), width - padding - tooltipWidth);
-          const ty = p.y - 32 < padding ? p.y + 8 : p.y - 32;
+          const tx = Math.min(Math.max(p.x + 6, leftPadding), width - rightPadding - tooltipWidth);
+          const ty = p.y - 32 < topPadding ? p.y + 8 : p.y - 32;
           
           return (
             <g>
@@ -159,186 +246,13 @@ export const UnifiedChart = ({
   );
 };
 
-// ============ Aggregation Functions ============
-
-function aggregateDaily(workouts, metric, exerciseId, userWeight, exercisesDB) {
-  const days = {};
-  
-  workouts.forEach(w => {
-    const date = new Date(w.date);
-    const key = date.toISOString().split('T')[0]; // YYYY-MM-DD
-    
-    if (!days[key]) {
-      days[key] = [];
-    }
-    
-    // Extract metric from this workout
-    (w.exercises || []).forEach(ex => {
-      if (exerciseId && ex.exerciseId !== exerciseId) return; // Filter by exerciseId if specified
-      
-      const completed = (ex.sets || []).filter(s => s.completed && !s.warmup);
-      
-      completed.forEach(set => {
-        const kg = Number(set.kg) || 0;
-        const reps = Number(set.reps) || 0;
-        
-        if (kg === 0) return;
-        
-        const exDef = exercisesDB.find(e => e.id === ex.exerciseId) || {};
-        const totalKg = kg + ((exDef.usesBodyweight && userWeight) ? Number(userWeight) : 0);
-        
-        if (metric === 'weight') {
-          days[key].push(Math.round(totalKg * (1 + reps / 30))); // 1RM estimate
-        } else if (metric === 'volume') {
-          days[key].push(totalKg * reps);
-        } else if (metric === 'reps') {
-          days[key].push(reps);
-        }
-      });
-    });
-  });
-  
-  // Convert to array, sorted by date
-  return Object.entries(days)
-    .map(([date, values]) => {
-      const value = values.length > 0 ? Math.max(...values) : 0; // For weight, take max; for volume, could sum
-      return {
-        label: formatDateShort(date),
-        value,
-        date
-      };
-    })
-    .sort((a, b) => new Date(a.date) - new Date(b.date));
-}
-
-function aggregateWeekly(workouts, metric, exerciseId, userWeight, exercisesDB) {
-  const weeks = {};
-  
-  workouts.forEach(w => {
-    const date = new Date(w.date);
-    const weekStart = getWeekStart(date);
-    const key = weekStart.toISOString().split('T')[0];
-    
-    if (!weeks[key]) {
-      weeks[key] = [];
-    }
-    
-    (w.exercises || []).forEach(ex => {
-      if (exerciseId && ex.exerciseId !== exerciseId) return;
-      
-      const completed = (ex.sets || []).filter(s => s.completed && !s.warmup);
-      
-      completed.forEach(set => {
-        const kg = Number(set.kg) || 0;
-        const reps = Number(set.reps) || 0;
-        
-        if (kg === 0) return;
-        
-        const exDef = exercisesDB.find(e => e.id === ex.exerciseId) || {};
-        const totalKg = kg + ((exDef.usesBodyweight && userWeight) ? Number(userWeight) : 0);
-        
-        if (metric === 'weight') {
-          weeks[key].push(Math.round(totalKg * (1 + reps / 30)));
-        } else if (metric === 'volume') {
-          weeks[key].push(totalKg * reps);
-        } else if (metric === 'reps') {
-          weeks[key].push(reps);
-        }
-      });
-    });
-  });
-  
-  return Object.entries(weeks)
-    .map(([date, values]) => {
-      const value = values.length > 0 
-        ? (metric === 'volume' 
-          ? Math.round(values.reduce((a, b) => a + b, 0)) // Sum for volume
-          : Math.max(...values)) // Max for weight
-        : 0;
-      return {
-        label: `W${getWeekNumber(new Date(date))}`,
-        value,
-        date
-      };
-    })
-    .sort((a, b) => new Date(a.date) - new Date(b.date));
-}
-
-function aggregateMonthly(workouts, metric, exerciseId, userWeight, exercisesDB) {
-  const months = {};
-  
-  workouts.forEach(w => {
-    const date = new Date(w.date);
-    const key = date.toISOString().slice(0, 7); // YYYY-MM
-    
-    if (!months[key]) {
-      months[key] = [];
-    }
-    
-    (w.exercises || []).forEach(ex => {
-      if (exerciseId && ex.exerciseId !== exerciseId) return;
-      
-      const completed = (ex.sets || []).filter(s => s.completed && !s.warmup);
-      
-      completed.forEach(set => {
-        const kg = Number(set.kg) || 0;
-        const reps = Number(set.reps) || 0;
-        
-        if (kg === 0) return;
-        
-        const exDef = exercisesDB.find(e => e.id === ex.exerciseId) || {};
-        const totalKg = kg + ((exDef.usesBodyweight && userWeight) ? Number(userWeight) : 0);
-        
-        if (metric === 'weight') {
-          months[key].push(Math.round(totalKg * (1 + reps / 30)));
-        } else if (metric === 'volume') {
-          months[key].push(totalKg * reps);
-        } else if (metric === 'reps') {
-          months[key].push(reps);
-        }
-      });
-    });
-  });
-  
-  return Object.entries(months)
-    .map(([date, values]) => {
-      const value = values.length > 0
-        ? (metric === 'volume'
-          ? Math.round(values.reduce((a, b) => a + b, 0))
-          : Math.max(...values))
-        : 0;
-      return {
-        label: formatMonth(date + '-01'),
-        value,
-        date
-      };
-    })
-    .sort((a, b) => new Date(a.date) - new Date(b.date));
-}
-
-// ============ Utility Functions ============
-
-function getWeekStart(date) {
-  const d = new Date(date);
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is Sunday
-  return new Date(d.setDate(diff));
-}
-
-function getWeekNumber(date) {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const dayNum = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-}
-
-function formatDateShort(dateStr) {
-  const [year, month, day] = dateStr.split('-');
-  return `${month}/${day}`;
-}
-
-function formatMonth(dateStr) {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+// Format Y-axis label with unit
+function formatYAxisLabel(value) {
+  if (value >= 1000) {
+    return (value / 1000).toFixed(0) + 'k';
+  }
+  if (Number.isInteger(value)) {
+    return value.toString();
+  }
+  return value.toFixed(1);
 }

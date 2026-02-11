@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Plus, Search } from 'lucide-react';
 import { ExerciseCard } from '../components/ExerciseCard';
 
-export const ExercisesView = ({ exercisesDB, onAddExercise, onEditExercise, onDeleteExercise, onViewDetail }) => {
+export const ExercisesView = ({ exercisesDB, onAddExercise, onEditExercise, onDeleteExercise, onViewDetail, onToggleFavorite }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState(null); // null for all categories
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
@@ -55,10 +55,11 @@ export const ExercisesView = ({ exercisesDB, onAddExercise, onEditExercise, onDe
       );
     }
     
-    // Sort alphabetically by name
-    result.sort((a, b) => a.name.localeCompare(b.name));
+    // Separate favorites from others
+    const favorites = result.filter(ex => ex.isFavorite).sort((a, b) => a.name.localeCompare(b.name));
+    const others = result.filter(ex => !ex.isFavorite).sort((a, b) => a.name.localeCompare(b.name));
     
-    return result;
+    return { favorites, others, all: result };
   }, [exercisesDB, searchQuery, categoryFilter]);
 
   return (
@@ -138,11 +139,11 @@ export const ExercisesView = ({ exercisesDB, onAddExercise, onEditExercise, onDe
 
         {/* Results Count */}
         {searchQuery && (
-          <p className="text-xs text-slate-400 mb-3">Found {filtered.length} exercise{filtered.length !== 1 ? 's' : ''}</p>
+          <p className="text-xs text-slate-400 mb-3">Found {filtered.all.length} exercise{filtered.all.length !== 1 ? 's' : ''}</p>
         )}
 
         {/* Exercise List */}
-        {filtered.length === 0 ? (
+        {filtered.all.length === 0 ? (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
               <p className="text-slate-400 text-sm font-semibold">
@@ -155,13 +156,42 @@ export const ExercisesView = ({ exercisesDB, onAddExercise, onEditExercise, onDe
           </div>
         ) : (
           <div className="space-y-3 flex-1">
-            {filtered.map(exercise => (
+            {/* Favorites Section */}
+            {filtered.favorites.length > 0 && (
+              <>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xs font-black text-amber-400 tracking-widest">⭐ FAVORITES</span>
+                  <div className="flex-1 h-px bg-amber-500/20"></div>
+                </div>
+                {filtered.favorites.map(exercise => (
+                  <ExerciseCard
+                    key={exercise.id}
+                    exercise={exercise}
+                    onViewDetail={() => onViewDetail(exercise.id)}
+                    onEditExercise={onEditExercise}
+                    onDeleteExercise={onDeleteExercise}
+                    onToggleFavorite={onToggleFavorite}
+                  />
+                ))}
+              </>
+            )}
+            
+            {/* Other Exercises */}
+            {filtered.others.length > 0 && filtered.favorites.length > 0 && (
+              <div className="flex items-center gap-2 my-4">
+                <span className="text-xs font-black text-slate-500 tracking-widest">ALL EXERCISES</span>
+                <div className="flex-1 h-px bg-slate-700/30"></div>
+              </div>
+            )}
+            
+            {filtered.others.map(exercise => (
               <ExerciseCard
                 key={exercise.id}
                 exercise={exercise}
                 onViewDetail={() => onViewDetail(exercise.id)}
                 onEditExercise={onEditExercise}
                 onDeleteExercise={onDeleteExercise}
+                onToggleFavorite={onToggleFavorite}
               />
             ))}
           </div>

@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Settings, BarChart3, Dumbbell, Activity, Calendar, Edit2 } from 'lucide-react';
 import { calculateTotalVolume } from '../domain/calculations';
-import { getChartData, getChartTooltip } from '../domain/profileCharts';
+import { UnifiedChart } from '../components/UnifiedChart';
 
 export const ProfileView = ({
   workouts = [],
@@ -40,37 +40,50 @@ export const ProfileView = ({
     }
   };
 
-  // Get aggregated chart data
-  const chartData = useMemo(() => {
-    console.log('ProfileView: Getting chart data with:', { 
-      range: dateRange, 
-      metric: chartMetric, 
-      workoutCount: workouts?.length 
-    });
-    const data = getChartData({ range: dateRange, metric: chartMetric, workouts });
-    console.log('ProfileView: Chart data received:', { dataLength: data?.length, data });
-    return Array.isArray(data) && data.length > 0 ? data : [];
-  }, [workouts, dateRange, chartMetric]);
-
-  // Calculate total for summary
-  const summaryStats = useMemo(() => {
-    if (chartData.length === 0) {
-      return { total: 0, sessions: 0 };
+  // Map date range format (ProfileView uses '1week' format, UnifiedChart uses '7days')
+  const getUnifiedChartPeriod = (range) => {
+    switch (range) {
+      case '1week': return '7days';
+      case '1month': return '30days';
+      case '3months': return '3months';
+      case '1year': return '1year';
+      default: return '3months';
     }
-    const total = chartData.reduce((sum, d) => sum + (d.rawValue?.[chartMetric] || 0), 0);
-    const sessions = chartData.reduce((sum, d) => sum + (d.workoutCount || 0), 0);
-    return { total, sessions };
-  }, [chartData, chartMetric]);
+  };
 
-  // Format summary text
+  // Calculate summary text based on metric
   const summaryText = useMemo(() => {
+    const period = dateRange === '1week' ? 'this week' : dateRange === '1month' ? 'this month' : dateRange === '3months' ? 'last 3 months' : 'this year';
+    
     if (chartMetric === 'duration') {
-      const hours = Math.round(summaryStats.total / 60);
-      const period = dateRange === '1week' ? 'this week' : dateRange === '1month' ? 'this month' : dateRange === '3months' ? 'last 3 months' : 'this year';
+      // Calculate total duration from workouts in range
+      const now = new Date();
+      let startDate;
+      switch (dateRange) {
+        case '1week': startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000); break;
+        case '1month': startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000); break;
+        case '3months': startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000); break;
+        case '1year': startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000); break;
+        default: startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+      }
+      const total = (workouts || []).filter(w => new Date(w.date) >= startDate).reduce((sum, w) => sum + (w.duration || 0), 0);
+      const hours = Math.round(total / 60);
       return `${hours} hours ${period}`;
     }
-    return `${summaryStats.sessions} sessions`;
-  }, [summaryStats, chartMetric, dateRange]);
+    
+    // Count workouts in range
+    const now = new Date();
+    let startDate;
+    switch (dateRange) {
+      case '1week': startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000); break;
+      case '1month': startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000); break;
+      case '3months': startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000); break;
+      case '1year': startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000); break;
+      default: startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+    }
+    const sessions = (workouts || []).filter(w => new Date(w.date) >= startDate).length;
+    return `${sessions} sessions ${period}`;
+  }, [workouts, dateRange, chartMetric]);
 
   // Get last 5 workouts
   const lastWorkouts = useMemo(() => workouts.slice(0, 5), [workouts]);
@@ -159,57 +172,17 @@ export const ProfileView = ({
             </select>
           </div>
 
-          {/* Simple Bar Chart */}
-          <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700/30 mb-4 relative w-full overflow-visible">
-            {chartData.length === 0 ? (
-              <div className="h-40 flex items-center justify-center text-slate-500 font-semibold text-sm">
-                No workouts in this period
-              </div>
-            ) : (
-              <div className="flex items-end justify-between gap-2 h-48 w-full">
-                {chartData.map((data, i) => {
-                  const value = Number(data.value) || 0;
-                  const allValues = chartData.map(d => Number(d.value) || 0);
-                  const max = Math.max(...allValues, 0.1); // Avoid division by 0
-                  const height = (value / max) * 100;
-                  const minHeight = 12; // Minimum 12% so bars are always visible
-
-                  console.log(`Bar ${i}: value=${value}, max=${max}, height=${height}%, minHeight=${minHeight}%`);
-
-                  return (
-                    <div
-                      key={`chart-${i}-${data.label}`}
-                      className="flex-1 flex flex-col items-center gap-2 h-full relative group justify-end"
-                      onMouseEnter={() => setHoveredBarIndex(i)}
-                      onMouseLeave={() => setHoveredBarIndex(null)}
-                    >
-                      {/* Bar Container - fills available space */}
-                      <div className="flex items-end justify-center" style={{ height: `${Math.max(height, minHeight)}%` }}>
-                        <div 
-                          className="w-2/3 bg-gradient-to-t from-cyan-500 via-cyan-400 to-cyan-300 rounded-sm hover:from-cyan-400 hover:via-cyan-300 hover:to-cyan-200 transition-all shadow-lg hover:shadow-xl" 
-                          style={{ 
-                            width: '100%',
-                            height: '100%',
-                            minHeight: '8px',
-                            transitionDuration: '200ms'
-                          }} 
-                        />
-                      </div>
-                      
-                      {/* Tooltip */}
-                      {hoveredBarIndex === i && (
-                        <div className="absolute bottom-full mb-2 bg-slate-900 border border-cyan-400 rounded-lg px-3 py-1.5 text-xs font-bold text-cyan-300 whitespace-nowrap z-20 pointer-events-none shadow-lg">
-                          {getChartTooltip(value, chartMetric)}
-                        </div>
-                      )}
-                      
-                      {/* Date label */}
-                      <span className="text-xs text-slate-500 font-semibold truncate px-0.5 text-center w-full leading-tight">{data.label}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+          {/* Chart - using UnifiedChart for consistency */}
+          <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700/30 mb-4">
+            <UnifiedChart
+              workouts={workouts}
+              metric={chartMetric}
+              timePeriod={getUnifiedChartPeriod(dateRange)}
+              userWeight={userWeight}
+              exercisesDB={exercisesDB}
+              color="#06b6d4"
+              unit={chartMetric === 'duration' ? 'h' : chartMetric === 'volume' ? 'k' : 'reps'}
+            />
           </div>
 
           {/* Metric Toggle */}

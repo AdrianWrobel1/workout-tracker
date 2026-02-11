@@ -89,7 +89,11 @@ export default function App() {
   const [activePRBanner, setActivePRBanner] = useState(null);
   const [prBannerVisible, setPRBannerVisible] = useState(false);
 
-  // --- EFFECTS ---
+  // P6 FIX: Clear keypad state when view changes to prevent stale values on reopening
+  useEffect(() => {
+    setActiveInput(null);
+    setKeypadValue('');
+  }, [view]);
 
   // Load Data
   useEffect(() => {
@@ -165,12 +169,13 @@ export default function App() {
   }, []);
 
   // Save Data (debounced to prevent excessive localStorage writes)
-  useDebouncedLocalStorage('exercises', exercisesDB, 1000);
-  useDebouncedLocalStorage('workouts', workouts, 1000);
-  useDebouncedLocalStorage('templates', templates, 1000);
-  useDebouncedLocalStorage('userWeight', userWeight, 1000);
-  useDebouncedLocalStorage('defaultStatsRange', defaultStatsRange, 1000);
-  useDebouncedLocalStorage('trainingNotes', trainingNotes, 1000);
+  // P4 FIX: Increased save frequency from 1000ms to 200ms to reduce data loss window between crashes
+  useDebouncedLocalStorage('exercises', exercisesDB, 200);
+  useDebouncedLocalStorage('workouts', workouts, 200);
+  useDebouncedLocalStorage('templates', templates, 200);
+  useDebouncedLocalStorage('userWeight', userWeight, 200);
+  useDebouncedLocalStorage('defaultStatsRange', defaultStatsRange, 200);
+  useDebouncedLocalStorage('trainingNotes', trainingNotes, 200);
   useDebouncedLocalStorage('enablePerformanceAlerts', enablePerformanceAlerts, 300);
   useDebouncedLocalStorage('enableHapticFeedback', enableHapticFeedback, 300);
   useDebouncedLocalStorageManual('activeWorkout', activeWorkout, 500);
@@ -368,24 +373,44 @@ export default function App() {
     updated.exercises[exIndex].sets[setIndex][field] = value;
     setActiveWorkout(updated);
 
-    // If this set is already completed, update exercise default in DB
+    // If this set is already completed, re-run PR detection to update flags
     const exId = updated.exercises[exIndex].exerciseId;
     const isCompleted = updated.exercises[exIndex].sets[setIndex].completed;
     if (exId && isCompleted) {
       const kg = Number(updated.exercises[exIndex].sets[setIndex].kg) || 0;
       const reps = Number(updated.exercises[exIndex].sets[setIndex].reps) || 0;
-        // compute 1RM for this set
-        const this1RM = calculate1RM(kg, reps);
-        // compare against historical best (exclude warmups)
-        const hist = getExerciseRecords(exId, workouts);
-        const histBest = hist.best1RM || 0;
-        if (this1RM > histBest) {
-          setExercisesDB(prev => prev.map(e => e.id === exId ? { ...e, defaultSets: [{ kg, reps }, ...(e.defaultSets || []).slice(1)] } : e));
-          // subtle haptic for PR
-          if (navigator.vibrate) navigator.vibrate(20);
-        }
+      
+      // P1 FIX: Re-run PR detection after edit to update set flags correctly
+      // Create temporary workout for PR detection
+      const tempWorkout = { ...updated };
+      const prStatus = detectPRsInWorkout(tempWorkout, workouts, calculate1RM, getExerciseRecords);
+      
+      // Apply PR flags back to the updated set
+      if (prStatus[exId]?.recordsPerSet?.[setIndex]) {
+        const recordTypes = prStatus[exId].recordsPerSet[setIndex];
+        updated.exercises[exIndex].sets[setIndex].isBest1RM = recordTypes.includes('best1RM');
+        updated.exercises[exIndex].sets[setIndex].isBestSetVolume = recordTypes.includes('bestSetVolume');
+        updated.exercises[exIndex].sets[setIndex].isHeaviestWeight = recordTypes.includes('heaviestWeight');
+      } else {
+        // Clear PR flags if no longer a record
+        updated.exercises[exIndex].sets[setIndex].isBest1RM = false;
+        updated.exercises[exIndex].sets[setIndex].isBestSetVolume = false;
+        updated.exercises[exIndex].sets[setIndex].isHeaviestWeight = false;
+      }
+      
+      setActiveWorkout(updated);
+      
+      // Also update exercise default in DB if new 1RM
+      const hist = getExerciseRecords(exId, workouts);
+      const histBest = hist.best1RM || 0;
+      const this1RM = calculate1RM(kg, reps);
+      if (this1RM > histBest) {
+        setExercisesDB(prev => prev.map(e => e.id === exId ? { ...e, defaultSets: [{ kg, reps }, ...(e.defaultSets || []).slice(1)] } : e));
+        // subtle haptic for PR
+        if (navigator.vibrate) navigator.vibrate(20);
+      }
     }
-  }, [activeWorkout, workouts]);
+  }, [activeWorkout, workouts, exercisesDB]);
 
   // Keypad Handlers
   const handleOpenKeypad = useCallback((exIndex, setIndex, field) => {
@@ -533,6 +558,40 @@ export default function App() {
           }
         }
       }
+
+      // If part of superset, auto-scroll to next exercise in superset
+      if (newVal && activeWorkout.exercises[exIndex].supersetId) {
+        const supersetId = activeWorkout.exercises[exIndex].supersetId;
+        let nextExIndex = -1;
+        
+        // Find next exercise in the same superset (after current)
+        for (let i = exIndex + 1; i < activeWorkout.exercises.length; i++) {
+          if (activeWorkout.exercises[i].supersetId === supersetId) {
+            nextExIndex = i;
+            break;
+          }
+        }
+        
+        // If not found, wrap around and search from beginning
+        if (nextExIndex === -1) {
+          for (let i = 0; i < exIndex; i++) {
+            if (activeWorkout.exercises[i].supersetId === supersetId) {
+              nextExIndex = i;
+              break;
+            }
+          }
+        }
+        
+        // Auto-scroll to next exercise
+        if (nextExIndex !== -1) {
+          setTimeout(() => {
+            const element = document.querySelector(`[data-exercise-index="${nextExIndex}"]`);
+            if (element) {
+              element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }, 100);
+        }
+      }
     }
   }, [activeWorkout, workouts, exercisesDB, enablePerformanceAlerts, enableHapticFeedback, showToast]);
 
@@ -587,7 +646,16 @@ export default function App() {
   const handleDeleteExercise = useCallback((exIndex) => {
     if (confirm('Delete this exercise?')) {
       const updated = { ...activeWorkout };
+      const deletedSupersetId = updated.exercises[exIndex].supersetId;
       updated.exercises.splice(exIndex, 1);
+      
+      // If we deleted from a superset, remove superset from remaining exercises
+      if (deletedSupersetId) {
+        updated.exercises = updated.exercises.map(ex => 
+          ex.supersetId === deletedSupersetId ? { ...ex, supersetId: null } : ex
+        );
+      }
+      
       setActiveWorkout(updated);
     }
   }, [activeWorkout]);
@@ -651,6 +719,12 @@ export default function App() {
     
     setActiveWorkout(updated);
   }, [activeWorkout]);
+
+  const handleToggleFavorite = useCallback((exerciseId) => {
+    setExercisesDB(prev => prev.map(ex => 
+      ex.id === exerciseId ? { ...ex, isFavorite: !ex.isFavorite } : ex
+    ));
+  }, []);
 
   // --- ACTIONS: TEMPLATES ---
 
@@ -913,12 +987,13 @@ export default function App() {
             <ExercisesView
               exercisesDB={exercisesDB}
               onAddExercise={() => {
-                setEditingExercise({ name: '', category: 'Push', muscles: [], defaultSets: [{ kg: 0, reps: 0 }], usesBodyweight: false });
+                setEditingExercise({ name: '', category: 'Push', muscles: [], defaultSets: [{ kg: 0, reps: 0 }], usesBodyweight: false, isFavorite: false });
                 setView('createExercise');
               }}
               onEditExercise={(ex) => { setEditingExercise(ex); setView('createExercise'); }}
               onDeleteExercise={handleDeleteExerciseFromDB}
               onViewDetail={(id) => { setSelectedExerciseId(id); setView('exerciseDetail'); }}
+              onToggleFavorite={handleToggleFavorite}
             />
           )}
 
@@ -1292,7 +1367,7 @@ export default function App() {
                 <div className="flex items-baseline gap-2">
                   <span className="text-2xl font-black text-white">{pendingSummary.cleanData.completedSets}</span>
                   {pendingSummary.comparison && (
-                    <span className="text-xl" title={`${pendingSummary.comparison.prevVolume ? 'vs ' + Math.round(pendingSummary.comparison.prevVolume / 1000) + 'k prev' : ''}`}>
+                    <span className="text-lg" title={`${pendingSummary.comparison.prevVolume ? 'vs ' + Math.round(pendingSummary.comparison.prevVolume / 1000) + 'k prev' : ''}`}>
                       {pendingSummary.comparison.trend}
                     </span>
                   )}
@@ -1331,11 +1406,21 @@ export default function App() {
               
               return (
                 <div className="mb-6">
-                  <p className="text-xs text-slate-400 font-semibold tracking-widest mb-3">MUSCLE DISTRIBUTION</p>
-                  <div className="flex justify-center">
-                    <svg width="200" height="200" viewBox="0 0 200 200" className="drop-shadow-lg">
+                  <p className="text-xs text-slate-400 font-semibold tracking-widest mb-4">MUSCLE DISTRIBUTION</p>
+                  <div className="flex justify-center bg-slate-800/20 rounded-xl p-6">
+                    <svg width="320" height="320" viewBox="0 0 320 320" className="drop-shadow-lg animate-fade-in">
                       <defs>
-                        <filter id="radarGlow">
+                        {/* Glow filter for polygon */}
+                        <filter id="radarPolygonGlow">
+                          <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                          <feMerge>
+                            <feMergeNode in="coloredBlur"/>
+                            <feMergeNode in="SourceGraphic"/>
+                          </feMerge>
+                        </filter>
+                        
+                        {/* Glow filter for data points */}
+                        <filter id="radarPointGlow">
                           <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
                           <feMerge>
                             <feMergeNode in="coloredBlur"/>
@@ -1343,10 +1428,17 @@ export default function App() {
                           </feMerge>
                         </filter>
                       </defs>
-                      <g transform="translate(100,100)">
-                        {/* Concentric circles */}
+                      <g transform="translate(160,160)">
+                        {/* Concentric circles - subtle grid */}
                         {[1, 2, 3].map((r, i) => (
-                          <circle key={i} r={i * 25} fill="none" stroke="#334155" strokeWidth="0.5" opacity="0.5" />
+                          <circle 
+                            key={i} 
+                            r={i * 35} 
+                            fill="none" 
+                            stroke="#475569" 
+                            strokeWidth="0.5" 
+                            opacity="0.12"
+                          />
                         ))}
                         
                         {/* Axes and labels */}
@@ -1354,53 +1446,156 @@ export default function App() {
                           const groups = ['Chest', 'Back', 'Legs', 'Shoulders', 'Biceps', 'Triceps', 'Core'];
                           const values = groups.map(g => radarData[g] || 0);
                           
-                          // Already normalized 0-1, just scale to radius
+                          // Normalized 0-1, scale to radius
                           const points = values.map((v, i) => {
                             const angle = (i / groups.length) * Math.PI * 2 - Math.PI / 2;
-                            const radius = v * 75;
+                            const radius = v * 100;
                             return `${Math.cos(angle) * radius},${Math.sin(angle) * radius}`;
                           }).join(' ');
                           
+                          // Get coordinates for data point markers
+                          const pointCoords = values.map((v, i) => {
+                            const angle = (i / groups.length) * Math.PI * 2 - Math.PI / 2;
+                            const radius = v * 100;
+                            return {
+                              x: Math.cos(angle) * radius,
+                              y: Math.sin(angle) * radius
+                            };
+                          });
+                          
                           return (
                             <>
-                              {/* Axes */}
+                              {/* Subtle axis lines (very faint) */}
                               {groups.map((g, i) => {
                                 const angle = (i / groups.length) * Math.PI * 2 - Math.PI / 2;
-                                const x = Math.cos(angle) * 80;
-                                const y = Math.sin(angle) * 80;
+                                const x = Math.cos(angle) * 105;
+                                const y = Math.sin(angle) * 105;
                                 return (
-                                  <g key={g}>
-                                    <line x1={0} y1={0} x2={x} y2={y} stroke="#475569" strokeWidth="0.5" opacity="0.7" />
-                                    <text 
-                                      x={x * 1.25} 
-                                      y={y * 1.25} 
-                                      fontSize="10" 
-                                      fill="#cbd5e1" 
-                                      fontWeight="600"
-                                      textAnchor={Math.abs(x) > 10 ? (x > 0 ? 'start' : 'end') : 'middle'}
-                                      dominantBaseline="middle"
-                                    >
-                                      {g}
-                                    </text>
-                                  </g>
+                                  <line 
+                                    key={`axis-${i}`}
+                                    x1={0} 
+                                    y1={0} 
+                                    x2={x} 
+                                    y2={y} 
+                                    stroke="#475569" 
+                                    strokeWidth="0.5" 
+                                    opacity="0.08"
+                                  />
                                 );
                               })}
                               
-                              {/* Data polygon with animation */}
+                              {/* Data polygon with animation and glow */}
                               <polygon 
                                 points={points} 
-                                fill="#3b82f6" 
-                                fillOpacity="0.2" 
-                                stroke="#3b82f6" 
-                                strokeWidth="1.5"
-                                filter="url(#radarGlow)"
-                                className="animate-pulse"
+                                fill="#06b6d4" 
+                                fillOpacity="0.28"
+                                stroke="#06b6d4" 
+                                strokeWidth="2"
+                                filter="url(#radarPolygonGlow)"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                style={{
+                                  animation: 'radarDraw 500ms ease-out forwards',
+                                  transformOrigin: '0 0'
+                                }}
                               />
+                              
+                              {/* Data point markers */}
+                              {pointCoords.map((coord, i) => (
+                                <g key={`point-${i}`}>
+                                  {/* Outer glow circle */}
+                                  <circle 
+                                    cx={coord.x} 
+                                    cy={coord.y} 
+                                    r="5" 
+                                    fill="none" 
+                                    stroke="#06b6d4" 
+                                    strokeWidth="1" 
+                                    opacity="0.3"
+                                    style={{
+                                      animation: `radarPointPulse 2s ease-in-out infinite`,
+                                      animationDelay: `${i * 0.15}s`
+                                    }}
+                                  />
+                                  
+                                  {/* Center point */}
+                                  <circle
+                                    cx={coord.x}
+                                    cy={coord.y}
+                                    r="3.5"
+                                    fill="#06b6d4"
+                                    filter="url(#radarPointGlow)"
+                                    style={{
+                                      animation: `radarDraw 500ms ease-out forwards`,
+                                      animationDelay: `${i * 30}ms`
+                                    }}
+                                  />
+                                </g>
+                              ))}
+                              
+                              {/* Labels */}
+                              {groups.map((g, i) => {
+                                const angle = (i / groups.length) * Math.PI * 2 - Math.PI / 2;
+                                const x = Math.cos(angle) * 130;
+                                const y = Math.sin(angle) * 130;
+                                return (
+                                  <text 
+                                    key={`label-${i}`}
+                                    x={x} 
+                                    y={y}
+                                    fontSize="12" 
+                                    fill="#cbd5e1" 
+                                    fontWeight="600"
+                                    textAnchor={Math.abs(x) > 10 ? (x > 0 ? 'start' : 'end') : 'middle'}
+                                    dominantBaseline="middle"
+                                  >
+                                    {g}
+                                  </text>
+                                );
+                              })}
                             </>
                           );
                         })()}
                       </g>
                     </svg>
+                    
+                    {/* CSS animations */}
+                    <style>{`
+                      @keyframes radarDraw {
+                        from {
+                          stroke-dasharray: 1000;
+                          stroke-dashoffset: 1000;
+                        }
+                        to {
+                          stroke-dasharray: 1000;
+                          stroke-dashoffset: 0;
+                        }
+                      }
+                      
+                      @keyframes radarPointPulse {
+                        0%, 100% {
+                          r: 5;
+                          opacity: 0.2;
+                        }
+                        50% {
+                          r: 7;
+                          opacity: 0.1;
+                        }
+                      }
+                      
+                      .animate-fade-in {
+                        animation: fadeIn 400ms ease-out;
+                      }
+                      
+                      @keyframes fadeIn {
+                        from {
+                          opacity: 0;
+                        }
+                        to {
+                          opacity: 1;
+                        }
+                      }
+                    `}</style>
                   </div>
                 </div>
               );

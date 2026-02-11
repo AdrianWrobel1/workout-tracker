@@ -213,7 +213,7 @@ export const ExerciseDetailView = ({ exerciseId, workouts, exercisesDB, onBack, 
           <div className="space-y-5 mt-2">
             {/* Time Period Selector */}
             <div className="flex gap-2 px-4">
-              {['7days', '3months', '1year'].map(period => (
+              {['7days', '30days', '3months', '1year'].map(period => (
                 <button
                   key={period}
                   onClick={() => setChartPeriod(period)}
@@ -223,7 +223,7 @@ export const ExerciseDetailView = ({ exerciseId, workouts, exercisesDB, onBack, 
                       : 'bg-slate-800/50 text-slate-400 hover:bg-slate-700/50'
                   }`}
                 >
-                  {period === '7days' ? 'Last 7d' : period === '3months' ? 'Last 3m' : 'Last Year'}
+                  {period === '7days' ? 'Last 7d' : period === '30days' ? 'Last 30d' : period === '3months' ? 'Last 3m' : 'Last Year'}
                 </button>
               ))}
             </div>
