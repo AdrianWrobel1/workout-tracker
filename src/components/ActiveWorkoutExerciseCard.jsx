@@ -1,7 +1,11 @@
 import React, { useState, useRef } from 'react';
 import { Trash2, Medal } from 'lucide-react';
 
-export const ActiveWorkoutExerciseCard = ({
+/**
+ * OPTIMIZED: Memoized exercise card for active workouts
+ * Only re-renders if exercise data or critical handlers change
+ */
+export const ActiveWorkoutExerciseCard = React.memo(({
   exercise,
   exerciseIndex,
   previousSets = [],
@@ -206,4 +210,6 @@ export const ActiveWorkoutExerciseCard = ({
       </div>
     </div>
   );
-};
+});
+
+ActiveWorkoutExerciseCard.displayName = 'ActiveWorkoutExerciseCard';

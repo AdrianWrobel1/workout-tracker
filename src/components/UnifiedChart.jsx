@@ -80,7 +80,7 @@ export const UnifiedChart = ({
         return [3, 6, 9, 12].includes(date.getMonth() + 1);
       });
     }
-  }, [workouts, exerciseId, metric, timePeriod, userWeight, exercisesDB]);
+  }, [workouts, exerciseId, metric, timePeriod, userWeight]); // FIXED: Removed exercisesDB - only needed for internal aggregation
 
   if (!chartData || chartData.length < 2) {
     return (

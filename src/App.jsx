@@ -7,7 +7,13 @@ import { prepareCleanWorkoutData, compareWorkoutToPrevious, generateSessionFeedb
 
 // HOOKS
 import { useDebouncedLocalStorage, useDebouncedLocalStorageManual } from './hooks/useLocalStorage';
+import { useIndexedDBStore, useIndexedDBSetting, useIndexedDBDirect } from './hooks/useIndexedDB';
+import { useRecordsIndex } from './hooks/useRecordsIndex';
 import { useModals } from './contexts/ModalContext';
+import { useWorkouts, useUI, useSettings } from './contexts/index.js';
+
+// SERVICES
+import { storage, STORES } from './services/storageService';
 
 // COMPONENTS
 import { MiniWorkoutBar } from './components/MiniWorkoutBar';
@@ -36,61 +42,65 @@ import { ExportDataView } from './views/ExportDataView';
 
 
 export default function App() {
+  // --- CONTEXT HOOKS ---
+  const {
+    workouts, setWorkouts,
+    templates, setTemplates,
+    exercisesDB, setExercisesDB,
+    activeWorkout, setActiveWorkout,
+    workoutTimer, setWorkoutTimer,
+    isWorkoutMinimized, setIsWorkoutMinimized,
+    selectedTags, setSelectedTags,
+    deletedWorkout, setDeletedWorkout,
+    pendingSummary, setPendingSummary,
+  } = useWorkouts();
+
+  const {
+    view, setView,
+    activeTab, setActiveTab,
+    editingTemplate, setEditingTemplate,
+    editingExercise, setEditingExercise,
+    activeInput, setActiveInput,
+    keypadValue, setKeypadValue,
+    selectorMode, setSelectorMode,
+    historyFilter, setHistoryFilter,
+    profileSubview, setProfileSubview,
+    selectedDate, setSelectedDate,
+    selectedExerciseId, setSelectedExerciseId,
+    monthOffset, setMonthOffset,
+    exerciseCreateSource, setExerciseCreateSource,
+    finishingWorkout, setFinishingWorkout,
+    firstLoad, setFirstLoad,
+    exportType, setExportType,
+    exportPeriod, setExportPeriod,
+    exportStartDate, setExportStartDate,
+    exportEndDate, setExportEndDate,
+    exportExerciseId, setExportExerciseId,
+  } = useUI();
+
+  const {
+    userWeight, setUserWeight,
+    weeklyGoal, setWeeklyGoal,
+    defaultStatsRange, setDefaultStatsRange,
+    trainingNotes, setTrainingNotes,
+    enablePerformanceAlerts, setEnablePerformanceAlerts,
+    enableHapticFeedback, setEnableHapticFeedback,
+    activePRBanner, setActivePRBanner,
+    prBannerVisible, setPRBannerVisible,
+  } = useSettings();
+
   // --- CONTEXT ---
   const { showCalendar, closeCalendar, openCalendar, showExerciseSelector, closeExerciseSelector, openExerciseSelector, showExportModal, closeExportModal } = useModals();
 
-  // --- STATE ---
-  const [view, setView] = useState('home');
-  const [activeTab, setActiveTab] = useState('home');
+  // --- HOOKS ---
+  const { recordsIndex, updateRecordForExercise, updateRecordsForExercises, rebuildIndex, getRecords, clearCache } = useRecordsIndex();
 
-  const [workouts, setWorkouts] = useState([]);
-  const [templates, setTemplates] = useState([]);
-  const [exercisesDB, setExercisesDB] = useState([]);
-  const [userWeight, setUserWeight] = useState(null);
-  const [weeklyGoal, setWeeklyGoal] = useState(4);
-  const [defaultStatsRange, setDefaultStatsRange] = useState('3months');
-  const [activeWorkout, setActiveWorkout] = useState(null);
-  const [workoutTimer, setWorkoutTimer] = useState(0);
-  const [isWorkoutMinimized, setIsWorkoutMinimized] = useState(false);
-  const [selectedTags, setSelectedTags] = useState([]); // for post-workout tag selection
-
-  // UI State
-  const [selectorMode, setSelectorMode] = useState(null); // 'template' | 'activeWorkout'
-  const [historyFilter, setHistoryFilter] = useState('all'); // persist across views
-  const [profileSubview, setProfileSubview] = useState('main'); // 'main' | 'statistics'
-  const [exportType, setExportType] = useState('all'); // 'all' | 'workouts' | 'exercises'
-  const [exportPeriod, setExportPeriod] = useState('all'); // 'all' | 'last7' | 'last30' | 'last90' | 'custom'
-  const [exportStartDate, setExportStartDate] = useState('');
-  const [exportEndDate, setExportEndDate] = useState('');
-  const [exportExerciseId, setExportExerciseId] = useState(null);
-
-  // Selection State
-  const [selectedDate, setSelectedDate] = useState(null);
-  const [selectedExerciseId, setSelectedExerciseId] = useState(null);
-  const [editingTemplate, setEditingTemplate] = useState(null);
-  const [editingExercise, setEditingExercise] = useState(null);
-  const [selectedExerciseIndex, setSelectedExerciseIndex] = useState(null);
-  const [monthOffset, setMonthOffset] = useState(0);
-  const [pendingSummary, setPendingSummary] = useState(null);
+  // --- LOCAL STATE ---
   const [summaryVisible, setSummaryVisible] = useState(false);
-  const [firstLoad, setFirstLoad] = useState(true);
-  const [returnTo, setReturnTo] = useState(null);
   const [toast, setToast] = useState(null);
-  const [exerciseCreateSource, setExerciseCreateSource] = useState(null); // 'activeWorkout' | 'template' | 'exercises' | null
-  const [trainingNotes, setTrainingNotes] = useState('');
+  const [returnTo, setReturnTo] = useState(null);
   
-  // Keypad State
-  const [activeInput, setActiveInput] = useState(null); // { workoutId, exerciseIndex, setIndex, field: 'kg' | 'reps' | 'rpe' }
-  const [keypadValue, setKeypadValue] = useState('');
-
-  // Performance Alerts State
-  const [enablePerformanceAlerts, setEnablePerformanceAlerts] = useState(true);
-  const [enableHapticFeedback, setEnableHapticFeedback] = useState(false);
-  const [activePRBanner, setActivePRBanner] = useState(null);
-  const [prBannerVisible, setPRBannerVisible] = useState(false);
-
   // Undo deleted workout
-  const [deletedWorkout, setDeletedWorkout] = useState(null);
   const undoTimeoutRef = useRef(null);
 
   // P6 FIX: Clear keypad state when view changes to prevent stale values on reopening
@@ -99,71 +109,57 @@ export default function App() {
     setKeypadValue('');
   }, [view]);
 
-  // Load Data
+  // Initialize IndexedDB and load data
   useEffect(() => {
-    try {
-      const savedEx = localStorage.getItem('exercises');
-      if (savedEx) setExercisesDB(JSON.parse(savedEx));
+    (async () => {
+      try {
+        // Initialize IndexedDB
+        await storage.init();
+        
+        // Migrate from localStorage on first run
+        const migrated = await storage.migrateFromLocalStorage();
+        if (migrated.migratedWorkouts > 0) {
+          console.log(`✓ Migrated ${migrated.migratedWorkouts} workouts from localStorage`);
+        }
 
-      const savedWorkouts = localStorage.getItem('workouts');
-      if (savedWorkouts) setWorkouts(JSON.parse(savedWorkouts));
+        // Load entities from IndexedDB
+        const exercises = await storage.getAllFromStore(STORES.EXERCISES);
+        const workouts = await storage.getAllFromStore(STORES.WORKOUTS);
+        const templates = await storage.getAllFromStore(STORES.TEMPLATES);
 
-      const savedTemplates = localStorage.getItem('templates');
-      if (savedTemplates) setTemplates(JSON.parse(savedTemplates));
+        setExercisesDB(exercises || []);
+        setWorkouts(workouts || []);
+        setTemplates(templates || []);
 
-      const savedGoal = localStorage.getItem('weeklyGoal');
-      if (savedGoal) setWeeklyGoal(parseInt(savedGoal));
+        // Load settings
+        const goal = await storage.getSetting('weeklyGoal', 4);
+        const statsRange = await storage.getSetting('defaultStatsRange', '12m');
+        const weight = await storage.getSetting('userWeight', null);
+        const enableAlerts = await storage.getSetting('enablePerformanceAlerts', true);
+        const enableHaptic = await storage.getSetting('enableHapticFeedback', false);
+        const notes = await storage.getSetting('trainingNotes', '');
 
-      const savedStatsRange = localStorage.getItem('defaultStatsRange');
-      if (savedStatsRange) setDefaultStatsRange(savedStatsRange);
+        setWeeklyGoal(parseInt(goal) || 4);
+        setDefaultStatsRange(statsRange || '12m');
+        setUserWeight(Number(weight) || null);
+        setEnablePerformanceAlerts(enableAlerts !== null ? enableAlerts : true);
+        setEnableHapticFeedback(enableHaptic !== null ? enableHaptic : false);
+        setTrainingNotes(typeof notes === 'string' ? notes : '');
 
-      const savedWeight = localStorage.getItem('userWeight');
-      if (savedWeight) setUserWeight(Number(savedWeight));
-
-      const savedEnableAlerts = localStorage.getItem('enablePerformanceAlerts');
-      if (savedEnableAlerts !== null) setEnablePerformanceAlerts(JSON.parse(savedEnableAlerts));
-
-      const savedEnableHaptic = localStorage.getItem('enableHapticFeedback');
-      if (savedEnableHaptic !== null) setEnableHapticFeedback(JSON.parse(savedEnableHaptic));
-
-      const savedNotes = localStorage.getItem('trainingNotes');
-      if (savedNotes && savedNotes.trim()) {
-        try {
-          const parsed = JSON.parse(savedNotes);
-          // Ensure it's a string, not an object or other type
-          if (typeof parsed === 'string') {
-            setTrainingNotes(parsed);
-          } else {
-            // If parsed as something else, reset
-            setTrainingNotes('');
-            localStorage.removeItem('trainingNotes');
-          }
-        } catch (e) {
-          // If parsing fails, assume it's already a plain string
-          // But check if it contains escaped quotes which indicates corruption
-          if (savedNotes.includes('\\"')) {
-            // Corrupted - clear it
-            setTrainingNotes('');
-            localStorage.removeItem('trainingNotes');
-          } else {
-            setTrainingNotes(savedNotes);
+        // Load active workout if within 24h
+        const activeWO = await storage.get(STORES.WORKOUTS, 'activeWorkout');
+        if (activeWO && activeWO.startTime) {
+          if (new Date() - new Date(activeWO.startTime) < 86400000) {
+            setActiveWorkout(activeWO);
+            setView('activeWorkout');
           }
         }
-      }
 
-      // Opcjonalnie: Przywracanie aktywnego treningu (jeśli aplikacja została zamknięta)
-      const savedActive = localStorage.getItem('activeWorkout');
-      if (savedActive) {
-        const parsed = JSON.parse(savedActive);
-        // Sprawdź czy nie jest zbyt stary (np. > 24h)
-        if (new Date() - new Date(parsed.startTime) < 86400000) {
-          setActiveWorkout(parsed);
-          setView('activeWorkout');
-        }
+        console.log('✓ Data loaded from IndexedDB');
+      } catch (error) {
+        console.error('Error initializing storage:', error);
       }
-    } catch (e) {
-      console.error("Error loading data", e);
-    }
+    })();
   }, []);
 
   // initial skeleton (cold start): show for ~350ms
@@ -173,16 +169,28 @@ export default function App() {
   }, []);
 
   // Save Data (debounced to prevent excessive localStorage writes)
-  // P4 FIX: Increased save frequency from 1000ms to 200ms to reduce data loss window between crashes
-  useDebouncedLocalStorage('exercises', exercisesDB, 200);
-  useDebouncedLocalStorage('workouts', workouts, 200);
-  useDebouncedLocalStorage('templates', templates, 200);
-  useDebouncedLocalStorage('userWeight', userWeight, 200);
-  useDebouncedLocalStorage('defaultStatsRange', defaultStatsRange, 200);
-  useDebouncedLocalStorage('trainingNotes', trainingNotes, 200);
-  useDebouncedLocalStorage('enablePerformanceAlerts', enablePerformanceAlerts, 300);
-  useDebouncedLocalStorage('enableHapticFeedback', enableHapticFeedback, 300);
-  useDebouncedLocalStorageManual('activeWorkout', activeWorkout, 500);
+  // Persist data to IndexedDB (async, non-blocking)
+  useIndexedDBStore(STORES.EXERCISES, exercisesDB, 200);
+  useIndexedDBStore(STORES.WORKOUTS, workouts, 200);
+  useIndexedDBStore(STORES.TEMPLATES, templates, 200);
+  
+  // Persist settings (smaller payloads, can use settings API)
+  useIndexedDBSetting('userWeight', userWeight, 300);
+  useIndexedDBSetting('defaultStatsRange', defaultStatsRange, 300);
+  useIndexedDBSetting('trainingNotes', trainingNotes, 500);
+  useIndexedDBSetting('enablePerformanceAlerts', enablePerformanceAlerts, 500);
+  useIndexedDBSetting('enableHapticFeedback', enableHapticFeedback, 500);
+  
+  // activeWorkout requires immediate async save (no debounce for critical data)
+  const { saveAsync } = useIndexedDBDirect();
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (activeWorkout) {
+        saveAsync(STORES.WORKOUTS, { ...activeWorkout, id: 'activeWorkout' });
+      }
+    }, 100); // Small debounce to batch rapid updates
+    return () => clearTimeout(timeoutId);
+  }, [activeWorkout, saveAsync]);
 
   // Timer
   useEffect(() => {
@@ -373,8 +381,20 @@ export default function App() {
 
   // Active Workout Modifications
   const handleUpdateSet = useCallback((exIndex, setIndex, field, value) => {
-    const updated = { ...activeWorkout };
-    updated.exercises[exIndex].sets[setIndex][field] = value;
+    // FIXED: Deep copy to prevent shallow mutation
+    const updated = {
+      ...activeWorkout,
+      exercises: activeWorkout.exercises.map((ex, idx) => {
+        if (idx !== exIndex) return ex;
+        return {
+          ...ex,
+          sets: ex.sets.map((set, sidx) => {
+            if (sidx !== setIndex) return set;
+            return { ...set, [field]: value };
+          })
+        };
+      })
+    };
     setActiveWorkout(updated);
 
     // If this set is already completed, re-run PR detection to update flags
@@ -472,49 +492,63 @@ export default function App() {
   }, []);
 
   const handleToggleSet = useCallback((exIndex, setIndex) => {
-    const updated = { ...activeWorkout };
-    const set = updated.exercises[exIndex].sets[setIndex];
+    // FIXED: Deep copy to prevent shallow mutation
+    const updated = {
+      ...activeWorkout,
+      exercises: activeWorkout.exercises.map((ex, idx) => {
+        if (idx !== exIndex) return ex;
+        return {
+          ...ex,
+          sets: ex.sets.map((set, sidx) => {
+            if (sidx !== setIndex) return set;
+            
+            // Toggle completion
+            const newVal = !set.completed;
+            
+            let updatedSet = { ...set, completed: newVal };
+            
+            // If trying to complete a set
+            if (newVal && !set.completed) {
+              const kg = Number(set.kg) || 0;
+              const reps = Number(set.reps) || 0;
+              const suggestedKg = Number(set.suggestedKg) || 0;
+              const suggestedReps = Number(set.suggestedReps) || 0;
+              
+              // Check if there are no values
+              if (kg === 0 && reps === 0 && suggestedKg === 0 && suggestedReps === 0) {
+                showToast('Please enter kg and reps');
+                return set; // Don't change completion
+              }
+              
+              // Auto-fill with suggested values if user didn't enter anything
+              if (kg === 0 && reps === 0 && (suggestedKg > 0 || suggestedReps > 0)) {
+                updatedSet.kg = suggestedKg;
+                updatedSet.reps = suggestedReps;
+              } else if (kg === 0 || reps === 0) {
+                // Fill in suggested if one is missing
+                if (kg === 0) updatedSet.kg = suggestedKg;
+                if (reps === 0) updatedSet.reps = suggestedReps;
+              }
+            }
+            
+            // If unchecking, remove medal flags
+            if (!newVal) {
+              updatedSet.isBest1RM = false;
+              updatedSet.isBestSetVolume = false;
+              updatedSet.isHeaviestWeight = false;
+            }
+            
+            return updatedSet;
+          })
+        };
+      })
+    };
     
-    // Toggle completion
-    const newVal = !set.completed;
-    
-    // If trying to complete a set
-    if (newVal && !set.completed) {
-      const kg = Number(set.kg) || 0;
-      const reps = Number(set.reps) || 0;
-      const suggestedKg = Number(set.suggestedKg) || 0;
-      const suggestedReps = Number(set.suggestedReps) || 0;
-      
-      // Check if there are no values
-      if (kg === 0 && reps === 0 && suggestedKg === 0 && suggestedReps === 0) {
-        showToast('Please enter kg and reps');
-        return;
-      }
-      
-      // Auto-fill with suggested values if user didn't enter anything
-      if (kg === 0 && reps === 0 && (suggestedKg > 0 || suggestedReps > 0)) {
-        set.kg = suggestedKg;
-        set.reps = suggestedReps;
-      } else if (kg === 0 || reps === 0) {
-        // Fill in suggested if one is missing
-        if (kg === 0) set.kg = suggestedKg;
-        if (reps === 0) set.reps = suggestedReps;
-      }
-    }
-    
-    set.completed = newVal;
-
-    // If unchecking, remove medal flags
-    if (!newVal) {
-      set.isBest1RM = false;
-      set.isBestSetVolume = false;
-      set.isHeaviestWeight = false;
-    }
-
     setActiveWorkout(updated);
 
     // When marking completed, check for PRs and update default exercises
-    if (newVal) {
+    const set = updated.exercises[exIndex].sets[setIndex];
+    if (set.completed) {
       const exId = updated.exercises[exIndex].exerciseId;
       const exerciseName = updated.exercises[exIndex].name;
       if (exId) {
@@ -522,8 +556,10 @@ export default function App() {
         const reps = Number(set.reps) || 0;
         if (kg > 0 && reps > 0 && !set.warmup) {
           const this1RM = calculate1RM(kg, reps);
-          const hist = getExerciseRecords(exId, workouts);
-          const histBest = hist.best1RM || 0;
+          
+          // Use cache if available, fallback to calculation
+          const hist = getRecords(exId) || getExerciseRecords(exId, workouts);
+          const histBest = hist?.best1RM || 0;
           if (this1RM > histBest) {
             setExercisesDB(prev => prev.map(e => e.id === exId ? { ...e, defaultSets: [{ kg, reps }, ...(e.defaultSets || []).slice(1)] } : e));
           }
@@ -564,7 +600,7 @@ export default function App() {
       }
 
       // If part of superset, auto-scroll to next exercise in superset
-      if (newVal && activeWorkout.exercises[exIndex].supersetId) {
+      if (activeWorkout.exercises[exIndex].supersetId) {
         const supersetId = activeWorkout.exercises[exIndex].supersetId;
         let nextExIndex = -1;
         
@@ -600,9 +636,18 @@ export default function App() {
   }, [activeWorkout, workouts, exercisesDB, enablePerformanceAlerts, enableHapticFeedback, showToast]);
 
   const handleAddSet = useCallback((exIndex) => {
-    const updated = { ...activeWorkout };
-    const lastSet = updated.exercises[exIndex].sets.at(-1) || { kg: 0, reps: 0 };
-    updated.exercises[exIndex].sets.push({ ...lastSet, completed: false });
+    // FIXED: Deep copy for immutability
+    const updated = {
+      ...activeWorkout,
+      exercises: activeWorkout.exercises.map((ex, idx) => {
+        if (idx !== exIndex) return ex;
+        const lastSet = ex.sets.at(-1) || { kg: 0, reps: 0 };
+        return {
+          ...ex,
+          sets: [...ex.sets, { ...lastSet, completed: false }]
+        };
+      })
+    };
     setActiveWorkout(updated);
   }, [activeWorkout]);
 
@@ -888,47 +933,129 @@ export default function App() {
     const file = e.target.files[0];
     if (!file) return;
 
+    // Validation schema
+    const isValidWorkout = (w) => {
+      return w && typeof w === 'object' &&
+        w.id && w.date && Array.isArray(w.exercises) &&
+        w.exercises.every(ex => ex.exerciseId && ex.name && Array.isArray(ex.sets) &&
+          ex.sets.every(s => typeof s.kg === 'number' && typeof s.reps === 'number')
+        );
+    };
+
+    const isValidTemplate = (t) => {
+      return t && typeof t === 'object' &&
+        t.id && t.name && Array.isArray(t.exercises);
+    };
+
+    const isValidExercise = (ex) => {
+      return ex && typeof ex === 'object' &&
+        ex.id && ex.name && typeof ex.category === 'string';
+    };
+
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
         const data = JSON.parse(event.target.result);
 
+        if (!data || typeof data !== 'object') {
+          alert('Invalid JSON structure');
+          return;
+        }
+
         if (data.workouts) {
-          setWorkouts(prev => {
-            const existingIds = new Set(prev.map(w => w.id));
-            const newOnes = data.workouts.filter(w => !existingIds.has(w.id));
-            return [...newOnes, ...prev];
+          if (!Array.isArray(data.workouts)) {
+            alert('Workouts must be an array');
+            return;
+          }
+          const validWorkouts = data.workouts.filter(w => {
+            if (!isValidWorkout(w)) {
+              console.warn('Invalid workout skipped:', w);
+              return false;
+            }
+            return true;
           });
+          if (validWorkouts.length > 0) {
+            setWorkouts(prev => {
+              const existingIds = new Set(prev.map(w => w.id));
+              const newOnes = validWorkouts.filter(w => !existingIds.has(w.id));
+              return [...newOnes, ...prev];
+            });
+          }
         }
 
         if (data.templates) {
-          setTemplates(prev => {
-            const existingIds = new Set(prev.map(t => t.id));
-            const newOnes = data.templates.filter(t => !existingIds.has(t.id));
-            return [...prev, ...newOnes];
-          });
+          if (!Array.isArray(data.templates)) {
+            console.warn('Templates must be an array');
+          } else {
+            const validTemplates = data.templates.filter(t => {
+              if (!isValidTemplate(t)) {
+                console.warn('Invalid template skipped:', t);
+                return false;
+              }
+              return true;
+            });
+            if (validTemplates.length > 0) {
+              setTemplates(prev => {
+                const existingIds = new Set(prev.map(t => t.id));
+                const newOnes = validTemplates.filter(t => !existingIds.has(t.id));
+                return [...prev, ...newOnes];
+              });
+            }
+          }
         }
 
         if (data.exercisesDB) {
-          setExercisesDB(prev => {
-            const existingIds = new Set(prev.map(e => e.id));
-            const newOnes = data.exercisesDB.filter(e => !existingIds.has(e.id));
-            return [...prev, ...newOnes];
-          });
+          if (!Array.isArray(data.exercisesDB)) {
+            console.warn('ExercisesDB must be an array');
+          } else {
+            const validExercises = data.exercisesDB.filter(ex => {
+              if (!isValidExercise(ex)) {
+                console.warn('Invalid exercise skipped:', ex);
+                return false;
+              }
+              return true;
+            });
+            if (validExercises.length > 0) {
+              setExercisesDB(prev => {
+                const existingIds = new Set(prev.map(e => e.id));
+                const newOnes = validExercises.filter(e => !existingIds.has(e.id));
+                return [...prev, ...newOnes];
+              });
+            }
+          }
         }
 
-        if (data.weeklyGoal && !weeklyGoal) {
+        if (data.weeklyGoal && !weeklyGoal && typeof data.weeklyGoal === 'number') {
           setWeeklyGoal(data.weeklyGoal);
         }
 
-        alert('Import completed (merged)');
-      } catch {
-        alert('Invalid JSON file');
+        // Rebuild PR cache after import (do it async after state updates settle)
+        setTimeout(() => {
+          // Need to use closure values which will be stale, so we recalculate from storage
+          (async () => {
+            try {
+              const importedWorkouts = await storage.getAllFromStore(STORES.WORKOUTS);
+              const importedExercises = await storage.getAllFromStore(STORES.EXERCISES);
+              await rebuildIndex(importedWorkouts, importedExercises);
+            } catch (error) {
+              console.error('Error rebuilding PR cache after import:', error);
+            }
+          })();
+        }, 0);
+
+        alert('Import completed (validated and merged)');
+      } catch (error) {
+        console.error('Import error:', error);
+        alert('Invalid JSON file or corrupted data');
       }
     };
 
+    reader.onerror = () => {
+      alert('Error reading file');
+    };
+
     reader.readAsText(file);
-  }, []);
+  }, [weeklyGoal]);
 
 
   // --- NAVIGATION HANDLER ---
@@ -983,16 +1110,37 @@ export default function App() {
             <HistoryView
               workouts={workouts}
               onViewWorkoutDetail={(date) => { setSelectedDate(date); setView('workoutDetail'); }}
-              onDeleteWorkout={(id) => {
+              onDeleteWorkout={async (id) => {
                 const workoutToDelete = workouts.find(w => w.id === id);
                 if (workoutToDelete) {
-                  setWorkouts(workouts.filter(w => w.id !== id));
+                  const newWorkouts = workouts.filter(w => w.id !== id);
+                  
+                  // Delete from storage using specific ID (cleaner than clear+setMany)
+                  try {
+                    await storage.delete(STORES.WORKOUTS, id);
+                  } catch (err) {
+                    console.error('Error persisting workout deletion:', err);
+                  }
+                  
+                  // Update state after storage is persisted
+                  setWorkouts(newWorkouts);
+                  
                   setDeletedWorkout(workoutToDelete);
+                  
+                  // Invalidate PR cache for exercises in deleted workout
+                  const exerciseIds = (workoutToDelete.exercises || [])
+                    .map(e => e.exerciseId)
+                    .filter(Boolean);
+                  if (exerciseIds.length > 0) {
+                    updateRecordsForExercises(exerciseIds, newWorkouts).catch(err =>
+                      console.error('Error updating records after delete:', err)
+                    );
+                  }
                   
                   // Clear existing timeout
                   if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
                   
-                  // Set new timeout to clear undo option after 5 seconds
+                  // Set new timeout to clear undo option after 10 seconds
                   undoTimeoutRef.current = setTimeout(() => {
                     setDeletedWorkout(null);
                   }, 10000);
@@ -1368,29 +1516,30 @@ export default function App() {
         />
       )}
       {pendingSummary && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div
             data-ui-anim
-            className={`bg-gradient-to-br from-slate-900/95 to-black/95 text-white p-8 rounded-2xl w-[95%] max-w-md border border-slate-700/50 ui-modal-scale ${summaryVisible ? 'animate-modal-fade-in' : 'opacity-0 scale-95'}`}
+            className={`bg-gradient-to-br from-slate-900/95 to-black/95 text-white rounded-2xl w-full max-w-md border border-slate-700/50 ui-modal-scale max-h-[90vh] overflow-y-auto ${summaryVisible ? 'animate-modal-fade-in' : 'opacity-0 scale-95'}`}
           >
-            <div className="flex justify-between items-start mb-6">
+            <div className="p-6 sticky top-0 bg-gradient-to-b from-slate-900/95 to-transparent border-b border-slate-700/30 flex justify-between items-start">
               <div>
-                <h2 className="text-3xl font-black bg-gradient-to-r from-blue-400 to-blue-300 bg-clip-text text-transparent">
+                <h2 className="text-2xl sm:text-3xl font-black bg-gradient-to-r from-blue-400 to-blue-300 bg-clip-text text-transparent">
                   {pendingSummary.cleanData.totalVolume.toLocaleString()}
                 </h2>
                 <p className="text-xs text-slate-400 mt-1 font-semibold tracking-widest">TOTAL VOLUME</p>
               </div>
-              <button onClick={() => setPendingSummary(null)} className="text-slate-500 hover:text-slate-300 transition">
+              <button onClick={() => setPendingSummary(null)} className="text-slate-500 hover:text-slate-300 transition flex-shrink-0">
                 <span className="text-xl">✕</span>
               </button>
             </div>
 
+            <div className="p-6 space-y-4">
             {/* Main stats row */}
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <div className="bg-slate-800/40 border border-slate-700/50 rounded-lg p-4">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+              <div className="bg-slate-800/40 border border-slate-700/50 rounded-lg p-3 sm:p-4">
                 <p className="text-slate-400 text-xs font-semibold tracking-widest mb-2">SETS COMPLETED</p>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-black text-white">{pendingSummary.cleanData.completedSets}</span>
+                  <span className="text-xl sm:text-2xl font-black text-white">{pendingSummary.cleanData.completedSets}</span>
                   {pendingSummary.comparison && (
                     <span className="text-lg" title={`${pendingSummary.comparison.prevVolume ? 'vs ' + Math.round(pendingSummary.comparison.prevVolume / 1000) + 'k prev' : ''}`}>
                       {pendingSummary.comparison.trend}
@@ -1399,15 +1548,15 @@ export default function App() {
                 </div>
               </div>
               
-              <div className="bg-slate-800/40 border border-slate-700/50 rounded-lg p-4">
+              <div className="bg-slate-800/40 border border-slate-700/50 rounded-lg p-3 sm:p-4">
                 <p className="text-slate-400 text-xs font-semibold tracking-widest mb-2">DURATION</p>
-                <p className="text-2xl font-black text-white">{pendingSummary.metrics.duration}m</p>
+                <p className="text-xl sm:text-2xl font-black text-white">{pendingSummary.metrics.duration}m</p>
               </div>
             </div>
 
             {/* Feedback text */}
-            <div className="bg-blue-950/30 border border-blue-500/20 rounded-lg p-4 mb-6 text-center">
-              <p className="text-lg font-bold text-blue-300">{pendingSummary.feedback}</p>
+            <div className="bg-blue-950/30 border border-blue-500/20 rounded-lg p-3 sm:p-4 text-center">
+              <p className="text-sm sm:text-lg font-bold text-blue-300">{pendingSummary.feedback}</p>
             </div>
 
             {/* PR Celebration */}
@@ -1627,7 +1776,7 @@ export default function App() {
             })()}
 
             {/* Tag Selection */}
-            <div className="mb-6">
+            <div className="mb-4 sm:mb-6">
               <p className="text-xs text-slate-400 font-semibold tracking-widest mb-2">WORKOUT TAGS</p>
               <div className="flex flex-wrap gap-2">
                 {['#cut', '#power', '#volume', '#sleep-bad', '#bulk', '#stress', '#sick'].map(tag => (
@@ -1636,7 +1785,7 @@ export default function App() {
                     onClick={() => setSelectedTags(prev => 
                       prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
                     )}
-                    className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${
+                    className={`px-3 sm:px-4 py-2 rounded-full text-xs font-bold transition-all ${
                       selectedTags.includes(tag)
                         ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
                         : 'bg-slate-800/50 border border-slate-700/50 text-slate-400 hover:text-slate-300'
@@ -1647,13 +1796,29 @@ export default function App() {
                 ))}
               </div>
             </div>
+            </div>
 
             {/* Action buttons */}
-            <div className="flex flex-col gap-2">
+            <div className="p-6 pt-0 flex flex-col gap-2 sticky bottom-0 bg-gradient-to-t from-slate-900/95 to-transparent border-t border-slate-700/30">
               <button 
-                onClick={() => {
+                onClick={async () => {
                   const workoutWithTags = { ...pendingSummary.completedWorkout, tags: selectedTags };
-                  setWorkouts([workoutWithTags, ...workouts]);
+                  
+                  // Save just the new workout (more efficient than saving entire array)
+                  try {
+                    await storage.set(STORES.WORKOUTS, workoutWithTags);
+                  } catch (err) {
+                    console.error('Error saving workout:', err);
+                  }
+                  
+                  // Update state for immediate UI feedback
+                  const newWorkouts = [workoutWithTags, ...workouts];
+                  setWorkouts(newWorkouts);
+                  
+                  // Update PR cache for all exercises in this workout (use new list for cache)
+                  const exerciseIds = (workoutWithTags.exercises || []).map(e => e.exerciseId).filter(Boolean);
+                  await updateRecordsForExercises(exerciseIds, newWorkouts);
+
                   setActiveWorkout(null);
                   setWorkoutTimer(0);
                   setPendingSummary(null);
@@ -1667,7 +1832,19 @@ export default function App() {
               
               {pendingSummary.templateId && (
                 <button 
-                  onClick={() => {
+                  onClick={async () => {
+                    const workoutWithTags = { ...pendingSummary.completedWorkout, tags: selectedTags };
+                    
+                    // Update state for immediate UI feedback
+                    const newWorkouts = [workoutWithTags, ...workouts];
+                    
+                    // Save just the new workout (more efficient)
+                    try {
+                      await storage.set(STORES.WORKOUTS, workoutWithTags);
+                    } catch (err) {
+                      console.error('Error saving workout:', err);
+                    }
+                    
                     if (pendingSummary.templateId) {
                       const ti = templates.findIndex(t => t.id === pendingSummary.templateId);
                       if (ti !== -1) {
@@ -1675,11 +1852,21 @@ export default function App() {
                         newTemplate.exercises = (pendingSummary.completedWorkout.exercises || []).map(ex => ({ name: ex.name, category: ex.category, sets: ex.sets.map(s => ({ kg: 0, reps: 0 })) }));
                         const updated = [...templates]; 
                         updated[ti] = newTemplate; 
+                        // Save just the updated template
+                        try {
+                          await storage.set(STORES.TEMPLATES, newTemplate);
+                        } catch (err) {
+                          console.error('Error updating template:', err);
+                        }
                         setTemplates(updated);
                       }
                     }
-                    const workoutWithTags = { ...pendingSummary.completedWorkout, tags: selectedTags };
-                    setWorkouts([workoutWithTags, ...workouts]);
+                    
+                    // Update PR cache for all exercises in this workout
+                    const exerciseIds = (workoutWithTags.exercises || []).map(e => e.exerciseId).filter(Boolean);
+                    await updateRecordsForExercises(exerciseIds, newWorkouts);
+
+                    setWorkouts(newWorkouts);
                     setActiveWorkout(null);
                     setWorkoutTimer(0);
                     setPendingSummary(null);
@@ -1718,8 +1905,19 @@ export default function App() {
             <p className="text-xs text-slate-400 mt-1">Undo within 10 seconds</p>
           </div>
           <button
-            onClick={() => {
-              setWorkouts([deletedWorkout, ...workouts]);
+            onClick={async () => {
+              const restoredWorkouts = [deletedWorkout, ...workouts];
+              
+              // Restore to storage using set (restores specific workout by ID)
+              try {
+                await storage.set(STORES.WORKOUTS, deletedWorkout);
+              } catch (err) {
+                console.error('Error persisting workout restoration:', err);
+                return;
+              }
+              
+              // Update state
+              setWorkouts(restoredWorkouts);
               setDeletedWorkout(null);
               if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
             }}

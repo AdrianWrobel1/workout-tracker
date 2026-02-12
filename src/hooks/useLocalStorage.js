@@ -17,7 +17,13 @@ export const useDebouncedLocalStorage = (key, value, delay = 1000) => {
 
     // Set new timeout
     timeoutRef.current = setTimeout(() => {
-      localStorage.setItem(key, JSON.stringify(value));
+      try {
+        localStorage.setItem(key, JSON.stringify(value));
+      } catch (error) {
+        console.error(`Error saving to localStorage [${key}]:`, error);
+        // Silently fail for now (quota exceeded, disabled, etc.)
+        // Could add error state management here if needed
+      }
     }, delay);
 
     // Cleanup
@@ -43,11 +49,19 @@ export const useDebouncedLocalStorageManual = (key, value, delay = 1000) => {
 
     if (value !== null && value !== undefined) {
       timeoutRef.current = setTimeout(() => {
-        localStorage.setItem(key, JSON.stringify(value));
+        try {
+          localStorage.setItem(key, JSON.stringify(value));
+        } catch (error) {
+          console.error(`Error saving to localStorage [${key}]:`, error);
+        }
       }, delay);
     } else {
       // Immediately remove if value is null/undefined
-      localStorage.removeItem(key);
+      try {
+        localStorage.removeItem(key);
+      } catch (error) {
+        console.error(`Error removing from localStorage [${key}]:`, error);
+      }
     }
 
     return () => {

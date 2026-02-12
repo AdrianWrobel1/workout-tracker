@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Plus, Edit2, Calendar, Check, TrendingUp, Zap, ChevronDown, X } from 'lucide-react';
 import { getWeekWorkouts, getMonthWorkouts, getMonthLabel } from '../domain/workouts';
 import { WeekHeatmap } from '../components/WeekHeatmap';
@@ -205,6 +205,14 @@ export const HomeView = ({
   onViewWorkoutDetail,
   onOpenMonthlyProgress
 }) => {
+  const [notesModalOpen, setNotesModalOpen] = useState(false);
+  const [notesInput, setNotesInput] = useState(trainingNotes || '');
+
+  // Sync modal input when trainingNotes prop changes
+  React.useEffect(() => {
+    setNotesInput(trainingNotes || '');
+  }, [trainingNotes, notesModalOpen]);
+
   const weekWorkouts = getWeekWorkouts(workouts);
   const getMonthWorkoutsCount = (offset) => getMonthWorkouts(workouts, offset).length;
   const weekProgress = Math.min((weekWorkouts.length / weeklyGoal) * 100, 100);
@@ -277,14 +285,72 @@ export const HomeView = ({
 
       {/* Training Notes */}
       <div className="px-4 py-4">
-        <p className="text-slate-400 text-xs font-semibold tracking-widest mb-2">TRAINING NOTES</p>
-        <textarea
-          value={trainingNotes}
-          onChange={(e) => onTrainingNotesChange(e.target.value)}
-          placeholder="Zapisz wszystko: co dołożyć, co nie weszło, co bolało, pomysły na kolejne treningi…"
-          className="w-full h-24 bg-slate-800/50 border border-slate-700/50 text-white rounded-lg p-4 font-semibold text-sm placeholder-slate-600 focus:border-blue-500 focus:outline-none transition resize-none"
-        />
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-slate-400 text-xs font-semibold tracking-widest">TRAINING NOTES</p>
+          <button
+            onClick={() => {
+              setNotesInput(trainingNotes || '');
+              setNotesModalOpen(true);
+            }}
+            className="text-blue-400 hover:text-blue-300 text-xs font-semibold transition"
+          >
+            {trainingNotes ? 'Edit' : 'Add'}
+          </button>
+        </div>
+        {trainingNotes && (
+          <div className="w-full bg-slate-800/30 border border-slate-700/50 text-slate-300 rounded-lg p-3 font-semibold text-sm line-clamp-2">
+            {trainingNotes}
+          </div>
+        )}
       </div>
+
+      {/* Training Notes Modal */}
+      {notesModalOpen && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
+          <div className="bg-gradient-to-br from-slate-900 to-black border border-slate-700/50 rounded-2xl w-full sm:max-w-md max-h-[90vh] sm:max-h-[85vh] flex flex-col shadow-2xl mx-auto">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 sm:p-6 border-b border-slate-700/30">
+              <h2 className="text-lg sm:text-xl font-black text-white">Training Notes</h2>
+              <button
+                onClick={() => setNotesModalOpen(false)}
+                className="p-1 hover:bg-slate-800/50 rounded-lg transition"
+              >
+                <X size={24} className="text-slate-400" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+              <textarea
+                autoFocus
+                value={notesInput}
+                onChange={(e) => setNotesInput(e.target.value)}
+                placeholder="Zapisz wszystko: co dołożyć, co nie weszło, co bolało, pomysły na kolejne treningi…"
+                className="w-full h-64 bg-slate-800/50 border border-slate-700/50 text-white rounded-lg p-4 font-semibold text-sm placeholder-slate-600 focus:border-blue-500 focus:outline-none transition resize-none"
+              />
+            </div>
+
+            {/* Footer */}
+            <div className="flex gap-2 p-4 sm:p-6 border-t border-slate-700/30 bg-slate-900/30">
+              <button
+                onClick={() => {
+                  onTrainingNotesChange(notesInput);
+                  setNotesModalOpen(false);
+                }}
+                className="flex-1 px-4 py-3 rounded-lg bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold text-sm transition-all"
+              >
+                Save
+              </button>
+              <button
+                onClick={() => setNotesModalOpen(false)}
+                className="flex-1 px-4 py-3 rounded-lg bg-slate-800/50 hover:bg-slate-700/50 text-slate-300 font-bold text-sm transition-all"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Recent Workouts */}
       <div className="px-4 pb-4">

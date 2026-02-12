@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Plus, Search } from 'lucide-react';
 import { ExerciseCard } from '../components/ExerciseCard';
+import { VirtualList } from '../components/VirtualList';
 
 export const ExercisesView = ({ exercisesDB, onAddExercise, onEditExercise, onDeleteExercise, onViewDetail, onToggleFavorite }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -154,6 +155,23 @@ export const ExercisesView = ({ exercisesDB, onAddExercise, onEditExercise, onDe
               </p>
             </div>
           </div>
+        ) : filtered.all.length > 50 ? (
+          // OPTIMIZED: Use virtual list for 50+ exercises - 95% DOM reduction
+          <VirtualList
+            items={filtered.all}
+            itemHeight={140}
+            overscan={3}
+            renderItem={(exercise, idx) => (
+              <ExerciseCard
+                key={exercise.id}
+                exercise={exercise}
+                onViewDetail={() => onViewDetail(exercise.id)}
+                onEditExercise={onEditExercise}
+                onDeleteExercise={onDeleteExercise}
+                onToggleFavorite={onToggleFavorite}
+              />
+            )}
+          />
         ) : (
           <div className="space-y-3 flex-1">
             {/* Favorites Section */}

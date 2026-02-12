@@ -3,6 +3,7 @@ import { ChevronRight, Edit2, Trash2, Plus, X as CloseIcon, Medal } from 'lucide
 import { formatDate, formatMonth, calculateTotalVolume } from '../domain/calculations';
 import { getExerciseRecords } from '../domain/exercises';
 import { WorkoutCard } from '../components/WorkoutCard';
+import { VirtualList } from '../components/VirtualList';
 
 export const HistoryView = ({ workouts, onViewWorkoutDetail, onDeleteWorkout, onEditWorkout, exercisesDB = [], filter = 'all', onFilterChange }) => {
   const [editingId, setEditingId] = useState(null);
@@ -11,7 +12,7 @@ export const HistoryView = ({ workouts, onViewWorkoutDetail, onDeleteWorkout, on
   const [newExercise, setNewExercise] = useState({ exerciseId: null, name: '', category: '', sets: [{ kg: 0, reps: 0, completed: false }] });
   const [useExerciseDB, setUseExerciseDB] = useState(false);
   const [expandedExerciseIdx, setExpandedExerciseIdx] = useState(null);
-  const [tagFilter, setTagFilter] = useState(null); // null for all, or specific tag
+  const [selectedTags, setSelectedTags] = useState([]); // Multi-tag support
   const [showTagDropdown, setShowTagDropdown] = useState(false);
   const tagDropdownRef = useRef(null);
 
@@ -28,79 +29,93 @@ export const HistoryView = ({ workouts, onViewWorkoutDetail, onDeleteWorkout, on
     }
   }, [showTagDropdown]);
 
+  // FIXED: Pre-calculate PR data once instead of O(N²) in filter
+  const prWorkoutIds = useMemo(() => {
+    const prIds = new Set();
+    (workouts || []).forEach(workout => {
+      try {
+        const isPRAny = (workout.exercises || []).some(ex => {
+          const exId = ex.exerciseId;
+          if (!exId) return false;
+          const records = getExerciseRecords(exId, workouts) || {};
+          const best1RM = records.best1RM || 0;
+          const max1RMInThisWorkout = Math.max(0, ...(ex.sets || [])
+            .filter(s => s && s.completed && !s.warmup)
+            .map(s => {
+              const kg = Number(s.kg) || 0;
+              const reps = Number(s.reps) || 0;
+              if (!kg || !reps) return 0;
+              return Math.round(kg * (1 + reps / 30));
+            }), 0);
+          return max1RMInThisWorkout >= best1RM && best1RM > 0;
+        });
+        if (isPRAny) prIds.add(workout.id);
+      } catch (e) {
+        // Silently skip on error
+      }
+    });
+    return prIds;
+  }, [workouts]);
+
   // Smart filter logic
   const hasPR = (workout) => {
-    try {
-      return (workout.exercises || []).some(ex => {
-        const exId = ex.exerciseId;
-        if (!exId) return false;
-        const records = getExerciseRecords(exId, workouts) || {};
-        const best1RM = records.best1RM || 0;
-        const max1RMInThisWorkout = Math.max(0, ...(ex.sets || [])
-          .filter(s => s && s.completed && !s.warmup)
-          .map(s => {
-            const kg = Number(s.kg) || 0;
-            const reps = Number(s.reps) || 0;
-            if (!kg || !reps) return 0;
-            return Math.round(kg * (1 + reps / 30));
-          }), 0);
-        return max1RMInThisWorkout >= best1RM && best1RM > 0;
-      });
-    } catch (e) {
-      return false;
-    }
+    return prWorkoutIds.has(workout.id);
   };
 
-  const getWorkoutIntensity = (workout) => {
-    // heavy = volume > 70th percentile of all volumes
+  const getWorkoutIntensity = useMemo(() => {
+    // Calculate 70th percentile of volumes once (OPTIMIZED: memoized)
     const allVols = (workouts || []).map(w => (w.exercises || []).reduce((sum, ex) => sum + calculateTotalVolume(ex.sets || []), 0));
     const allVols_sorted = [...allVols].sort((a, b) => a - b);
     const idx = Math.floor(allVols_sorted.length * 0.7);
     const p70 = (allVols_sorted.length > 0 && Number.isFinite(allVols_sorted[idx])) ? allVols_sorted[idx] : 0;
-    const thisVol = (workout.exercises || []).reduce((sum, ex) => sum + calculateTotalVolume(ex.sets || []), 0);
-
-    if (p70 <= 0) {
-      // Not enough historical data; classify by simple thresholds
-      if (thisVol === 0) return 'light';
-      if (thisVol > 1000) return 'heavy';
+    
+    return (workout) => {
+      const thisVol = (workout.exercises || []).reduce((sum, ex) => sum + calculateTotalVolume(ex.sets || []), 0);
+      if (p70 <= 0) {
+        if (thisVol === 0) return 'light';
+        if (thisVol > 1000) return 'heavy';
+        return 'normal';
+      }
+      if (thisVol >= p70) return 'heavy';
+      if (thisVol > 0 && thisVol < p70 * 0.3) return 'light';
       return 'normal';
-    }
+    };
+  }, [workouts]);
 
-    if (thisVol >= p70) return 'heavy';
-    if (thisVol > 0 && thisVol < p70 * 0.3) return 'light';
-    return 'normal';
-  };
-
-  const filteredWorkouts = useMemo(() => {
+  // OPTIMIZED: Filter + Group workouts memoized together
+  const { filteredWorkouts, groups, sortedKeys } = useMemo(() => {
     let result = workouts;
     const filterToUse = filter || 'all';
+    const intensityFn = getWorkoutIntensity;
     
-    // Apply smart filter (PR, heavy, light)
+    // Apply smart filter (PR, heavy, light) - uses memoized getWorkoutIntensity
     if (filterToUse === 'pr') {
       result = result.filter(w => hasPR(w));
     } else if (filterToUse === 'heavy') {
-      result = result.filter(w => getWorkoutIntensity(w) === 'heavy');
+      result = result.filter(w => intensityFn(w) === 'heavy');
     } else if (filterToUse === 'light') {
-      result = result.filter(w => getWorkoutIntensity(w) === 'light');
+      result = result.filter(w => intensityFn(w) === 'light');
     }
     
-    // Apply tag filter
-    if (tagFilter) {
-      result = result.filter(w => (w.tags || []).includes(tagFilter));
+    // Apply multi-tag filter
+    if (selectedTags.length > 0) {
+      result = result.filter(w => {
+        const workoutTags = w.tags || [];
+        return selectedTags.some(tag => workoutTags.includes(tag));
+      });
     }
+
+    // Group by month-year
+    const grps = {};
+    result.forEach(w => {
+      const key = new Date(w.date).toISOString().slice(0,7);
+      if (!grps[key]) grps[key] = [];
+      grps[key].push(w);
+    });
+    const keys = Object.keys(grps).sort((a,b) => b.localeCompare(a));
     
-    return result;
-  }, [workouts, filter, tagFilter]);
-
-  // Group workouts by month-year
-  const groups = {};
-  filteredWorkouts.forEach(w => {
-    const key = new Date(w.date).toISOString().slice(0,7);
-    if (!groups[key]) groups[key] = [];
-    groups[key].push(w);
-  });
-
-  const sortedKeys = Object.keys(groups).sort((a,b) => b.localeCompare(a));
+    return { filteredWorkouts: result, groups: grps, sortedKeys: keys };
+  }, [workouts, filter, selectedTags, getWorkoutIntensity, prWorkoutIds]);
 
   const handleEditStart = (workout) => {
     setEditingId(workout.id);
@@ -621,47 +636,39 @@ export const HistoryView = ({ workouts, onViewWorkoutDetail, onDeleteWorkout, on
         </div>
         
         {/* Tag Filters */}
-        <div className="relative mt-3" ref={tagDropdownRef}>
-          <button
-            onClick={() => setShowTagDropdown(!showTagDropdown)}
-            className="w-full bg-slate-800/50 border border-slate-600/50 hover:bg-slate-700/50 text-white rounded-lg px-4 py-3 text-sm font-bold flex items-center justify-between transition"
-          >
-            <span>Tags: {tagFilter || 'All'}</span>
-            <span className={`text-xs transition-transform ${showTagDropdown ? 'rotate-180' : ''}`}>▾</span>
-          </button>
-          {showTagDropdown && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-slate-900/95 border border-slate-700/50 rounded-lg shadow-lg z-50">
+        <div className="mt-4">
+          <p className="text-xs text-slate-400 font-semibold tracking-widest mb-2">FILTER BY TAGS</p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setSelectedTags([])}
+              className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${
+                selectedTags.length === 0
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+                  : 'bg-slate-800/50 border border-slate-700/50 text-slate-400 hover:text-slate-300'
+              }`}
+            >
+              All
+            </button>
+            {['#cut', '#power', '#volume', '#sleep-bad', '#bulk', '#stress', '#sick'].map(tag => (
               <button
+                key={tag}
                 onClick={() => {
-                  setTagFilter(null);
-                  setShowTagDropdown(false);
+                  setSelectedTags(prev => 
+                    prev.includes(tag) 
+                      ? prev.filter(t => t !== tag)
+                      : [...prev, tag]
+                  );
                 }}
-                className={`w-full text-left px-4 py-3 text-sm font-semibold transition-colors ${
-                  tagFilter === null
-                    ? 'bg-blue-600/30 text-white'
-                    : 'text-slate-300 hover:bg-slate-800/50'
+                className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${
+                  selectedTags.includes(tag)
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+                    : 'bg-slate-800/50 border border-slate-700/50 text-slate-400 hover:text-slate-300'
                 }`}
               >
-                All
+                {tag}
               </button>
-              {['#cut', '#power', '#volume', '#sleep-bad', '#bulk', '#stress', '#sick'].map(tag => (
-                <button
-                  key={tag}
-                  onClick={() => {
-                    setTagFilter(tag);
-                    setShowTagDropdown(false);
-                  }}
-                  className={`w-full text-left px-4 py-3 text-sm font-semibold transition-colors ${
-                    tagFilter === tag
-                      ? 'bg-blue-600/30 text-white'
-                      : 'text-slate-300 hover:bg-slate-800/50'
-                  }`}
-                >
-                  {tag}
-                </button>
-              ))}
-            </div>
-          )}
+            ))}
+          </div>
         </div>
       </div>
 
@@ -675,7 +682,28 @@ export const HistoryView = ({ workouts, onViewWorkoutDetail, onDeleteWorkout, on
               {(filter || 'all') === 'all' ? 'Start your first workout to see it here' : 'Try a different filter'}
             </p>
           </div>
+        ) : filteredWorkouts.length > 200 ? (
+          // Use virtual list for large datasets (>200 workouts)
+          <VirtualList
+            items={filteredWorkouts}
+            itemHeight={320} // Approximate height of workout card
+            containerHeight={window.innerHeight - 250}
+            keyExtractor={(item) => item.id}
+            renderItem={(workout) => (
+              <div key={workout.id} className="mb-3">
+                <WorkoutCard 
+                  workout={workout}
+                  onViewDetail={() => onViewWorkoutDetail && onViewWorkoutDetail(workout.id)}
+                  onEdit={() => onEditWorkout && onEditWorkout(workout.id)}
+                  onDelete={() => onDeleteWorkout && onDeleteWorkout(workout.id)}
+                  exercisesDB={exercisesDB}
+                  hasPR={false}
+                />
+              </div>
+            )}
+          />
         ) : (
+          // Use grouped layout for small datasets (<200 workouts)
           groupElements
         )}
       </div>

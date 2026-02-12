@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { X, Plus, FileText, ChevronDown } from 'lucide-react';
 import { SortableExerciseList } from '../components/SortableExerciseList';
 import { formatDate, formatTime } from '../domain/calculations';
@@ -31,16 +31,23 @@ export const ActiveWorkoutView = ({
   const [deleteModeIndex, setDeleteModeIndex] = useState(null);
   const [warmupModeIndex, setWarmupModeIndex] = useState(null);
 
-  // Calculate progress: completed sets / total sets
-  const totalSets = useMemo(() => {
-    return activeWorkout.exercises.reduce((sum, ex) => sum + (ex.sets?.length || 0), 0);
-  }, [activeWorkout]);
+  // OPTIMIZED: Use refs instead of expensive reduce() on every set edit
+  // Recalculate only when exercise count changes, not on every set edit keystroke
+  const totalSetCountRef = useRef(0);
+  const completedSetCountRef = useRef(0);
 
-  const completedSets = useMemo(() => {
-    return activeWorkout.exercises.reduce((sum, ex) => sum + (ex.sets?.filter(s => s.completed).length || 0), 0);
-  }, [activeWorkout]);
+  useEffect(() => {
+    totalSetCountRef.current = activeWorkout.exercises.reduce(
+      (sum, ex) => sum + (ex.sets?.length || 0), 
+      0
+    );
+    completedSetCountRef.current = activeWorkout.exercises.reduce(
+      (sum, ex) => sum + (ex.sets?.filter(s => s.completed).length || 0), 
+      0
+    );
+  }, [activeWorkout.exercises.length]); // Only depend on exercise count
 
-  const progressPercent = totalSets > 0 ? (completedSets / totalSets) * 100 : 0;
+  const progressPercent = totalSetCountRef.current > 0 ? (completedSetCountRef.current / totalSetCountRef.current) * 100 : 0;
 
 
 
@@ -75,7 +82,7 @@ export const ActiveWorkoutView = ({
         <div className="space-y-2.5">
           <div className="flex items-baseline justify-between">
             <p className="text-xs text-slate-400 font-semibold tracking-widest">PROGRESS</p>
-            <p className="text-sm font-bold text-white">{completedSets} / {totalSets} Sets</p>
+            <p className="text-sm font-bold text-white">{completedSetCountRef.current} / {totalSetCountRef.current} Sets</p>
           </div>
             <div className="w-full h-2 bg-slate-800/50 rounded-full overflow-hidden border border-white/10">
             <div
@@ -95,7 +102,7 @@ export const ActiveWorkoutView = ({
       </div>
 
       {/* Exercises Scroll Area */}
-      <div className="flex-1 overflow-y-auto px-4 pt-4 pb-4">
+      <div className="flex-1 overflow-y-auto px-3 sm:px-4 pt-3 sm:pt-4 pb-4">
         <SortableExerciseList
           exercises={activeWorkout.exercises}
           workouts={workouts}
@@ -125,7 +132,7 @@ export const ActiveWorkoutView = ({
 
         <button
           onClick={onAddExercise}
-          className="w-full mt-4 py-4 border-2 border-dashed border-slate-700 hover:border-slate-600 rounded-xl text-slate-400 hover:text-slate-300 font-bold transition-colors flex flex-col items-center gap-2"
+          className="w-full mt-4 py-3 sm:py-4 border-2 border-dashed border-slate-700 hover:border-slate-600 rounded-xl text-slate-400 hover:text-slate-300 font-bold transition-colors flex flex-col items-center gap-2"
         >
           <Plus size={24} />
           <span className="text-sm">Add Exercise</span>

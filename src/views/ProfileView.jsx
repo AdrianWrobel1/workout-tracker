@@ -75,8 +75,16 @@ export const ProfileView = ({
     return `${sessions} sessions ${period}`;
   }, [workouts, dateRange, chartMetric]);
 
-  // Get last 5 workouts
-  const lastWorkouts = useMemo(() => workouts.slice(0, 5), [workouts]);
+  // Get last 5 workouts with pre-computed metrics (OPTIMIZED: memoized to avoid recalculation)
+  const lastWorkouts = useMemo(() => {
+    return workouts.slice(0, 5).map(workout => {
+      const totalVol = (workout.exercises || []).reduce(
+        (sum, ex) => sum + calculateTotalVolume(ex.sets || []),
+        0
+      );
+      return { workout, totalVol, exerciseCount: (workout.exercises || []).length };
+    });
+  }, [workouts]);
 
   // Calculate workout count
   const workoutCount = workouts.length;
@@ -237,14 +245,9 @@ export const ProfileView = ({
           <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-6 animate-chart-fade-in">
             <h2 className="text-sm font-black text-slate-300 uppercase tracking-widest mb-4">Recent Workouts</h2>
             <div className="space-y-3">
-              {lastWorkouts.map((workout, idx) => {
+              {lastWorkouts.map(({ workout, totalVol, exerciseCount }, idx) => {
                 const date = new Date(workout.date);
                 const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', weekday: 'short' });
-                const totalVol = (workout.exercises || []).reduce(
-                  (sum, ex) => sum + calculateTotalVolume(ex.sets || []),
-                  0
-                );
-                const exerciseCount = (workout.exercises || []).length;
 
                 return (
                   <button

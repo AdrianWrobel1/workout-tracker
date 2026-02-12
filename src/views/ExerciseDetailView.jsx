@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { ChevronLeft, Trophy, Medal } from 'lucide-react';
 import { UnifiedChart } from '../components/UnifiedChart';
+import { VirtualList } from '../components/VirtualList';
 import { getExerciseHistory, getExerciseRecords, getLastSet, getExerciseTrend, getChartContext } from '../domain/exercises';
 import { formatLastSetDate } from '../domain/calculations';
 
@@ -151,6 +152,67 @@ export const ExerciseDetailView = ({ exerciseId, workouts, exercisesDB, onBack, 
               <div className="text-center text-slate-500 mt-10 py-6">
                 <p className="text-sm font-semibold">No history yet</p>
               </div>
+            ) : history.length > 100 ? (
+              // OPTIMIZED: Use virtual list for large histories (100+ items)
+              <VirtualList
+                items={history}
+                itemHeight={200}
+                overscan={5}
+                renderItem={(item, index) => {
+                  const i = index;
+                  const prevItem = history[i - 1];
+                  const currentMonth = item.date.substring(0, 7);
+                  const prevMonth = prevItem?.date.substring(0, 7);
+                  const showMonth = currentMonth !== prevMonth;
+                  
+                  return (
+                    <div key={`${item.date}-item`}>
+                      {showMonth && (
+                        <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest sticky top-0 bg-black/50 py-3 mt-4 first:mt-0">
+                          {new Date(item.date).toLocaleString('en-US', { month: 'long', year: 'numeric' })}
+                        </h3>
+                      )}
+                      <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-lg p-4 hover:border-slate-600/50 transition-all">
+                        <div className="flex justify-between items-baseline mb-3">
+                          <span className="font-black text-blue-400">
+                            {new Date(item.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', weekday: 'short' })}
+                          </span>
+                          <span className="text-xs text-slate-400 font-bold">1RM <span className="text-blue-300">{item.max1RM} kg</span></span>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {item.sets.map((set, idx) => (
+                            <button
+                              key={`${item.date}-${set.kg}-${set.reps}-${idx}`}
+                              onClick={() => onOpenWorkout && onOpenWorkout(item.date)}
+                              className={`px-3 py-2 rounded-lg text-xs border transition flex items-center gap-1.5 ${
+                                (set.isBest1RM || set.isBestSetVolume || set.isHeaviestWeight)
+                                  ? 'bg-yellow-500/20 border-yellow-500/40 hover:bg-yellow-500/30'
+                                  : 'bg-slate-800/60 hover:bg-slate-700/60 border-slate-700/50 hover:border-slate-600/50'
+                              }`}
+                              title={
+                                (set.isBest1RM || set.isBestSetVolume || set.isHeaviestWeight)
+                                  ? [
+                                      set.isHeaviestWeight && 'Heaviest Weight',
+                                      set.isBestSetVolume && 'Best Set Volume',
+                                      set.isBest1RM && 'Best 1RM'
+                                    ].filter(Boolean).join(', ')
+                                  : ''
+                              }
+                            >
+                              {(set.isBest1RM || set.isBestSetVolume || set.isHeaviestWeight) && (
+                                <Medal size={12} className="text-yellow-400" />
+                              )}
+                              <span className="font-black text-white">{set.kg}</span>
+                              <span className="text-slate-500">×</span>
+                              <span className="text-slate-300">{set.reps}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }}
+              />
             ) : (
               history.map((item, i) => {
                 const prevItem = history[i - 1];
