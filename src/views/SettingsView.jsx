@@ -44,7 +44,7 @@ export const SettingsView = ({
             type="number"
             value={weeklyGoal}
             onChange={(e) => onWeeklyGoalChange(parseInt(e.target.value) || 1)}
-            className="w-full bg-slate-800/50 border border-slate-600/50 rounded-lg px-4 py-3 text-white font-bold focus:border-blue-500 focus:outline-none transition"
+            className="w-full bg-slate-800/50 border border-slate-600/50 rounded-lg px-4 py-3 text-white font-bold focus:border-accent-text focus:outline-none focus:accent-ring transition"
             placeholder="Target workouts per week"
           />
         </div>
@@ -55,7 +55,7 @@ export const SettingsView = ({
           <select
             value={defaultStatsRange}
             onChange={(e) => onDefaultStatsRangeChange && onDefaultStatsRangeChange(e.target.value)}
-            className="w-full bg-slate-800/50 border border-slate-600/50 rounded-lg px-4 py-3 text-white font-bold focus:border-blue-500 focus:outline-none transition"
+            className="w-full bg-slate-800/50 border border-slate-600/50 rounded-lg px-4 py-3 text-white font-bold focus:border-accent-text focus:outline-none focus:accent-ring transition"
           >
             <option value="1week">7 Days</option>
             <option value="1month">30 Days</option>
@@ -107,7 +107,7 @@ export const SettingsView = ({
                   onClick={() => onEnableHapticFeedbackChange && onEnableHapticFeedbackChange(!enableHapticFeedback)}
                   className={`w-12 h-7 rounded-full transition-all flex items-center px-1 ${
                     enableHapticFeedback
-                      ? 'bg-blue-600'
+                      ? 'accent-bg'
                       : 'bg-slate-600'
                   }`}
                 >
@@ -139,6 +139,40 @@ export const SettingsView = ({
           </div>
         </div>
 
+        {/* Accent Color Card */}
+        <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-6">
+          <h3 className="font-black text-white mb-4">Accent Color</h3>
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { name: 'Orange', hex: '#ea580c' },
+              { name: 'Electric Blue', hex: '#0084d4' },
+              { name: 'Neon Green', hex: '#10b981' },
+              { name: 'Deep Purple', hex: '#7c3aed' },
+              { name: 'Crimson', hex: '#dc2626' },
+              { name: 'Hot Pink', hex: '#ec4899' },
+              { name: 'Sky Blue', hex: '#0ea5e9' },
+              { name: 'Amber', hex: '#fbbf24' }
+            ].map(color => (
+              <button
+                key={color.hex}
+                onClick={() => {
+                  document.documentElement.style.setProperty('--accent', color.hex);
+                  localStorage.setItem('accentColor', color.hex);
+                }}
+                className="p-4 rounded-lg border-2 border-slate-700/50 hover:border-slate-600 transition-all relative group"
+                style={{
+                  backgroundColor: `${color.hex}20`,
+                  borderColor: localStorage.getItem('accentColor') === color.hex ? color.hex : undefined
+                }}
+              >
+                <div className="absolute top-2 right-2 w-3 h-3 rounded-full" style={{ backgroundColor: color.hex }} />
+                <p className="text-sm font-bold text-white">{color.name}</p>
+                <p className="text-xs text-slate-400 mt-1">{color.hex}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Reset Button */}
         <button
           onClick={onReset}
@@ -166,7 +200,7 @@ export const SettingsView = ({
                 <select
                   value={exportType}
                   onChange={(e) => setExportType(e.target.value)}
-                  className="w-full bg-slate-800/50 border border-slate-600/50 rounded-lg px-4 py-2 text-white font-semibold focus:border-blue-500 focus:outline-none transition"
+                  className="w-full bg-slate-800/50 border border-slate-600/50 rounded-lg px-4 py-2 text-white font-semibold focus:border-accent-text focus:outline-none focus:accent-ring transition"
                 >
                   <option value="all">All Data</option>
                   <option value="workouts">Workouts Only</option>
@@ -181,7 +215,7 @@ export const SettingsView = ({
                 <select
                   value={exportPeriod}
                   onChange={(e) => setExportPeriod(e.target.value)}
-                  className="w-full bg-slate-800/50 border border-slate-600/50 rounded-lg px-4 py-2 text-white font-semibold focus:border-blue-500 focus:outline-none transition"
+                  className="w-full bg-slate-800/50 border border-slate-600/50 rounded-lg px-4 py-2 text-white font-semibold focus:border-accent-text focus:outline-none focus:accent-ring transition"
                 >
                   <option value="all">All Time</option>
                   <option value="last7">Last 7 Days</option>
@@ -200,7 +234,7 @@ export const SettingsView = ({
                       type="date"
                       value={exportStartDate}
                       onChange={(e) => setExportStartDate(e.target.value)}
-                      className="w-full bg-slate-800/50 border border-slate-600/50 rounded-lg px-4 py-2 text-white font-semibold focus:border-blue-500 focus:outline-none transition"
+                      className="w-full bg-slate-800/50 border border-slate-600/50 rounded-lg px-4 py-2 text-white font-semibold focus:border-accent-text focus:outline-none focus:accent-ring transition"
                     />
                   </div>
                   <div>
@@ -209,7 +243,7 @@ export const SettingsView = ({
                       type="date"
                       value={exportEndDate}
                       onChange={(e) => setExportEndDate(e.target.value)}
-                      className="w-full bg-slate-800/50 border border-slate-600/50 rounded-lg px-4 py-2 text-white font-semibold focus:border-blue-500 focus:outline-none transition"
+                      className="w-full bg-slate-800/50 border border-slate-600/50 rounded-lg px-4 py-2 text-white font-semibold focus:border-accent-text focus:outline-none focus:accent-ring transition"
                     />
                   </div>
                 </div>
@@ -222,7 +256,7 @@ export const SettingsView = ({
                   <select
                     value={exportExerciseId || ''}
                     onChange={(e) => setExportExerciseId(e.target.value ? parseInt(e.target.value) : null)}
-                    className="w-full bg-slate-800/50 border border-slate-600/50 rounded-lg px-4 py-2 text-white font-semibold focus:border-blue-500 focus:outline-none transition"
+                    className="w-full bg-slate-800/50 border border-slate-600/50 rounded-lg px-4 py-2 text-white font-semibold focus:border-accent-text focus:outline-none focus:accent-ring transition"
                   >
                     <option value="">Choose an exercise...</option>
                     {exercisesDB && exercisesDB.map(ex => (

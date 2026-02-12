@@ -17,7 +17,7 @@ export const TemplateCard = React.memo(({
         onClick={() => onSelect && onSelect(template)}
         className="flex-1 text-left hover:opacity-80 transition"
       >
-        <h3 className="font-black text-lg text-white group-hover:text-blue-400 transition mb-1">{template.name}</h3>
+        <h3 className="font-black text-lg text-white group-hover:accent-text transition mb-1">{template.name}</h3>
         <p className="text-xs text-slate-500 font-semibold">{template.exercises.length} exercises</p>
         <div className="mt-3 flex flex-wrap gap-2">
           {template.exercises.slice(0, 3).map((ex, i) => (
@@ -49,7 +49,7 @@ export const TemplateCard = React.memo(({
               e.stopPropagation();
               onEdit(template);
             }}
-            className="p-2 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 rounded-lg text-blue-400 transition"
+            className="p-2 accent-bg-light hover:opacity-80 accent-border-light rounded-lg accent-text transition"
             title="Edit"
           >
             <Edit2 size={16} />

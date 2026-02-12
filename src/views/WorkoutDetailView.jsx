@@ -1,15 +1,26 @@
-import React, { useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { ChevronLeft, Clock, FileText, Medal, LayoutGrid, List } from 'lucide-react';
 import { formatDate, calculate1RM, calculateTotalVolume } from '../domain/calculations';
-import { useDebouncedLocalStorage } from '../hooks/useLocalStorage';
 
 export const WorkoutDetailView = ({ selectedDate, workouts, onBack, exercisesDB = [] }) => {
-  // OPTIMIZED: Use debounced localStorage hook - batches writes and prevents 5-10ms latency per toggle
-  const [isCompact, setIsCompact] = useDebouncedLocalStorage(
-    'workoutDetailCompactView',
-    false,
-    300  // Debounce 300ms - wait before writing to localStorage
-  );
+  // State for compact/normal view - reads and writes to localStorage
+  const [isCompact, setIsCompact] = useState(() => {
+    try {
+      const saved = localStorage.getItem('workoutDetailCompactView');
+      return saved ? JSON.parse(saved) : false;
+    } catch {
+      return false;
+    }
+  });
+
+  // Save to localStorage whenever isCompact changes
+  useEffect(() => {
+    try {
+      localStorage.setItem('workoutDetailCompactView', JSON.stringify(isCompact));
+    } catch (error) {
+      console.error('Error saving to localStorage:', error);
+    }
+  }, [isCompact]);
 
   const dateWorkouts = workouts.filter(w => w.date === selectedDate);
 
@@ -84,7 +95,7 @@ export const WorkoutDetailView = ({ selectedDate, workouts, onBack, exercisesDB 
                     <span className="text-lg leading-none">📊</span>
                     <div className="min-w-0">
                       <div className="text-xs text-slate-500 font-semibold">VOLUME</div>
-                      <div className="text-base font-black text-blue-400">{(stats.totalVolume / 1000).toFixed(1)}k</div>
+                      <div className="text-base font-black accent-text">{(stats.totalVolume / 1000).toFixed(1)}k</div>
                     </div>
                   </div>
                   
@@ -127,7 +138,7 @@ export const WorkoutDetailView = ({ selectedDate, workouts, onBack, exercisesDB 
                 {workout.tags.map(tag => (
                   <span 
                     key={tag}
-                    className="text-xs px-2.5 py-1 rounded-full font-bold bg-blue-600/20 text-blue-400 border border-blue-500/30"
+                    className="text-xs px-2.5 py-1 rounded-full font-bold accent-bg-light accent-text accent-border-light"
                   >
                     {tag}
                   </span>
@@ -177,7 +188,7 @@ export const WorkoutDetailView = ({ selectedDate, workouts, onBack, exercisesDB 
                           {(() => {
                             const exFromDB = exercisesDB?.find(e => e.id === ex.exerciseId);
                             return exFromDB?.note && (
-                              <div className="mt-2 text-xs bg-blue-500/10 border border-blue-500/30 text-blue-300 px-2 py-1 rounded">
+                              <div className="mt-2 text-xs accent-bg-light accent-border-light accent-text px-2 py-1 rounded">
                                 {exFromDB.note}
                               </div>
                             );
@@ -238,7 +249,7 @@ export const WorkoutDetailView = ({ selectedDate, workouts, onBack, exercisesDB 
                               </div>
                               <div className="text-right min-w-fit">
                                 <p className="text-xs text-slate-400 font-semibold">1RM</p>
-                                <p className="text-sm font-black text-blue-400">
+                                <p className="text-sm font-black accent-text">
                                   {calculate1RM(set.kg, set.reps)} kg
                                 </p>
                               </div>

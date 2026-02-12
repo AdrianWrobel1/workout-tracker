@@ -139,7 +139,7 @@ function SortableExerciseItem({
                   const newNote = prompt('Exercise note:', currentNote);
                   if (newNote !== null) onAddExerciseNote(exIndex, newNote);
                 }}
-                className="p-1 hover:bg-blue-500/20 rounded text-blue-400 hover:text-blue-300 transition flex-shrink-0"
+                className="p-1 hover:bg-accent/20 rounded accent-text hover:opacity-80 transition flex-shrink-0"
                 title="Edit exercise note"
               >
                 📝
@@ -149,7 +149,7 @@ function SortableExerciseItem({
             {(() => {
               const exFromDB = exercisesDB?.find(e => e.id === exercise.exerciseId);
               return exFromDB?.note && (
-                <div className="mt-2 text-xs bg-blue-500/10 border border-blue-500/30 text-blue-300 px-2 py-1 rounded">
+                <div className="mt-2 text-xs accent-bg-light accent-border-light accent-text px-2 py-1 rounded">
                   {exFromDB.note}
                 </div>
               );

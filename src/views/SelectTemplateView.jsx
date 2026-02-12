@@ -21,7 +21,7 @@ export const SelectTemplateView = ({ templates, onClose, onSelectTemplate, onEdi
           onClick={() => onSelectTemplate({ id: 'empty', name: 'Empty Workout', exercises: [] })}
           className="w-full bg-gradient-to-br from-slate-800/50 to-slate-900/50 border-2 border-dashed border-slate-700/50 hover:border-slate-600/50 p-5 rounded-xl text-left transition-all group ui-fade-scale-anim"
         >
-          <h3 className="font-black text-lg text-slate-300 group-hover:text-blue-400 transition">Empty Workout</h3>
+          <h3 className="font-black text-lg text-slate-300 group-hover:accent-text transition">Empty Workout</h3>
           <p className="text-sm text-slate-500 mt-1">Start from scratch</p>
         </button>
 

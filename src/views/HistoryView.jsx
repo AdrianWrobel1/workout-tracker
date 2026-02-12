@@ -243,14 +243,14 @@ export const HistoryView = ({ workouts, onViewWorkoutDetail, onDeleteWorkout, on
                       type="text" 
                       value={current.name} 
                       onChange={(e) => setEditData({...current, name: e.target.value})}
-                      className="flex-1 bg-slate-800/50 border border-slate-600/50 text-white px-4 py-2 rounded-lg text-sm font-semibold focus:border-blue-500 focus:outline-none transition"
+                      className="flex-1 bg-slate-800/50 border border-slate-600/50 text-white px-4 py-2 rounded-lg text-sm font-semibold focus:border-accent focus:outline-none focus:accent-ring transition"
                       placeholder="Workout name"
                     />
                     <input 
                       type="number" 
                       value={current.duration || 0}
                       onChange={(e) => setEditData({...current, duration: Number(e.target.value) || 0})}
-                      className="w-24 bg-slate-800/50 border border-slate-600/50 text-white px-4 py-2 rounded-lg text-sm font-semibold focus:border-blue-500 focus:outline-none transition"
+                      className="w-24 bg-slate-800/50 border border-slate-600/50 text-white px-4 py-2 rounded-lg text-sm font-semibold focus:border-accent focus:outline-none focus:accent-ring transition"
                       placeholder="min"
                     />
                   </div>
@@ -284,7 +284,7 @@ export const HistoryView = ({ workouts, onViewWorkoutDetail, onDeleteWorkout, on
                           <div className="flex gap-2">
                             <button
                               onClick={() => setExpandedExerciseIdx(expandedExerciseIdx === exIdx ? null : exIdx)}
-                              className="p-2 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 rounded-lg transition text-blue-400"
+                              className="p-2 accent-bg-light hover:opacity-80 accent-border-light rounded-lg transition accent-text"
                               title="Add set"
                             >
                               <Plus size={14} />
@@ -300,7 +300,7 @@ export const HistoryView = ({ workouts, onViewWorkoutDetail, onDeleteWorkout, on
                         </div>
 
                         {expandedExerciseIdx === exIdx && (
-                          <div className="bg-slate-900/50 p-4 rounded-lg border-l-2 border-blue-500 space-y-2">
+                          <div className="bg-slate-900/50 p-4 rounded-lg border-l-2 accent-border space-y-2">
                             <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Add set</label>
                             <div className="flex flex-col sm:flex-row gap-2 items-end">
                               <input 
@@ -338,7 +338,7 @@ export const HistoryView = ({ workouts, onViewWorkoutDetail, onDeleteWorkout, on
                                   updated.exercises[exIdx].sets.push({ kg: 0, reps: 0, completed: false });
                                   setEditData(updated);
                                 }}
-                                className="w-full sm:w-auto px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded font-bold text-xs transition"
+                                className="w-full sm:w-auto px-3 py-2 accent-bg hover:opacity-90 text-white rounded font-bold text-xs transition"
                               >
                                 ✓
                               </button>
@@ -693,7 +693,7 @@ export const HistoryView = ({ workouts, onViewWorkoutDetail, onDeleteWorkout, on
               <div key={workout.id} className="mb-3">
                 <WorkoutCard 
                   workout={workout}
-                  onViewDetail={() => onViewWorkoutDetail && onViewWorkoutDetail(workout.id)}
+                  onViewDetail={() => onViewWorkoutDetail && onViewWorkoutDetail(workout.date)}
                   onEdit={() => onEditWorkout && onEditWorkout(workout.id)}
                   onDelete={() => onDeleteWorkout && onDeleteWorkout(workout.id)}
                   exercisesDB={exercisesDB}

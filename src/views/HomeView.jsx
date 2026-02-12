@@ -119,7 +119,7 @@ const QuickInsightsSection = ({ workouts }) => {
                 </div>
                 <button
                   onClick={() => setShowDetailedChart(true)}
-                  className="w-full mt-4 px-3 py-2 bg-blue-600 hover:bg-blue-500 rounded transition text-sm font-bold"
+                  className="w-full mt-4 px-3 py-2 accent-bg hover:opacity-90 rounded transition text-sm font-bold"
                 >
                   See detailed chart →
                 </button>
@@ -229,7 +229,7 @@ export const HomeView = ({
         </div>
 
         {/* Weekly Progress Card */}
-        <div className="bg-gradient-to-br from-blue-950/40 to-slate-900/40 border border-blue-500/20 rounded-2xl p-6">
+        <div className="bg-gradient-to-br from-accent/40 to-slate-900/40 border border-accent/20 rounded-2xl p-6">
           {/* Minimal week heatmap */}
           <WeekHeatmap workouts={workouts} />
           
@@ -258,7 +258,7 @@ export const HomeView = ({
       <div className="px-4 py-6 space-y-4">
         <button
           onClick={onStartWorkout}
-          className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white rounded-2xl py-4 px-6 flex items-center justify-center gap-3 font-bold text-lg shadow-2xl shadow-blue-900/50 transition-all duration-200 ease-out ui-press border border-blue-400/20"
+          className="w-full bg-gradient-to-r from-accent to-accent hover:opacity-90 text-white rounded-2xl py-4 px-6 flex items-center justify-center gap-3 font-bold text-lg shadow-2xl shadow-accent/50 transition-all duration-200 ease-out ui-press border border-accent/20"
         >
           <Zap size={24} />
           Start New Workout
@@ -292,7 +292,7 @@ export const HomeView = ({
               setNotesInput(trainingNotes || '');
               setNotesModalOpen(true);
             }}
-            className="text-blue-400 hover:text-blue-300 text-xs font-semibold transition"
+            className="accent-text hover:opacity-80 text-xs font-semibold transition"
           >
             {trainingNotes ? 'Edit' : 'Add'}
           </button>
@@ -359,7 +359,7 @@ export const HomeView = ({
             <p className="text-slate-400 text-xs font-semibold tracking-widest">RECENT</p>
             <h2 className="text-xl font-bold mt-1">Last Sessions</h2>
           </div>
-          <button onClick={onViewHistory} className="text-blue-400 hover:text-blue-300 text-sm font-semibold transition">
+          <button onClick={onViewHistory} className="accent-text hover:opacity-80 text-sm font-semibold transition">
             View All
           </button>
         </div>
@@ -387,11 +387,11 @@ export const HomeView = ({
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-start gap-3 flex-1 min-w-0">
-                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0 mt-1">
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-accent to-accent flex items-center justify-center flex-shrink-0 mt-1">
                     <Check size={16} className="text-white" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h3 className="font-bold text-sm text-white group-hover:text-blue-300 transition truncate">{workout.name}</h3>
+                    <h3 className="font-bold text-sm text-white group-hover:accent-text transition truncate">{workout.name}</h3>
                     <p className="text-xs text-slate-400 mt-0.5">{formatDate(workout.date)}</p>
                   </div>
                 </div>

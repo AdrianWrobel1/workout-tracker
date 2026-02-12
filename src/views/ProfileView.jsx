@@ -45,23 +45,6 @@ export const ProfileView = ({
   const summaryText = useMemo(() => {
     const period = dateRange === '1week' ? 'this week' : dateRange === '1month' ? 'this month' : dateRange === '3months' ? 'last 3 months' : 'this year';
     
-    if (chartMetric === 'duration') {
-      // Calculate total duration from workouts in range
-      const now = new Date();
-      let startDate;
-      switch (dateRange) {
-        case '1week': startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000); break;
-        case '1month': startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000); break;
-        case '3months': startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000); break;
-        case '1year': startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000); break;
-        default: startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-      }
-      const total = (workouts || []).filter(w => new Date(w.date) >= startDate).reduce((sum, w) => sum + (w.duration || 0), 0);
-      const hours = Math.round(total / 60);
-      return `${hours} hours ${period}`;
-    }
-    
-    // Count workouts in range
     const now = new Date();
     let startDate;
     switch (dateRange) {
@@ -71,7 +54,24 @@ export const ProfileView = ({
       case '1year': startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000); break;
       default: startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
     }
-    const sessions = (workouts || []).filter(w => new Date(w.date) >= startDate).length;
+    
+    const filteredWorkouts = (workouts || []).filter(w => new Date(w.date) >= startDate);
+    
+    if (chartMetric === 'duration') {
+      // Calculate total duration from workouts in range
+      const total = filteredWorkouts.reduce((sum, w) => sum + (w.duration || 0), 0);
+      const hours = Math.round(total / 60);
+      return `${hours} hours ${period}`;
+    }
+    
+    if (chartMetric === 'workouts') {
+      // Count workouts in range
+      const count = filteredWorkouts.length;
+      return `${count} workout${count !== 1 ? 's' : ''} ${period}`;
+    }
+    
+    // Count workouts in range for other metrics
+    const sessions = filteredWorkouts.length;
     return `${sessions} sessions ${period}`;
   }, [workouts, dateRange, chartMetric]);
 
@@ -147,7 +147,7 @@ export const ProfileView = ({
               <div className="mt-3 flex gap-6">
                 <div>
                   <p className="text-xs text-slate-400 font-semibold tracking-widest">WORKOUTS</p>
-                  <p className="text-xl font-black text-blue-400 mt-1">{workoutCount}</p>
+                  <p className="text-xl font-black accent-text mt-1">{workoutCount}</p>
                 </div>
               </div>
             </div>
@@ -178,22 +178,23 @@ export const ProfileView = ({
               timePeriod={getUnifiedChartPeriod(dateRange)}
               userWeight={userWeight}
               exercisesDB={exercisesDB}
-              color="#06b6d4"
-              unit={chartMetric === 'duration' ? 'h' : chartMetric === 'volume' ? 'k' : 'reps'}
+              color={chartMetric === 'duration' ? '#06b6d4' : chartMetric === 'workouts' ? '#10b981' : chartMetric === 'volume' ? '#f59e0b' : '#8b5cf6'}
+              unit={chartMetric === 'duration' ? 'h' : chartMetric === 'workouts' ? 'workouts' : chartMetric === 'volume' ? 'k' : 'reps'}
             />
           </div>
 
           {/* Metric Toggle */}
-          <div className="flex gap-2">
+          <div className="grid grid-cols-4 gap-2">
             {[
               { key: 'duration', label: 'Duration' },
+              { key: 'workouts', label: 'Workouts' },
               { key: 'volume', label: 'Volume' },
               { key: 'reps', label: 'Reps' }
             ].map(metric => (
               <button
                 key={metric.key}
                 onClick={() => setChartMetric(metric.key)}
-                className={`flex-1 py-2 px-3 rounded-lg font-bold text-xs uppercase tracking-wider transition-all ${
+                className={`py-2 px-3 rounded-lg font-bold text-xs uppercase tracking-wider transition-all ${
                   chartMetric === metric.key
                     ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
                     : 'bg-slate-800/50 text-slate-400 hover:bg-slate-700/50'
@@ -255,13 +256,13 @@ export const ProfileView = ({
                     onClick={() => onWorkoutClick && onWorkoutClick(workout.date)}
                     className="w-full text-left bg-slate-800/40 hover:bg-slate-800/60 border border-slate-700/50 hover:border-slate-600/50 rounded-lg p-4 transition-all"
                   >
-                    <div className="flex justify-between items-start mb-2">
+                    <div className="flex justify-between items-center mb-2">
                       <div>
                         <h3 className="font-bold text-white">{workout.name || 'Unnamed Workout'}</h3>
                         <p className="text-xs text-slate-500 mt-1">{dateStr}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm font-bold text-blue-400">{(totalVol / 1000).toFixed(1)}k</p>
+                        <p className="text-sm font-bold accent-text">{(totalVol / 1000).toFixed(1)}k</p>
                         <p className="text-xs text-slate-500">total volume</p>
                       </div>
                     </div>
@@ -281,7 +282,7 @@ export const ProfileView = ({
                             <div key={i}>{ex.name}</div>
                           ))}
                         {exerciseCount > 3 && (
-                          <div className="text-blue-400 font-semibold">See {exerciseCount - 3} more exercises</div>
+                          <div className="accent-text font-semibold">See {exerciseCount - 3} more exercises</div>
                         )}
                       </div>
                     )}
@@ -301,7 +302,7 @@ export const ProfileView = ({
               placeholder="Enter your weight in kg"
               value={userWeight ?? ''}
               onChange={(e) => onUserWeightChange && onUserWeightChange(Number(e.target.value) || null)}
-              className="flex-1 bg-slate-800/50 border border-slate-600/50 rounded-lg px-4 py-3 text-white font-semibold focus:border-blue-500 focus:outline-none transition placeholder:text-slate-600"
+              className="flex-1 bg-slate-800/50 border border-slate-600/50 rounded-lg px-4 py-3 text-white font-semibold focus:border-accent focus:outline-none focus:accent-ring transition placeholder:text-slate-600"
             />
             <span className="flex items-center px-4 text-slate-400 font-bold">kg</span>
           </div>

@@ -12,7 +12,15 @@ export const aggregateDaily = (workouts, metric, exerciseId, userWeight, exercis
     const key = date.toISOString().split('T')[0]; // YYYY-MM-DD
     
     if (!days[key]) {
-      days[key] = [];
+      days[key] = { values: [], workoutCount: 0, totalDuration: 0 };
+    }
+    
+    // Count this workout once per day
+    days[key].workoutCount += 1;
+    
+    // Accumulate duration for 'duration' metric
+    if (metric === 'duration') {
+      days[key].totalDuration += (w.duration || 0);
     }
     
     // Extract metric from this workout
@@ -31,11 +39,11 @@ export const aggregateDaily = (workouts, metric, exerciseId, userWeight, exercis
         const totalKg = kg + ((exDef.usesBodyweight && userWeight) ? Number(userWeight) : 0);
         
         if (metric === 'weight') {
-          days[key].push(Math.round(totalKg * (1 + reps / 30))); // 1RM estimate
+          days[key].values.push(Math.round(totalKg * (1 + reps / 30))); // 1RM estimate
         } else if (metric === 'volume') {
-          days[key].push(totalKg * reps);
+          days[key].values.push(totalKg * reps);
         } else if (metric === 'reps') {
-          days[key].push(reps);
+          days[key].values.push(reps);
         }
       });
     });
@@ -43,8 +51,15 @@ export const aggregateDaily = (workouts, metric, exerciseId, userWeight, exercis
   
   // Convert to array, sorted by date
   return Object.entries(days)
-    .map(([date, values]) => {
-      const value = values.length > 0 ? Math.max(...values) : 0; // For weight, take max; for volume, could sum
+    .map(([date, data]) => {
+      let value = 0;
+      if (metric === 'duration') {
+        value = Math.round(data.totalDuration / 60); // Convert minutes to hours
+      } else if (metric === 'workouts') {
+        value = data.workoutCount; // Count of workouts
+      } else {
+        value = data.values.length > 0 ? Math.max(...data.values) : 0; // For weight, take max; for volume, could sum
+      }
       return {
         label: formatDateShort(date),
         value,
@@ -63,7 +78,15 @@ export const aggregateWeekly = (workouts, metric, exerciseId, userWeight, exerci
     const key = weekStart.toISOString().split('T')[0];
     
     if (!weeks[key]) {
-      weeks[key] = [];
+      weeks[key] = { values: [], workoutCount: 0, totalDuration: 0 };
+    }
+    
+    // Count this workout once per week
+    weeks[key].workoutCount += 1;
+    
+    // Accumulate duration for 'duration' metric
+    if (metric === 'duration') {
+      weeks[key].totalDuration += (w.duration || 0);
     }
     
     (w.exercises || []).forEach(ex => {
@@ -81,23 +104,30 @@ export const aggregateWeekly = (workouts, metric, exerciseId, userWeight, exerci
         const totalKg = kg + ((exDef.usesBodyweight && userWeight) ? Number(userWeight) : 0);
         
         if (metric === 'weight') {
-          weeks[key].push(Math.round(totalKg * (1 + reps / 30)));
+          weeks[key].values.push(Math.round(totalKg * (1 + reps / 30)));
         } else if (metric === 'volume') {
-          weeks[key].push(totalKg * reps);
+          weeks[key].values.push(totalKg * reps);
         } else if (metric === 'reps') {
-          weeks[key].push(reps);
+          weeks[key].values.push(reps);
         }
       });
     });
   });
   
   return Object.entries(weeks)
-    .map(([date, values]) => {
-      const value = values.length > 0 
-        ? (metric === 'volume' 
-          ? Math.round(values.reduce((a, b) => a + b, 0)) // Sum for volume
-          : Math.max(...values)) // Max for weight
-        : 0;
+    .map(([date, data]) => {
+      let value = 0;
+      if (metric === 'duration') {
+        value = Math.round(data.totalDuration / 60); // Convert minutes to hours
+      } else if (metric === 'workouts') {
+        value = data.workoutCount; // Count of workouts
+      } else {
+        value = data.values.length > 0 
+          ? (metric === 'volume' 
+            ? Math.round(data.values.reduce((a, b) => a + b, 0)) // Sum for volume
+            : Math.max(...data.values)) // Max for weight
+          : 0;
+      }
       return {
         label: formatWeekStart(date),
         value,
@@ -115,7 +145,15 @@ export const aggregateMonthly = (workouts, metric, exerciseId, userWeight, exerc
     const key = date.toISOString().slice(0, 7); // YYYY-MM
     
     if (!months[key]) {
-      months[key] = [];
+      months[key] = { values: [], workoutCount: 0, totalDuration: 0 };
+    }
+    
+    // Count this workout once per month
+    months[key].workoutCount += 1;
+    
+    // Accumulate duration for 'duration' metric
+    if (metric === 'duration') {
+      months[key].totalDuration += (w.duration || 0);
     }
     
     (w.exercises || []).forEach(ex => {
@@ -133,23 +171,30 @@ export const aggregateMonthly = (workouts, metric, exerciseId, userWeight, exerc
         const totalKg = kg + ((exDef.usesBodyweight && userWeight) ? Number(userWeight) : 0);
         
         if (metric === 'weight') {
-          months[key].push(Math.round(totalKg * (1 + reps / 30)));
+          months[key].values.push(Math.round(totalKg * (1 + reps / 30)));
         } else if (metric === 'volume') {
-          months[key].push(totalKg * reps);
+          months[key].values.push(totalKg * reps);
         } else if (metric === 'reps') {
-          months[key].push(reps);
+          months[key].values.push(reps);
         }
       });
     });
   });
   
   return Object.entries(months)
-    .map(([date, values]) => {
-      const value = values.length > 0
-        ? (metric === 'volume'
-          ? Math.round(values.reduce((a, b) => a + b, 0))
-          : Math.max(...values))
-        : 0;
+    .map(([date, data]) => {
+      let value = 0;
+      if (metric === 'duration') {
+        value = Math.round(data.totalDuration / 60); // Convert minutes to hours
+      } else if (metric === 'workouts') {
+        value = data.workoutCount; // Count of workouts
+      } else {
+        value = data.values.length > 0
+          ? (metric === 'volume'
+            ? Math.round(data.values.reduce((a, b) => a + b, 0))
+            : Math.max(...data.values))
+          : 0;
+      }
       return {
         label: formatMonth(date + '-01'),
         value,

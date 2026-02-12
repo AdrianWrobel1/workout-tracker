@@ -23,7 +23,7 @@ export const WorkoutCard = React.memo(({
             {onEdit && (
               <button 
                 onClick={() => onEdit(workout)}
-                className="px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 rounded-lg text-blue-400 text-xs font-bold transition flex items-center gap-1"
+                className="px-3 py-1.5 accent-bg-light hover:opacity-80 accent-border-light rounded-lg accent-text text-xs font-bold transition flex items-center gap-1"
               >
                 <Edit2 size={12} /> Edit
               </button>
@@ -84,7 +84,7 @@ export const WorkoutCard = React.memo(({
             {workout.tags.map(tag => (
               <span 
                 key={tag}
-                className="text-xs px-2 py-1 rounded-full font-bold bg-blue-600/20 text-blue-400 border border-blue-500/30"
+                className="text-xs px-2 py-1 rounded-full font-bold accent-bg-light accent-text accent-border-light"
               >
                 {tag}
               </span>

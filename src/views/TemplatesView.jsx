@@ -124,7 +124,7 @@ export const TemplatesView = ({
                       updated.exercises[exIndex].sets.push({ kg: 0, reps: 0 });
                       onChange(updated);
                     }}
-                    className="w-full py-1.5 text-xs text-blue-400 hover:text-blue-300 hover:bg-blue-600/10 border border-blue-600/30 rounded transition font-bold"
+                    className="w-full py-1.5 text-xs accent-text hover:opacity-80 hover:accent-bg-light accent-border-light rounded transition font-bold"
                   >
                     + Set
                   </button>

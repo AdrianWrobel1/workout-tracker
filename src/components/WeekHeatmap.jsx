@@ -48,12 +48,12 @@ export const WeekHeatmap = ({ workouts = [] }) => {
   const max = Math.max(...volumes, 0);
 
   const getColor = (v) => {
-    if (!v) return 'bg-slate-700/20';
+    if (!v) return 'heatmap-empty';
     const ratio = max > 0 ? v / max : 0;
-    if (ratio > 0.75) return 'bg-blue-400';
-    if (ratio > 0.5) return 'bg-blue-500';
-    if (ratio > 0.25) return 'bg-blue-600';
-    return 'bg-blue-700/80';
+    if (ratio > 0.75) return 'heatmap-full';
+    if (ratio > 0.5) return 'heatmap-high';
+    if (ratio > 0.25) return 'heatmap-mid';
+    return 'heatmap-low';
   };
 
   // Month calendar data with modal
@@ -173,7 +173,7 @@ export const WeekHeatmap = ({ workouts = [] }) => {
                     key={day}
                     className={`w-full aspect-square flex items-center justify-center text-xs font-bold rounded transition ${
                       vol > 0 ? getColor(vol) : 'bg-slate-800/30'
-                    } ${isToday ? 'ring-2 ring-blue-400' : ''}`}
+                    } ${isToday ? 'heatmap-today' : ''}`}
                     title={vol > 0 ? `${vol} volume` : 'rest'}
                   >
                     {day}

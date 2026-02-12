@@ -75,7 +75,7 @@ export const ExercisesView = ({ exercisesDB, onAddExercise, onEditExercise, onDe
         {/* Add Exercise Button */}
         <button
           onClick={onAddExercise}
-          className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 transition text-white rounded-xl p-4 mb-4 font-bold flex items-center justify-center gap-2 shadow-lg shadow-blue-600/50 ui-press"
+          className="w-full bg-gradient-to-r from-accent to-accent hover:opacity-90 transition text-white rounded-xl p-4 mb-4 font-bold flex items-center justify-center gap-2 shadow-lg shadow-accent/50 ui-press"
         >
           <Plus size={20} /> Add Exercise
         </button>
@@ -88,7 +88,7 @@ export const ExercisesView = ({ exercisesDB, onAddExercise, onEditExercise, onDe
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search exercises..."
-            className="w-full bg-slate-800/50 border border-slate-600/50 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-slate-500 focus:border-blue-500 focus:outline-none transition"
+            className="w-full bg-slate-800/50 border border-slate-600/50 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-slate-500 focus:border-accent focus:outline-none focus:accent-ring transition"
           />
         </div>
 
@@ -111,7 +111,7 @@ export const ExercisesView = ({ exercisesDB, onAddExercise, onEditExercise, onDe
                   }}
                   className={`w-full text-left px-4 py-3 text-sm font-semibold transition-colors ${
                     categoryFilter === null
-                      ? 'bg-blue-600/30 text-white'
+                      ? 'accent-bg-light text-white'
                       : 'text-slate-300 hover:bg-slate-800/50'
                   }`}
                 >

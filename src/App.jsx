@@ -103,6 +103,12 @@ export default function App() {
   // Undo deleted workout
   const undoTimeoutRef = useRef(null);
 
+  // Initialize accent color from localStorage on app startup
+  useEffect(() => {
+    const accentColor = localStorage.getItem('accentColor') || '#0ea5e9'; // Default Sky Blue accent
+    document.documentElement.style.setProperty('--accent', accentColor);
+  }, []);
+
   // P6 FIX: Clear keypad state when view changes to prevent stale values on reopening
   useEffect(() => {
     setActiveInput(null);
@@ -780,7 +786,7 @@ export default function App() {
   const handleSaveTemplate = useCallback(() => {
     if (!editingTemplate.name.trim()) return;
     if (editingTemplate.id) {
-      setTemplates(templates.map(t => t.id === editingTemplate.id ? editingTemplate : t));
+      setTemplates(prev => prev.map(t => t.id === editingTemplate.id ? editingTemplate : t));
     } else {
       setTemplates([...templates, { ...editingTemplate, id: Date.now() }]);
     }
@@ -1111,19 +1117,21 @@ export default function App() {
               workouts={workouts}
               onViewWorkoutDetail={(date) => { setSelectedDate(date); setView('workoutDetail'); }}
               onDeleteWorkout={async (id) => {
+                // Capture workout FIRST before state changes
                 const workoutToDelete = workouts.find(w => w.id === id);
                 if (workoutToDelete) {
-                  const newWorkouts = workouts.filter(w => w.id !== id);
-                  
-                  // Delete from storage using specific ID (cleaner than clear+setMany)
+                  // Delete from storage using specific ID
                   try {
                     await storage.delete(STORES.WORKOUTS, id);
                   } catch (err) {
                     console.error('Error persisting workout deletion:', err);
                   }
                   
-                  // Update state after storage is persisted
-                  setWorkouts(newWorkouts);
+                  // Compute the filtered list for PR cache update
+                  const newWorkouts = workouts.filter(w => w.id !== id);
+                  
+                  // Use functional setState to ensure we always filter the latest state
+                  setWorkouts(prev => prev.filter(w => w.id !== id));
                   
                   setDeletedWorkout(workoutToDelete);
                   
@@ -1146,7 +1154,7 @@ export default function App() {
                   }, 10000);
                 }
               }}
-              onEditWorkout={(updatedWorkout) => { setWorkouts(workouts.map(w => w.id === updatedWorkout.id ? updatedWorkout : w)); }}
+              onEditWorkout={(updatedWorkout) => { setWorkouts(prev => prev.map(w => w.id === updatedWorkout.id ? updatedWorkout : w)); }}
               exercisesDB={exercisesDB}
               filter={historyFilter}
               onFilterChange={setHistoryFilter}
@@ -1273,7 +1281,7 @@ export default function App() {
               onClose={() => setView('home')}
               onCreateNew={() => setEditingTemplate({ name: '', exercises: [] })}
               onEdit={(t) => { setEditingTemplate(JSON.parse(JSON.stringify(t))); setView('templates'); }}
-              onDelete={(id) => setTemplates(templates.filter(t => t.id !== id))}
+              onDelete={(id) => setTemplates(prev => prev.filter(t => t.id !== id))}
               onChange={setEditingTemplate}
               onSave={handleSaveTemplate}
               onAddExercise={() => { setSelectedExerciseIndex(null); setSelectorMode('template'); openExerciseSelector(); }}
@@ -1456,7 +1464,7 @@ export default function App() {
               onViewWorkoutDetail={(date) => { setSelectedDate(date); setView('workoutDetail'); }}
               onDeleteWorkout={(id) => {
                 if (confirm('Delete this workout?')) {
-                  setWorkouts(workouts.filter(w => w.id !== id));
+                  setWorkouts(prev => prev.filter(w => w.id !== id));
                 }
               }}
             />
@@ -1555,8 +1563,8 @@ export default function App() {
             </div>
 
             {/* Feedback text */}
-            <div className="bg-blue-950/30 border border-blue-500/20 rounded-lg p-3 sm:p-4 text-center">
-              <p className="text-sm sm:text-lg font-bold text-blue-300">{pendingSummary.feedback}</p>
+            <div className="bg-accent/30 border border-accent/20 rounded-lg p-3 sm:p-4 text-center">
+              <p className="text-sm sm:text-lg font-bold accent-text">{pendingSummary.feedback}</p>
             </div>
 
             {/* PR Celebration */}
@@ -1921,7 +1929,7 @@ export default function App() {
               setDeletedWorkout(null);
               if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
             }}
-            className="ml-4 px-5 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg font-bold text-sm transition-colors flex-shrink-0"
+            className="ml-4 px-5 py-2 accent-bg hover:opacity-90 rounded-lg font-bold text-sm transition-colors text-white flex-shrink-0"
           >
             Undo
           </button>

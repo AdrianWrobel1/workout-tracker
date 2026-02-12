@@ -35,11 +35,40 @@ body {
 :root {
   --anim-duration: 200ms;
   --anim-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --accent: #0ea5e9; /* Default Sky Blue accent, can be overridden via localStorage */
 }
 
 /* Global animation helpers (non-bouncy, premium feel) */
 [data-ui-anim] {
   transition: all var(--anim-duration) var(--anim-ease);
+}
+
+/* Custom accent color utilities using CSS variables */
+.accent-text { color: var(--accent); }
+.accent-text-hover { color: var(--accent); }
+.accent-bg { background-color: var(--accent); }
+.accent-border { border-color: var(--accent); }
+.accent-ring { --tw-ring-color: var(--accent); }
+.accent-bg-light { background-color: color-mix(in srgb, var(--accent) 20%, transparent); }
+.accent-border-light { border-color: color-mix(in srgb, var(--accent) 30%, transparent); }
+.accent-shadow { box-shadow: 0 0 20px color-mix(in srgb, var(--accent) 30%, transparent); }
+
+/* Heatmap intensity gradients using accent color */
+.heatmap-empty { background-color: rgba(15, 23, 42, 0.2); }
+.heatmap-low { background-color: color-mix(in srgb, var(--accent) 25%, transparent); }
+.heatmap-mid { background-color: color-mix(in srgb, var(--accent) 50%, transparent); }
+.heatmap-high { background-color: color-mix(in srgb, var(--accent) 75%, transparent); }
+.heatmap-full { background-color: var(--accent); }
+.heatmap-today { box-shadow: inset 0 0 0 2px var(--accent); }
+
+/* Fallback for browsers that don't support color-mix */
+@supports not (background-color: color-mix(in srgb, red 50%, blue)) {
+  .accent-bg-light { background-color: rgba(14, 165, 233, 0.2); }
+  .accent-border-light { border-color: rgba(14, 165, 233, 0.3); }
+  .heatmap-low { background-color: rgba(14, 165, 233, 0.25); }
+  .heatmap-mid { background-color: rgba(14, 165, 233, 0.5); }
+  .heatmap-high { background-color: rgba(14, 165, 233, 0.75); }
+  .heatmap-full { background-color: #0ea5e9; }
 }
 
 /* View entry: slight translateY + fade-in (mount-only via animation)
