@@ -38,7 +38,7 @@ export const TemplatesView = ({
             value={editingTemplate.name}
             onChange={(e) => onChange({ ...editingTemplate, name: e.target.value })}
             placeholder="Template Name"
-            className="w-full bg-slate-800/50 border border-slate-600/50 rounded-lg p-3 text-white font-black focus:border-blue-500 focus:outline-none transition"
+            className="w-full bg-slate-800/50 border border-slate-600/50 rounded-lg p-3 text-white font-black focus:border-accent focus:outline-none focus:accent-ring transition\"
           />
 
           {/* Exercises List */}
@@ -136,7 +136,7 @@ export const TemplatesView = ({
           {/* Add Exercise Button */}
           <button 
             onClick={onAddExercise} 
-            className="w-full bg-blue-600 hover:bg-blue-500 text-white rounded-lg p-3 font-bold text-sm shadow-lg shadow-blue-600/30 transition ui-press"
+            className="w-full accent-bg hover:opacity-90 text-white rounded-lg p-3 font-bold text-sm shadow-lg shadow-accent/30 transition ui-press"
           >
             + Add Exercise
           </button>
@@ -161,7 +161,8 @@ export const TemplatesView = ({
         {/* Create New Button */}
         <button
           onClick={onCreateNew}
-          className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white rounded-xl p-4 font-bold shadow-lg shadow-blue-600/50 transition ui-press flex items-center justify-center gap-2"
+          className="w-full bg-gradient-accent hover:opacity-90 text-white rounded-xl p-4 font-bold shadow-lg transition ui-press flex items-center justify-center gap-2"
+          style={{ boxShadow: `0 10px 25px -5px var(--accent)` }}
         >
           <Plus size={20} /> Create New
         </button>

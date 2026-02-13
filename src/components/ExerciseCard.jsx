@@ -22,7 +22,7 @@ export const ExerciseCard = React.memo(({
           <h3 className="font-black text-lg text-white group-hover:text-blue-400 transition">{exercise.name}</h3>
           <div className="flex flex-wrap gap-2 mt-2">
             {exercise.category && (
-              <span className="text-xs bg-blue-500/20 text-blue-400 px-2.5 py-1 rounded-full border border-blue-500/30 font-semibold">
+              <span className="text-xs accent-bg-light accent-text accent-border-light px-2.5 py-1 rounded-full border font-semibold">
                 {exercise.category}
               </span>
             )}
@@ -48,7 +48,7 @@ export const ExerciseCard = React.memo(({
           {onEditExercise && (
             <button
               onClick={(e) => { e.stopPropagation(); onEditExercise(exercise); }}
-              className="p-2 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 rounded-lg text-blue-400 transition"
+              className="p-2 accent-bg/30 hover:accent-bg/50 border accent-border rounded-lg accent-text transition"
               title="Edit"
             >
               <Edit2 size={16} />

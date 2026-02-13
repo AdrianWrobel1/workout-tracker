@@ -25,7 +25,7 @@ export const BottomNav = ({ activeTab, onTabChange }) => {
             >
               {isCenter ? (
                 <div className={`flex items-center justify-center w-16 h-16 rounded-full
-                  ${isActive ? 'bg-gradient-to-br from-blue-500 to-blue-600 shadow-2xl shadow-blue-500/50' : 'bg-gradient-to-br from-slate-700 to-slate-800 hover:from-slate-600 hover:to-slate-700'}
+                  ${isActive ? 'bg-gradient-to-br from-accent to-accent shadow-2xl shadow-accent/50' : 'bg-gradient-to-br from-slate-700 to-slate-800 hover:from-slate-600 hover:to-slate-700'}
                   transition-all duration-200 border border-white/10`}>
                   <Icon size={32} color="white" strokeWidth={2.2} />
                 </div>

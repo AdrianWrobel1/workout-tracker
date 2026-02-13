@@ -86,7 +86,7 @@ export const ActiveWorkoutView = ({
           </div>
             <div className="w-full h-2 bg-slate-800/50 rounded-full overflow-hidden border border-white/10">
             <div
-              className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 transition-all duration-200 ease-out"
+              className="h-full bg-gradient-to-r from-accent to-accent transition-all duration-200 ease-out"
               style={{ width: `${progressPercent}%` }}
             />
           </div>

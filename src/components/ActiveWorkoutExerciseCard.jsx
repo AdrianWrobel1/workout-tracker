@@ -123,7 +123,7 @@ export const ActiveWorkoutExerciseCard = React.memo(({
                   value={set.kg === 0 || set.kg === undefined || set.kg === "" ? "" : set.kg}
                   onChange={(e) => onUpdateSet(exerciseIndex, i, 'kg', Number(e.target.value) || 0)}
                   placeholder={set.suggestedKg ? `${set.suggestedKg}` : (prev?.kg ? `${prev.kg}` : '0')}
-                  className={`bg-slate-800/50 border border-slate-600/50 rounded-lg px-4 py-2 text-center text-sm font-bold w-full focus:border-blue-500 focus:outline-none transition ${
+                  className={`bg-slate-800/50 border border-slate-600/50 rounded-lg px-4 py-2 text-center text-sm font-bold w-full focus:border-accent focus:outline-none focus:accent-ring transition ${
                     (set.kg === 0 || set.kg === undefined || set.kg === "") && !set.completed ? 'text-slate-500 placeholder-slate-600' : 'text-white'
                   } ${set.completed ? 'text-white' : ''}`}
                 />
@@ -138,7 +138,7 @@ export const ActiveWorkoutExerciseCard = React.memo(({
                   value={set.reps === 0 || set.reps === undefined || set.reps === "" ? "" : set.reps}
                   onChange={(e) => onUpdateSet(exerciseIndex, i, 'reps', Number(e.target.value) || 0)}
                   placeholder={set.suggestedReps ? `${set.suggestedReps}` : (prev?.reps ? `${prev.reps}` : '0')}
-                  className={`bg-slate-800/50 border border-slate-600/50 rounded-lg px-4 py-2 text-center text-sm font-bold w-full focus:border-blue-500 focus:outline-none transition ${
+                  className={`bg-slate-800/50 border border-slate-600/50 rounded-lg px-4 py-2 text-center text-sm font-bold w-full focus:border-accent focus:outline-none focus:accent-ring transition ${
                     (set.reps === 0 || set.reps === undefined || set.reps === "") && !set.completed ? 'text-slate-500 placeholder-slate-600' : 'text-white'
                   } ${set.completed ? 'text-white' : ''}`}
                 />

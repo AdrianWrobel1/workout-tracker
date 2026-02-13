@@ -241,7 +241,7 @@ export const HomeView = ({
                 <span className="text-slate-400 text-lg font-light">/ {weeklyGoal}</span>
               </div>
             </div>
-            <div className={`w-14 h-14 rounded-full ${weekProgress >= 100 ? 'bg-gradient-to-br from-green-500 to-emerald-600' : 'bg-gradient-to-br from-blue-500 to-blue-600'} flex items-center justify-center text-white font-bold shadow-lg`}>
+            <div className={`w-14 h-14 rounded-full ${weekProgress >= 100 ? 'bg-gradient-to-br from-green-500 to-emerald-600' : 'accent-bg'} flex items-center justify-center text-white font-bold shadow-lg`}>
               {Math.round(weekProgress)}%
             </div>
           </div>
@@ -258,7 +258,8 @@ export const HomeView = ({
       <div className="px-4 py-6 space-y-4">
         <button
           onClick={onStartWorkout}
-          className="w-full bg-gradient-to-r from-accent to-accent hover:opacity-90 text-white rounded-2xl py-4 px-6 flex items-center justify-center gap-3 font-bold text-lg shadow-2xl shadow-accent/50 transition-all duration-200 ease-out ui-press border border-accent/20"
+          className="w-full bg-gradient-accent hover:opacity-90 text-white rounded-2xl py-4 px-6 flex items-center justify-center gap-3 font-bold text-lg shadow-2xl transition-all duration-200 ease-out ui-press border border-accent/20"
+          style={{ boxShadow: `0 25px 50px -12px var(--accent)` }}
         >
           <Zap size={24} />
           Start New Workout

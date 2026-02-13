@@ -35,7 +35,7 @@ body {
 :root {
   --anim-duration: 200ms;
   --anim-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
-  --accent: #0ea5e9; /* Default Sky Blue accent, can be overridden via localStorage */
+  --accent: #4f46e5; /* Default Indigo accent, can be overridden via localStorage */
 }
 
 /* Global animation helpers (non-bouncy, premium feel) */
@@ -53,6 +53,25 @@ body {
 .accent-border-light { border-color: color-mix(in srgb, var(--accent) 30%, transparent); }
 .accent-shadow { box-shadow: 0 0 20px color-mix(in srgb, var(--accent) 30%, transparent); }
 
+/* Gradient stops for accent color - essential for dynamic color buttons */
+.from-accent {
+  --tw-gradient-from: var(--accent) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(79, 70, 229, 0)) !important;
+}
+
+.to-accent {
+  --tw-gradient-to: var(--accent) !important;
+}
+
+/* Unified gradient button class for large accent buttons */
+.bg-gradient-accent {
+  background: linear-gradient(to right, var(--accent), var(--accent));
+}
+
+.shadow-accent {
+  --tw-shadow-color: var(--accent) !important;
+}
+
 /* Heatmap intensity gradients using accent color */
 .heatmap-empty { background-color: rgba(15, 23, 42, 0.2); }
 .heatmap-low { background-color: color-mix(in srgb, var(--accent) 25%, transparent); }
@@ -63,12 +82,21 @@ body {
 
 /* Fallback for browsers that don't support color-mix */
 @supports not (background-color: color-mix(in srgb, red 50%, blue)) {
-  .accent-bg-light { background-color: rgba(14, 165, 233, 0.2); }
-  .accent-border-light { border-color: rgba(14, 165, 233, 0.3); }
-  .heatmap-low { background-color: rgba(14, 165, 233, 0.25); }
-  .heatmap-mid { background-color: rgba(14, 165, 233, 0.5); }
-  .heatmap-high { background-color: rgba(14, 165, 233, 0.75); }
-  .heatmap-full { background-color: #0ea5e9; }
+  .accent-bg-light { background-color: rgba(79, 70, 229, 0.2); }
+  .accent-border-light { border-color: rgba(79, 70, 229, 0.3); }
+  .heatmap-low { background-color: rgba(79, 70, 229, 0.25); }
+  .heatmap-mid { background-color: rgba(79, 70, 229, 0.5); }
+  .heatmap-high { background-color: rgba(79, 70, 229, 0.75); }
+  .heatmap-full { background-color: #4f46e5; }
+  
+  .from-accent {
+    --tw-gradient-from: var(--accent) !important;
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(79, 70, 229, 0)) !important;
+  }
+  
+  .to-accent {
+    --tw-gradient-to: var(--accent) !important;
+  }
 }
 
 /* View entry: slight translateY + fade-in (mount-only via animation)

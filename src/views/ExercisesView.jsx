@@ -75,7 +75,8 @@ export const ExercisesView = ({ exercisesDB, onAddExercise, onEditExercise, onDe
         {/* Add Exercise Button */}
         <button
           onClick={onAddExercise}
-          className="w-full bg-gradient-to-r from-accent to-accent hover:opacity-90 transition text-white rounded-xl p-4 mb-4 font-bold flex items-center justify-center gap-2 shadow-lg shadow-accent/50 ui-press"
+          className="w-full bg-gradient-accent hover:opacity-90 transition text-white rounded-xl p-4 mb-4 font-bold flex items-center justify-center gap-2 shadow-lg ui-press"
+          style={{ boxShadow: `0 10px 25px -5px var(--accent)` }}
         >
           <Plus size={20} /> Add Exercise
         </button>
@@ -126,7 +127,7 @@ export const ExercisesView = ({ exercisesDB, onAddExercise, onEditExercise, onDe
                     }}
                     className={`w-full text-left px-4 py-3 text-sm font-semibold transition-colors ${
                       categoryFilter === cat
-                        ? 'bg-blue-600/30 text-white'
+                        ? 'accent-bg-light text-white'
                         : 'text-slate-300 hover:bg-slate-800/50'
                     }`}
                   >

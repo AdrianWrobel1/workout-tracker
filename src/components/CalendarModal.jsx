@@ -49,9 +49,9 @@ export const CalendarModal = ({ workouts, onClose, onSelectDate }) => {
                 onClick={() => { onSelectDate(dateStr); onClose(); }}
                 className={`h-10 rounded-lg text-sm font-bold transition ${
                   isToday
-                    ? 'bg-gradient-to-br from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-600/50'
+                    ? 'bg-gradient-to-br from-accent to-accent text-white shadow-lg shadow-accent/50'
                     : hasWorkout
-                    ? 'bg-slate-700/60 border border-slate-600/50 text-white hover:bg-slate-700/80'
+                    ? 'bg-gradient-to-br from-accent/60 to-accent/60 border border-accent/30 text-white hover:from-accent/80 hover:to-accent/80'
                     : 'text-slate-500 hover:bg-slate-800/50 hover:text-slate-400'
                 }`}
               >

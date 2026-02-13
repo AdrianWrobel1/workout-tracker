@@ -145,12 +145,12 @@ export const SettingsView = ({
           <div className="grid grid-cols-2 gap-3">
             {[
               { name: 'Orange', hex: '#ea580c' },
-              { name: 'Electric Blue', hex: '#0084d4' },
+              { name: 'App Blue', hex: '#4F7BFF' },
               { name: 'Neon Green', hex: '#10b981' },
               { name: 'Deep Purple', hex: '#7c3aed' },
               { name: 'Crimson', hex: '#dc2626' },
               { name: 'Hot Pink', hex: '#ec4899' },
-              { name: 'Sky Blue', hex: '#0ea5e9' },
+              { name: 'Indigo', hex: '#4f46e5' },
               { name: 'Amber', hex: '#fbbf24' }
             ].map(color => (
               <button

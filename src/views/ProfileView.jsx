@@ -119,7 +119,7 @@ export const ProfileView = ({
         <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-6 animate-chart-fade-in">
           <div className="flex items-start gap-4">
             {/* Avatar Placeholder */}
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0">
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-accent to-accent flex items-center justify-center flex-shrink-0">
               <span className="text-2xl font-black text-white">👤</span>
             </div>
 
@@ -131,12 +131,12 @@ export const ProfileView = ({
                     type="text"
                     value={userName}
                     onChange={(e) => setUserName(e.target.value)}
-                    className="flex-1 bg-slate-800/50 border border-slate-600/50 rounded-lg px-3 py-2 text-white font-black focus:border-blue-500 focus:outline-none transition"
+                    className="flex-1 bg-slate-800/50 border border-slate-600/50 rounded-lg px-3 py-2 text-white font-black focus:border-accent focus:outline-none focus:accent-ring transition\"
                     autoFocus
                   />
                   <button
                     onClick={() => setIsEditingName(false)}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg transition"
+                    className="px-4 py-2 accent-bg hover:opacity-90 text-white font-bold rounded-lg transition\"
                   >
                     Done
                   </button>
@@ -184,25 +184,27 @@ export const ProfileView = ({
           </div>
 
           {/* Metric Toggle */}
-          <div className="grid grid-cols-4 gap-2">
-            {[
-              { key: 'duration', label: 'Duration' },
-              { key: 'workouts', label: 'Workouts' },
-              { key: 'volume', label: 'Volume' },
-              { key: 'reps', label: 'Reps' }
-            ].map(metric => (
-              <button
-                key={metric.key}
-                onClick={() => setChartMetric(metric.key)}
-                className={`py-2 px-3 rounded-lg font-bold text-xs uppercase tracking-wider transition-all ${
-                  chartMetric === metric.key
-                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
-                    : 'bg-slate-800/50 text-slate-400 hover:bg-slate-700/50'
-                }`}
-              >
-                {metric.label}
-              </button>
-            ))}
+          <div className="flex justify-center">
+            <div className="grid grid-cols-4 gap-2 w-full max-w-sm">
+              {[
+                { key: 'duration', label: 'Duration' },
+                { key: 'workouts', label: 'Workouts' },
+                { key: 'volume', label: 'Volume' },
+                { key: 'reps', label: 'Reps' }
+              ].map(metric => (
+                <button
+                  key={metric.key}
+                  onClick={() => setChartMetric(metric.key)}
+                  className={`py-2 px-3 rounded-lg font-bold text-xs uppercase tracking-wider transition-all ${
+                    chartMetric === metric.key
+                      ? 'accent-bg text-white shadow-lg shadow-accent/30'
+                      : 'bg-slate-800/50 text-slate-400 hover:bg-slate-700/50'
+                  }`}
+                >
+                  {metric.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 

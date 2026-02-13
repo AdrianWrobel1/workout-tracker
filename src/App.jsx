@@ -105,7 +105,7 @@ export default function App() {
 
   // Initialize accent color from localStorage on app startup
   useEffect(() => {
-    const accentColor = localStorage.getItem('accentColor') || '#0ea5e9'; // Default Sky Blue accent
+    const accentColor = localStorage.getItem('accentColor') || '#4f46e5'; // Default Indigo accent
     document.documentElement.style.setProperty('--accent', accentColor);
   }, []);
 
@@ -1833,7 +1833,7 @@ export default function App() {
                   setSelectedTags([]);
                   setView('home');
                 }}
-                className="w-full px-4 py-3 rounded-lg bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold text-sm transition-all duration-200 ease-out ui-press shadow-lg shadow-blue-600/30"
+                className="w-full px-4 py-3 rounded-lg bg-gradient-to-r from-accent to-accent hover:opacity-90 text-white font-bold text-sm transition-all duration-200 ease-out ui-press shadow-lg shadow-accent/30"
               >
                 Save Workout
               </button>

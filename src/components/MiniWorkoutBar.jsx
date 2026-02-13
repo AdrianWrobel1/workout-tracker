@@ -13,10 +13,11 @@ export const MiniWorkoutBar = ({ workoutName, timer, onMaximize }) => {
   return (
     <div 
       onClick={onMaximize}
-      className="fixed bottom-[72px] left-3 right-3 z-30 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 border border-blue-400/50 rounded-lg p-4 shadow-2xl shadow-blue-600/50 flex justify-between items-center cursor-pointer animate-in slide-in-from-bottom-4 fade-in duration-200 transition-all ease-out group"
+      className="fixed bottom-[72px] left-3 right-3 z-30 bg-gradient-accent hover:opacity-90 border border-accent/50 rounded-lg p-4 shadow-2xl flex justify-between items-center cursor-pointer animate-in slide-in-from-bottom-4 fade-in duration-200 transition-all ease-out group"
+      style={{ boxShadow: `0 25px 50px -12px var(--accent)` }}
     >
       <div className="flex flex-col">
-        <span className="text-xs text-blue-100 font-black uppercase tracking-widest">Active Workout</span>
+        <span className="text-xs text-white/90 font-black uppercase tracking-widest">Active Workout</span>
         <span className="text-white font-black text-sm truncate max-w-[200px]">{workoutName || "Workout"}</span>
       </div>
 

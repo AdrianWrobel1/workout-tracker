@@ -626,7 +626,7 @@ export const HistoryView = ({ workouts, onViewWorkoutDetail, onDeleteWorkout, on
               onClick={() => onFilterChange && onFilterChange(filterItem.id)}
               className={`text-xs font-bold px-4 py-2 rounded-full transition-all whitespace-nowrap ${
                 (filter || 'all') === filterItem.id
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/50'
+                  ? 'accent-bg text-white shadow-lg shadow-accent/50'
                   : 'bg-slate-800/50 border border-slate-700/50 text-slate-400 hover:text-slate-300'
               }`}
             >
@@ -643,7 +643,7 @@ export const HistoryView = ({ workouts, onViewWorkoutDetail, onDeleteWorkout, on
               onClick={() => setSelectedTags([])}
               className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${
                 selectedTags.length === 0
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+                  ? 'accent-bg text-white shadow-lg shadow-accent/30'
                   : 'bg-slate-800/50 border border-slate-700/50 text-slate-400 hover:text-slate-300'
               }`}
             >
@@ -661,7 +661,7 @@ export const HistoryView = ({ workouts, onViewWorkoutDetail, onDeleteWorkout, on
                 }}
                 className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${
                   selectedTags.includes(tag)
-                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+                    ? 'accent-bg text-white shadow-lg shadow-accent/30'
                     : 'bg-slate-800/50 border border-slate-700/50 text-slate-400 hover:text-slate-300'
                 }`}
               >

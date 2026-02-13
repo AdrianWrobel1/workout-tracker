@@ -147,17 +147,27 @@ export const ProfileStatisticsView = ({ workouts = [], exercisesDB = [], userWei
             onClick={() => setTimePeriod('7days')}
             className={`flex-1 py-2 px-4 rounded-lg font-bold text-xs uppercase transition-all ${
               timePeriod === '7days'
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+                ? 'bg-gradient-accent text-white shadow-lg accent-shadow'
                 : 'bg-slate-800/50 text-slate-400 hover:bg-slate-700/50'
             }`}
           >
             Last 7 days
           </button>
           <button
+            onClick={() => setTimePeriod('30days')}
+            className={`flex-1 py-2 px-4 rounded-lg font-bold text-xs uppercase transition-all ${
+              timePeriod === '30days'
+                ? 'bg-gradient-accent text-white shadow-lg accent-shadow'
+                : 'bg-slate-800/50 text-slate-400 hover:bg-slate-700/50'
+            }`}
+          >
+            Last 30 days
+          </button>
+          <button
             onClick={() => setTimePeriod('3months')}
             className={`flex-1 py-2 px-4 rounded-lg font-bold text-xs uppercase transition-all ${
               timePeriod === '3months'
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+                ? 'bg-gradient-accent text-white shadow-lg accent-shadow'
                 : 'bg-slate-800/50 text-slate-400 hover:bg-slate-700/50'
             }`}
           >
@@ -167,7 +177,7 @@ export const ProfileStatisticsView = ({ workouts = [], exercisesDB = [], userWei
             onClick={() => setTimePeriod('1year')}
             className={`flex-1 py-2 px-4 rounded-lg font-bold text-xs uppercase transition-all ${
               timePeriod === '1year'
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+                ? 'bg-gradient-accent text-white shadow-lg accent-shadow'
                 : 'bg-slate-800/50 text-slate-400 hover:bg-slate-700/50'
             }`}
           >
@@ -191,8 +201,8 @@ export const ProfileStatisticsView = ({ workouts = [], exercisesDB = [], userWei
             <p className="text-xs text-slate-500 mt-1">kg</p>
           </div>
 
-          <div className="bg-gradient-to-br from-emerald-600/20 to-emerald-700/10 border border-emerald-500/30 rounded-xl p-3 sm:p-4">
-            <p className="text-xs text-slate-400 font-semibold tracking-widest mb-2">WORKOUTS</p>
+          <div className="bg-gradient-to-br from-emerald-600/20 to-emerald-700/10 border border-emerald-500/30 rounded-xl p-3 sm:p-4 flex flex-col items-center justify-center text-center">
+            <p className="text-xs text-slate-400 font-semibold tracking-widest mb-2 whitespace-nowrap">WORKOUTS</p>
             <p className="text-2xl sm:text-3xl font-black text-emerald-400">{stats.totalSessions}</p>
             <p className="text-xs text-slate-500 mt-1">sessions</p>
           </div>
