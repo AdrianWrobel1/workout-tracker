@@ -99,6 +99,7 @@ export default function App() {
   const [summaryVisible, setSummaryVisible] = useState(false);
   const [toast, setToast] = useState(null);
   const [returnTo, setReturnTo] = useState(null);
+  const [selectedExerciseIndex, setSelectedExerciseIndex] = useState(null);
   
   // Undo deleted workout
   const undoTimeoutRef = useRef(null);
