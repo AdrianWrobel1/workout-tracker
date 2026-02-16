@@ -12,6 +12,28 @@ body {
   overscroll-behavior-y: none; 
 }
 
+/* Zapobiega automatycznemu przybliżeniu przy focus na input na telefonie (iOS/Android zoom gdy font < 16px) */
+@media (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Touch-friendly inputs: min height 44px (Apple HIG), larger tap targets for edit forms */
+.touch-input {
+  min-height: 44px;
+  padding: 12px 16px;
+}
+@media (max-width: 768px) {
+  .touch-input {
+    font-size: 16px !important;
+  }
+  input.touch-input[type="number"],
+  input.touch-input[type="text"] {
+    font-size: 16px !important;
+  }
+}
+
 /* Ukrycie paska przewijania, ale zachowanie funkcjonalności */
 ::-webkit-scrollbar {
   width: 6px;

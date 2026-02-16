@@ -6,6 +6,7 @@ import { formatDate, formatTime } from '../domain/calculations';
 export const ActiveWorkoutView = ({
   activeWorkout,
   workouts,
+  templates,
   workoutTimer,
   exercisesDB,
   onCancel,
@@ -107,6 +108,7 @@ export const ActiveWorkoutView = ({
           exercises={activeWorkout.exercises}
           workouts={workouts}
           activeWorkoutStartTime={activeWorkout.startTime}
+          templateLastSnapshot={templates?.find(t => t.id === activeWorkout.templateId)?.lastWorkoutSnapshot ?? null}
           menuOpenIndex={menuOpenIndex}
           setMenuOpenIndex={setMenuOpenIndex}
           onReorderExercises={onReorderExercises}

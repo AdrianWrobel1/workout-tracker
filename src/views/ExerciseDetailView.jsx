@@ -1,14 +1,21 @@
-import React, { useState, useMemo } from 'react';
-import { ChevronLeft, Trophy, Medal } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { ChevronLeft, Trophy, Medal, LayoutGrid, List } from 'lucide-react';
 import { UnifiedChart } from '../components/UnifiedChart';
 import { VirtualList } from '../components/VirtualList';
 import { getExerciseHistory, getExerciseRecords, getLastSet, getExerciseTrend, getChartContext } from '../domain/exercises';
 import { formatLastSetDate } from '../domain/calculations';
 
-export const ExerciseDetailView = ({ exerciseId, workouts, exercisesDB, onBack, onOpenWorkout, userWeight }) => {
+const ExerciseDetailViewInner = ({ exerciseId, workouts, exercisesDB, onBack, onOpenWorkout, userWeight }) => {
   const [activeTab, setActiveTab] = useState('history');
   const [selectedWeek, setSelectedWeek] = useState(null);
   const [chartPeriod, setChartPeriod] = useState('3months');
+  const [isCompact, setIsCompact] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('exerciseDetailCompactView') || 'false'); } catch { return false; }
+  });
+
+  useEffect(() => {
+    try { localStorage.setItem('exerciseDetailCompactView', JSON.stringify(isCompact)); } catch (_) {}
+  }, [isCompact]);
 
   const exerciseDef = exercisesDB.find(e => e.id === exerciseId);
   const history = useMemo(() => getExerciseHistory(exerciseId, workouts), [exerciseId, workouts]);
@@ -20,20 +27,29 @@ export const ExerciseDetailView = ({ exerciseId, workouts, exercisesDB, onBack, 
     <div className="min-h-screen bg-black text-white flex flex-col">
       {/* Header */}
       <div className="bg-gradient-to-b from-black to-black/80 border-b border-white/10 p-4 sticky top-0 z-20 shadow-2xl">
-        <div className="flex items-center gap-4 mb-4">
-          <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-lg transition">
-            <ChevronLeft size={20} />
-          </button>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-black leading-tight">{exerciseDef.name}</h1>
-            <p className="text-xs text-slate-400 mt-1 font-semibold">
-              {exerciseDef.category} • {exerciseDef.muscles?.join(', ') || 'General'}
-            </p>
+        <div className="flex items-center justify-between gap-4 mb-4">
+          <div className="flex items-center gap-4 flex-1 min-w-0">
+            <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-lg transition shrink-0">
+              <ChevronLeft size={20} />
+            </button>
+            <div className="flex-1 min-w-0">
+              <h1 className={isCompact ? 'text-lg font-black leading-tight' : 'text-2xl font-black leading-tight'}>{exerciseDef.name}</h1>
+              <p className="text-xs text-slate-400 mt-1 font-semibold">
+                {exerciseDef.category} • {exerciseDef.muscles?.join(', ') || 'General'}
+              </p>
+            </div>
           </div>
+          <button
+            onClick={() => setIsCompact(!isCompact)}
+            className="p-2 hover:bg-white/10 rounded-lg transition text-slate-400 hover:text-white shrink-0"
+            title={isCompact ? 'Normal view' : 'Compact view (screenshot)'}
+          >
+            {isCompact ? <List size={20} /> : <LayoutGrid size={20} />}
+          </button>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 bg-slate-800/50 p-1 rounded-lg border border-slate-700/50">
+        <div className={`flex gap-1 bg-slate-800/50 p-1 rounded-lg border border-slate-700/50 ${isCompact ? 'mb-0' : ''}`}>
           {['History', 'Charts', 'Records'].map(tab => (
             <button
               key={tab}
@@ -58,24 +74,27 @@ export const ExerciseDetailView = ({ exerciseId, workouts, exercisesDB, onBack, 
         if (!lastSet) return null;
         
         return (
-          <div className="px-4 py-4 bg-gradient-to-b from-slate-900/40 to-black/20 border-b border-slate-700/30">
-            <div className="grid grid-cols-3 gap-3">
+          <div className={isCompact ? 'px-3 py-2 border-b border-slate-700/30' : 'px-4 py-4 bg-gradient-to-b from-slate-900/40 to-black/20 border-b border-slate-700/30'}>
+            <div className={isCompact ? 'grid grid-cols-4 gap-2' : 'grid grid-cols-2 sm:grid-cols-4 gap-3'}>
               {/* Last */}
-              <div className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-4 text-center">
+              <div className={isCompact ? 'bg-slate-800/50 border border-slate-700/50 rounded p-2 text-center' : 'bg-slate-800/50 border border-slate-700/50 rounded-lg p-4 text-center'}>
                 <p className="text-xs text-slate-400 font-semibold mb-1">LAST</p>
-                <p className="text-lg font-black text-white">{lastSet.kg}×{lastSet.reps}</p>
+                <p className={isCompact ? 'text-sm font-black text-white' : 'text-lg font-black text-white'}>{lastSet.kg}×{lastSet.reps}</p>
               </div>
-              
-              {/* Best */}
-              <div className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-4 text-center">
+              {/* Best 1RM */}
+              <div className={isCompact ? 'bg-slate-800/50 border border-slate-700/50 rounded p-2 text-center' : 'bg-slate-800/50 border border-slate-700/50 rounded-lg p-4 text-center'}>
                 <p className="text-xs text-slate-400 font-semibold mb-1">BEST (1RM)</p>
-                <p className="text-lg font-black text-white">{records.best1RM}</p>
+                <p className={isCompact ? 'text-sm font-black text-white' : 'text-lg font-black text-white'}>{records.best1RM ?? '—'}</p>
               </div>
-              
+              {/* Max Weight */}
+              <div className={isCompact ? 'bg-slate-800/50 border border-slate-700/50 rounded p-2 text-center' : 'bg-slate-800/50 border border-slate-700/50 rounded-lg p-4 text-center'}>
+                <p className="text-xs text-slate-400 font-semibold mb-1">MAX</p>
+                <p className={isCompact ? 'text-sm font-black text-blue-400' : 'text-lg font-black text-blue-400'}>{records.heaviestWeight ?? '—'}<span className="text-slate-500">kg</span></p>
+              </div>
               {/* Trend */}
-              <div className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-4 text-center">
+              <div className={isCompact ? 'bg-slate-800/50 border border-slate-700/50 rounded p-2 text-center' : 'bg-slate-800/50 border border-slate-700/50 rounded-lg p-4 text-center'}>
                 <p className="text-xs text-slate-400 font-semibold mb-1">TREND</p>
-                <p className={`text-2xl font-black ${
+                <p className={`${isCompact ? 'text-lg' : 'text-2xl'} font-black ${
                   trend === '↑' ? 'text-green-400' : 
                   trend === '↓' ? 'text-red-400' : 
                   'text-slate-300'
@@ -145,9 +164,9 @@ export const ExerciseDetailView = ({ exerciseId, workouts, exercisesDB, onBack, 
       )}
 
       {/* Content */}
-      <div className="p-4 grow overflow-y-auto pb-24">
+      <div className={isCompact ? 'p-2 grow overflow-y-auto pb-24' : 'p-4 grow overflow-y-auto pb-24'}>
         {activeTab === 'history' && (
-          <div className="space-y-5">
+          <div className={isCompact ? 'space-y-2' : 'space-y-5'}>
             {history.length === 0 ? (
               <div className="text-center text-slate-500 mt-10 py-6">
                 <p className="text-sm font-semibold">No history yet</p>
@@ -172,19 +191,19 @@ export const ExerciseDetailView = ({ exerciseId, workouts, exercisesDB, onBack, 
                           {new Date(item.date).toLocaleString('en-US', { month: 'long', year: 'numeric' })}
                         </h3>
                       )}
-                      <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-lg p-4 hover:border-slate-600/50 transition-all">
-                        <div className="flex justify-between items-baseline mb-3">
-                          <span className="font-black text-blue-400">
+                      <div className={isCompact ? 'bg-slate-800/50 border border-slate-700/50 rounded p-2 hover:border-slate-600/50 transition-all' : 'bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-lg p-4 hover:border-slate-600/50 transition-all'}>
+                        <div className={`flex justify-between items-baseline ${isCompact ? 'mb-1' : 'mb-3'}`}>
+                          <span className={isCompact ? 'text-xs font-black text-blue-400' : 'font-black text-blue-400'}>
                             {new Date(item.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', weekday: 'short' })}
                           </span>
                           <span className="text-xs text-slate-400 font-bold">1RM <span className="text-blue-300">{item.max1RM} kg</span></span>
                         </div>
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-1.5">
                           {item.sets.map((set, idx) => (
                             <button
                               key={`${item.date}-${set.kg}-${set.reps}-${idx}`}
                               onClick={() => onOpenWorkout && onOpenWorkout(item.date)}
-                              className={`px-3 py-2 rounded-lg text-xs border transition flex items-center gap-1.5 ${
+                              className={`${isCompact ? 'px-2 py-1 rounded text-xs' : 'px-3 py-2 rounded-lg text-xs'} border transition flex items-center gap-1.5 ${
                                 (set.isBest1RM || set.isBestSetVolume || set.isHeaviestWeight)
                                   ? 'bg-yellow-500/20 border-yellow-500/40 hover:bg-yellow-500/30'
                                   : 'bg-slate-800/60 hover:bg-slate-700/60 border-slate-700/50 hover:border-slate-600/50'
@@ -227,19 +246,19 @@ export const ExerciseDetailView = ({ exerciseId, workouts, exercisesDB, onBack, 
                         {new Date(item.date).toLocaleString('en-US', { month: 'long', year: 'numeric' })}
                       </h3>
                     )}
-                    <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-lg p-4 hover:border-slate-600/50 transition-all">
-                      <div className="flex justify-between items-baseline mb-3">
-                        <span className="font-black text-blue-400">
+                    <div className={isCompact ? 'bg-slate-800/50 border border-slate-700/50 rounded p-2 hover:border-slate-600/50 transition-all' : 'bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-lg p-4 hover:border-slate-600/50 transition-all'}>
+                      <div className={`flex justify-between items-baseline ${isCompact ? 'mb-1' : 'mb-3'}`}>
+                        <span className={isCompact ? 'text-xs font-black text-blue-400' : 'font-black text-blue-400'}>
                           {new Date(item.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', weekday: 'short' })}
                         </span>
                         <span className="text-xs text-slate-400 font-bold">1RM <span className="text-blue-300">{item.max1RM} kg</span></span>
                       </div>
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap gap-1.5">
                         {item.sets.map((set, idx) => (
                           <button
                             key={`${item.date}-${set.kg}-${set.reps}-${idx}`}
                             onClick={() => onOpenWorkout && onOpenWorkout(item.date)}
-                            className={`px-3 py-2 rounded-lg text-xs border transition flex items-center gap-1.5 ${
+                            className={`${isCompact ? 'px-2 py-1 rounded text-xs' : 'px-3 py-2 rounded-lg text-xs'} border transition flex items-center gap-1.5 ${
                               (set.isBest1RM || set.isBestSetVolume || set.isHeaviestWeight)
                                 ? 'bg-yellow-500/20 border-yellow-500/40 hover:bg-yellow-500/30'
                                 : 'bg-slate-800/60 hover:bg-slate-700/60 border-slate-700/50 hover:border-slate-600/50'
@@ -326,11 +345,11 @@ export const ExerciseDetailView = ({ exerciseId, workouts, exercisesDB, onBack, 
         )}
 
         {activeTab === 'records' && (
-          <div className="grid grid-cols-2 gap-4 mt-4">
+          <div className={isCompact ? 'grid grid-cols-2 gap-2 mt-2' : 'grid grid-cols-2 gap-4 mt-4'}>
             {/* Best 1RM */}
-            <div className="col-span-2 bg-gradient-to-br from-amber-600/20 to-amber-700/10 border border-amber-500/30 rounded-xl p-6 flex flex-col items-center justify-center text-center">
-              <Trophy className="text-amber-400 mb-3" size={36} />
-              <div className="text-4xl font-black text-white mb-1">
+            <div className={`col-span-2 bg-gradient-to-br from-amber-600/20 to-amber-700/10 border border-amber-500/30 rounded-xl flex flex-col items-center justify-center text-center ${isCompact ? 'p-3' : 'p-6'}`}>
+              <Trophy className="text-amber-400 mb-3" size={isCompact ? 24 : 36} />
+              <div className={isCompact ? 'text-2xl font-black text-white mb-1' : 'text-4xl font-black text-white mb-1'}>
                 {records.best1RM} <span className="text-lg font-normal text-slate-400">kg</span>
               </div>
               <div className="text-xs text-amber-400 font-black uppercase tracking-wider">All-Time Best 1RM</div>
@@ -339,21 +358,21 @@ export const ExerciseDetailView = ({ exerciseId, workouts, exercisesDB, onBack, 
               )}
             </div>
 
-            {/* Max Weight */}
-            <div className="bg-gradient-to-br from-blue-600/20 to-blue-700/10 border border-blue-500/30 rounded-lg p-4 text-center">
+            {/* Max Weight (heaviest single weight lifted) */}
+            <div className={isCompact ? 'bg-gradient-to-br from-blue-600/20 to-blue-700/10 border border-blue-500/30 rounded-lg p-3 text-center' : 'bg-gradient-to-br from-blue-600/20 to-blue-700/10 border border-blue-500/30 rounded-lg p-4 text-center'}>
               <div className="text-xs text-slate-400 uppercase font-black tracking-wider mb-2">Max Weight</div>
-              <div className="text-3xl font-black text-blue-400">
-                {records.maxWeight} <span className="text-sm font-normal text-slate-500">kg</span>
+              <div className={isCompact ? 'text-xl font-black text-blue-400' : 'text-3xl font-black text-blue-400'}>
+                {records.heaviestWeight ?? '—'} <span className="text-sm font-normal text-slate-500">kg</span>
               </div>
-              {records.maxWeightDate && (
-                <div className="text-xs text-slate-500 mt-2 font-semibold">{formatLastSetDate(records.maxWeightDate)}</div>
+              {records.heaviestWeightDate && (
+                <div className="text-xs text-slate-500 mt-2 font-semibold">{formatLastSetDate(records.heaviestWeightDate)}</div>
               )}
             </div>
 
             {/* Max Reps */}
-            <div className="bg-gradient-to-br from-purple-600/20 to-purple-700/10 border border-purple-500/30 rounded-lg p-4 text-center">
+            <div className={isCompact ? 'bg-gradient-to-br from-purple-600/20 to-purple-700/10 border border-purple-500/30 rounded-lg p-3 text-center' : 'bg-gradient-to-br from-purple-600/20 to-purple-700/10 border border-purple-500/30 rounded-lg p-4 text-center'}>
               <div className="text-xs text-slate-400 uppercase font-black tracking-wider mb-2">Max Reps</div>
-              <div className="text-3xl font-black text-purple-400">
+              <div className={isCompact ? 'text-xl font-black text-purple-400' : 'text-3xl font-black text-purple-400'}>
                 {records.maxReps} <span className="text-sm font-normal text-slate-500">reps</span>
               </div>
               {records.maxRepsDate && (
@@ -366,3 +385,5 @@ export const ExerciseDetailView = ({ exerciseId, workouts, exercisesDB, onBack, 
     </div>
   );
 };
+
+export const ExerciseDetailView = React.memo(ExerciseDetailViewInner);

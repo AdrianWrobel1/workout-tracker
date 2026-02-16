@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 // DOMAIN
 import { calculate1RM } from './domain/calculations';
 import { getExerciseRecords, getLastCompletedSets, suggestNextWeight, checkSetRecords } from './domain/exercises';
-import { prepareCleanWorkoutData, compareWorkoutToPrevious, generateSessionFeedback, calculateMuscleDistribution, detectPRsInWorkout } from './domain/workouts';
+import { prepareCleanWorkoutData, compareWorkoutToPrevious, generateSessionFeedback, calculateMuscleDistribution, detectPRsInWorkout, buildLastWorkoutSnapshot } from './domain/workouts';
 
 // HOOKS
 import { useDebouncedLocalStorage, useDebouncedLocalStorageManual } from './hooks/useLocalStorage';
@@ -100,6 +100,8 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [returnTo, setReturnTo] = useState(null);
   const [selectedExerciseIndex, setSelectedExerciseIndex] = useState(null);
+  const [historyScrollPosition, setHistoryScrollPosition] = useState(null);
+  const [scrollToWorkoutDate, setScrollToWorkoutDate] = useState(null);
   
   // Undo deleted workout
   const undoTimeoutRef = useRef(null);
@@ -135,7 +137,8 @@ export default function App() {
         const templates = await storage.getAllFromStore(STORES.TEMPLATES);
 
         setExercisesDB(exercises || []);
-        setWorkouts(workouts || []);
+        // Exclude activeWorkout from list so it never gets overwritten by list persistence
+        setWorkouts((workouts || []).filter(w => w.id !== 'activeWorkout'));
         setTemplates(templates || []);
 
         // Load settings
@@ -175,10 +178,8 @@ export default function App() {
     return () => clearTimeout(t);
   }, []);
 
-  // Save Data (debounced to prevent excessive localStorage writes)
-  // Persist data to IndexedDB (async, non-blocking)
+  // Save Data (debounced). Workouts use incremental put/delete in handlers, not full setMany.
   useIndexedDBStore(STORES.EXERCISES, exercisesDB, 200);
-  useIndexedDBStore(STORES.WORKOUTS, workouts, 200);
   useIndexedDBStore(STORES.TEMPLATES, templates, 200);
   
   // Persist settings (smaller payloads, can use settings API)
@@ -346,7 +347,13 @@ export default function App() {
 
   const handleFinishWorkout = useCallback(() => {
     if (!activeWorkout) return;
-    const completedWorkout = { ...activeWorkout, id: Date.now(), date: new Date().toISOString().split('T')[0], tags: [] };
+    // Deep clone so detectPRsInWorkout does not mutate activeWorkout state
+    const completedWorkout = JSON.parse(JSON.stringify({
+      ...activeWorkout,
+      id: Date.now(),
+      date: new Date().toISOString().split('T')[0],
+      tags: []
+    }));
     const template = templates.find(t => t.id === activeWorkout.templateId);
     const baseTemplate = template || activeWorkout.templateSnapshot || null;
     const diff = baseTemplate ? computeTemplateDiff(baseTemplate, activeWorkout) : { changed: true, reasons: ['No template associated for this workout'] };
@@ -359,7 +366,7 @@ export default function App() {
     const comparison = compareWorkoutToPrevious(completedWorkout, workouts);
     const feedback = generateSessionFeedback(cleanData.totalVolume, cleanData.completedSets, comparison?.trend || '→');
     
-    // Pre-calculate PR status
+    // Pre-calculate PR status (on clone; no mutation of activeWorkout)
     const prStatus = detectPRsInWorkout(completedWorkout, workouts, calculate1RM, getExerciseRecords);
     const hasPR = Object.keys(prStatus).length > 0;
     
@@ -723,9 +730,25 @@ export default function App() {
   }, [activeWorkout]);
 
   const handleReplaceExercise = useCallback((exIndex, newExercise) => {
-    // Get last completed sets for auto-memory
-    const lastSets = getLastCompletedSets(newExercise.id, workouts);
-    const suggested = suggestNextWeight(lastSets);
+    // Check for template-specific previous sets first
+    let lastSets = [];
+    let suggested = null;
+    
+    // For active workouts from a template, prefer template-specific sets
+    if (activeWorkout?.templateId) {
+      const template = templates.find(t => t.id === activeWorkout.templateId);
+      const templatePrevious = template?.templatePrevious?.[newExercise.id];
+      if (templatePrevious?.sets && templatePrevious.sets.length > 0) {
+        lastSets = templatePrevious.sets;
+      }
+    }
+    
+    // Fall back to global previous if no template-specific sets found
+    if (lastSets.length === 0) {
+      lastSets = getLastCompletedSets(newExercise.id, workouts);
+    }
+    
+    suggested = suggestNextWeight(lastSets);
     
     // Build sets with auto-memory
     let sets;
@@ -750,7 +773,7 @@ export default function App() {
     updated.exercises[exIndex] = exData;
     setActiveWorkout(updated);
     closeExerciseSelector();
-  }, [activeWorkout, workouts, closeExerciseSelector]);
+  }, [activeWorkout, workouts, templates, closeExerciseSelector]);
 
   // --- SUPERSET HANDLERS ---
 
@@ -797,9 +820,25 @@ export default function App() {
   // --- SELECTOR LOGIC ---
 
   const handleSelectExercise = useCallback((exercise) => {
-    // Get last completed sets for auto-memory
-    const lastSets = getLastCompletedSets(exercise.id, workouts);
-    const suggested = suggestNextWeight(lastSets);
+    // Check for template-specific previous sets first
+    let lastSets = [];
+    let suggested = null;
+    
+    // For active workouts from a template, prefer template-specific sets
+    if (selectorMode === 'activeWorkout' && activeWorkout?.templateId) {
+      const template = templates.find(t => t.id === activeWorkout.templateId);
+      const templatePrevious = template?.templatePrevious?.[exercise.id];
+      if (templatePrevious?.sets && templatePrevious.sets.length > 0) {
+        lastSets = templatePrevious.sets;
+      }
+    }
+    
+    // Fall back to global previous if no template-specific sets found
+    if (lastSets.length === 0) {
+      lastSets = getLastCompletedSets(exercise.id, workouts);
+    }
+    
+    suggested = suggestNextWeight(lastSets);
     
     // Build sets with suggested values as placeholder hints
     let sets;
@@ -851,7 +890,7 @@ export default function App() {
       }));
     }
     closeExerciseSelector();
-  }, [selectorMode, editingTemplate, workouts, closeExerciseSelector]);
+  }, [selectorMode, editingTemplate, activeWorkout, workouts, templates, closeExerciseSelector]);
 
   // --- DATA MANAGEMENT ---
 
@@ -1075,6 +1114,16 @@ export default function App() {
     else if (tabId === 'settings') setView('settings');
   }, []);
 
+  // Scroll to top when opening a detail/overlay view so user always starts at top of the sub-view
+  useEffect(() => {
+    const detailViews = ['workoutDetail', 'exerciseDetail', 'createExercise', 'templates', 'selectTemplate', 'monthlyProgress', 'calendar', 'exportData', 'settings', 'profile', 'statistics'];
+    if (detailViews.includes(view)) {
+      window.scrollTo({ top: 0, behavior: 'instant' });
+      const main = document.querySelector('.max-w-md.min-h-screen');
+      if (main) main.scrollTo({ top: 0, behavior: 'instant' });
+    }
+  }, [view]);
+
   // --- RENDER ---
   return (
     <>
@@ -1116,6 +1165,11 @@ export default function App() {
           {view === 'history' && (
             <HistoryView
               workouts={workouts}
+              getRecords={getRecords}
+              scrollToWorkoutDate={scrollToWorkoutDate}
+              onScrollToWorkoutDone={() => setScrollToWorkoutDate(null)}
+              scrollPosition={historyScrollPosition}
+              onSaveScrollPosition={setHistoryScrollPosition}
               onViewWorkoutDetail={(date) => { setSelectedDate(date); setView('workoutDetail'); }}
               onDeleteWorkout={async (id) => {
                 // Capture workout FIRST before state changes
@@ -1155,7 +1209,10 @@ export default function App() {
                   }, 10000);
                 }
               }}
-              onEditWorkout={(updatedWorkout) => { setWorkouts(prev => prev.map(w => w.id === updatedWorkout.id ? updatedWorkout : w)); }}
+              onEditWorkout={async (updatedWorkout) => {
+                try { await storage.set(STORES.WORKOUTS, updatedWorkout); } catch (err) { console.error('Error persisting workout edit:', err); }
+                setWorkouts(prev => prev.map(w => w.id === updatedWorkout.id ? updatedWorkout : w));
+              }}
               exercisesDB={exercisesDB}
               filter={historyFilter}
               onFilterChange={setHistoryFilter}
@@ -1215,6 +1272,7 @@ export default function App() {
               workouts={workouts}
               exercisesDB={exercisesDB}
               onBack={() => {
+                const dateToScroll = selectedDate;
                 if (returnTo) {
                   if (returnTo.view === 'exerciseDetail') {
                     setSelectedExerciseId(returnTo.exerciseId);
@@ -1224,8 +1282,10 @@ export default function App() {
                   }
                   setReturnTo(null);
                 } else {
-                  if (activeTab === 'history') setView('history');
-                  else setView('home');
+                  if (activeTab === 'history') {
+                    setScrollToWorkoutDate(dateToScroll);
+                    setView('history');
+                  } else setView('home');
                 }
                 setSelectedDate(null);
               }}
@@ -1245,7 +1305,8 @@ export default function App() {
             <div data-ui-anim className={`transition-opacity duration-200 ease-out ${pendingSummary ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
               <ActiveWorkoutView
                 activeWorkout={activeWorkout}
-              workouts={workouts}
+                templates={templates}
+                workouts={workouts}
               workoutTimer={workoutTimer}
               exercisesDB={exercisesDB}
               onCancel={() => { if (confirm('Cancel?')) { setActiveWorkout(null); setView('home'); } }}
@@ -1828,11 +1889,24 @@ export default function App() {
                   const exerciseIds = (workoutWithTags.exercises || []).map(e => e.exerciseId).filter(Boolean);
                   await updateRecordsForExercises(exerciseIds, newWorkouts);
 
+                  // Update template lastWorkoutSnapshot (prev per template: Pull A vs Pull B)
+                  if (pendingSummary.templateId) {
+                    const snapshot = buildLastWorkoutSnapshot(workoutWithTags);
+                    const ti = templates.findIndex(t => t.id === pendingSummary.templateId);
+                    if (ti !== -1 && snapshot) {
+                      const updatedTemplate = { ...templates[ti], lastWorkoutSnapshot: snapshot };
+                      try { await storage.set(STORES.TEMPLATES, updatedTemplate); } catch (err) { console.error('Error saving template snapshot:', err); }
+                      setTemplates(prev => prev.map(t => t.id === updatedTemplate.id ? updatedTemplate : t));
+                    }
+                  }
+
                   setActiveWorkout(null);
                   setWorkoutTimer(0);
                   setPendingSummary(null);
                   setSelectedTags([]);
-                  setView('home');
+                  setActiveTab('history');
+                  setView('history');
+                  setScrollToWorkoutDate(workoutWithTags.date);
                 }}
                 className="w-full px-4 py-3 rounded-lg bg-gradient-to-r from-accent to-accent hover:opacity-90 text-white font-bold text-sm transition-all duration-200 ease-out ui-press shadow-lg shadow-accent/30"
               >
@@ -1858,15 +1932,26 @@ export default function App() {
                       const ti = templates.findIndex(t => t.id === pendingSummary.templateId);
                       if (ti !== -1) {
                         const newTemplate = { ...templates[ti] };
-                        newTemplate.exercises = (pendingSummary.completedWorkout.exercises || []).map(ex => ({ name: ex.name, category: ex.category, sets: ex.sets.map(s => ({ kg: 0, reps: 0 })) }));
-                        const updated = [...templates]; 
-                        updated[ti] = newTemplate; 
-                        // Save just the updated template
-                        try {
-                          await storage.set(STORES.TEMPLATES, newTemplate);
-                        } catch (err) {
-                          console.error('Error updating template:', err);
-                        }
+                        newTemplate.exercises = (pendingSummary.completedWorkout.exercises || []).map(ex => ({ name: ex.name, category: ex.category, sets: (ex.sets || []).map(s => ({ kg: 0, reps: 0 })) }));
+                        newTemplate.lastWorkoutSnapshot = buildLastWorkoutSnapshot(workoutWithTags);
+                        
+                        // Store template-specific previous sets for each exercise
+                        if (!newTemplate.templatePrevious) newTemplate.templatePrevious = {};
+                        (pendingSummary.completedWorkout.exercises || []).forEach(ex => {
+                          if (ex.exerciseId) {
+                            const completedSets = (ex.sets || []).filter(s => s.completed);
+                            if (completedSets.length > 0) {
+                              newTemplate.templatePrevious[ex.exerciseId] = {
+                                sets: completedSets.map(s => ({ kg: Number(s.kg) || 0, reps: Number(s.reps) || 0 })),
+                                lastDate: workoutWithTags.date
+                              };
+                            }
+                          }
+                        });
+                        
+                        const updated = [...templates];
+                        updated[ti] = newTemplate;
+                        try { await storage.set(STORES.TEMPLATES, newTemplate); } catch (err) { console.error('Error updating template:', err); }
                         setTemplates(updated);
                       }
                     }
@@ -1880,7 +1965,9 @@ export default function App() {
                     setWorkoutTimer(0);
                     setPendingSummary(null);
                     setSelectedTags([]);
-                    setView('home');
+                    setActiveTab('history');
+                    setView('history');
+                    setScrollToWorkoutDate(workoutWithTags.date);
                   }}
                   className="w-full px-4 py-3 rounded-lg bg-slate-800/60 hover:bg-slate-700/60 border border-slate-600/50 text-slate-300 hover:text-white font-semibold text-sm transition-all"
                 >

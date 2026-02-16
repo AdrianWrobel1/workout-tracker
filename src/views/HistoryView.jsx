@@ -5,7 +5,7 @@ import { getExerciseRecords } from '../domain/exercises';
 import { WorkoutCard } from '../components/WorkoutCard';
 import { VirtualList } from '../components/VirtualList';
 
-export const HistoryView = ({ workouts, onViewWorkoutDetail, onDeleteWorkout, onEditWorkout, exercisesDB = [], filter = 'all', onFilterChange }) => {
+const HistoryViewInner = ({ workouts, onViewWorkoutDetail, onDeleteWorkout, onEditWorkout, exercisesDB = [], filter = 'all', onFilterChange, scrollToWorkoutDate, onScrollToWorkoutDone, getRecords, scrollPosition, onSaveScrollPosition }) => {
   const [editingId, setEditingId] = useState(null);
   const [editData, setEditData] = useState(null);
   const [showNewExercise, setShowNewExercise] = useState(false);
@@ -15,6 +15,7 @@ export const HistoryView = ({ workouts, onViewWorkoutDetail, onDeleteWorkout, on
   const [selectedTags, setSelectedTags] = useState([]); // Multi-tag support
   const [showTagDropdown, setShowTagDropdown] = useState(false);
   const tagDropdownRef = useRef(null);
+  const scrollContainerRef = useRef(null);
 
   // Close tag dropdown when clicking outside
   useEffect(() => {
@@ -29,15 +30,41 @@ export const HistoryView = ({ workouts, onViewWorkoutDetail, onDeleteWorkout, on
     }
   }, [showTagDropdown]);
 
-  // FIXED: Pre-calculate PR data once instead of O(N²) in filter
+  // Restore scroll position when view is mounted
+  useEffect(() => {
+    if (scrollContainerRef.current && scrollPosition !== null && scrollPosition !== undefined) {
+      scrollContainerRef.current.scrollTop = scrollPosition;
+    }
+  }, [scrollPosition]);
+
+  // Save scroll position when user scrolls
+  const handleScroll = () => {
+    if (scrollContainerRef.current && onSaveScrollPosition) {
+      onSaveScrollPosition(scrollContainerRef.current.scrollTop);
+    }
+  };
+
+  // After saving workout from summary: scroll to that workout in list
+  useEffect(() => {
+    if (!scrollToWorkoutDate || !onScrollToWorkoutDone) return;
+    const t = setTimeout(() => {
+      const el = document.querySelector(`[data-workout-date="${scrollToWorkoutDate}"]`);
+      el?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      onScrollToWorkoutDone();
+    }, 150);
+    return () => clearTimeout(t);
+  }, [scrollToWorkoutDate, onScrollToWorkoutDone]);
+
+  // Use records cache (O(1)) when available; fallback to getExerciseRecords for cache miss. O(W·E) vs O(W²·E).
   const prWorkoutIds = useMemo(() => {
     const prIds = new Set();
+    const getRec = getRecords || (() => null);
     (workouts || []).forEach(workout => {
       try {
         const isPRAny = (workout.exercises || []).some(ex => {
           const exId = ex.exerciseId;
           if (!exId) return false;
-          const records = getExerciseRecords(exId, workouts) || {};
+          const records = (getRec(exId) ?? getExerciseRecords(exId, workouts)) || {};
           const best1RM = records.best1RM || 0;
           const max1RMInThisWorkout = Math.max(0, ...(ex.sets || [])
             .filter(s => s && s.completed && !s.warmup)
@@ -55,7 +82,7 @@ export const HistoryView = ({ workouts, onViewWorkoutDetail, onDeleteWorkout, on
       }
     });
     return prIds;
-  }, [workouts]);
+  }, [workouts, getRecords]);
 
   // Smart filter logic
   const hasPR = (workout) => {
@@ -105,7 +132,10 @@ export const HistoryView = ({ workouts, onViewWorkoutDetail, onDeleteWorkout, on
       });
     }
 
-    // Group by month-year
+    // Sort filtered workouts newest first (by date desc)
+    result = [...result].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    // Group by month-year (within each month order is already newest first)
     const grps = {};
     result.forEach(w => {
       const key = new Date(w.date).toISOString().slice(0,7);
@@ -128,19 +158,27 @@ export const HistoryView = ({ workouts, onViewWorkoutDetail, onDeleteWorkout, on
 
   const handleEditSave = () => {
     if (editData && onEditWorkout) {
+      const idToScroll = editingId;
       onEditWorkout(editData);
       setEditingId(null);
       setEditData(null);
+      setTimeout(() => {
+        document.querySelector(`[data-workout-id="${idToScroll}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }, 100);
     }
   };
 
   const handleEditCancel = () => {
+    const idToScroll = editingId;
     setEditingId(null);
     setEditData(null);
     setShowNewExercise(false);
     setNewExercise({ exerciseId: null, name: '', category: '', sets: [{ kg: 0, reps: 0, completed: false }] });
     setUseExerciseDB(false);
     setExpandedExerciseIdx(null);
+    setTimeout(() => {
+      document.querySelector(`[data-workout-id="${idToScroll}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }, 100);
   };
 
   const handleSetToggle = (exIndex, setIndex) => {
@@ -234,23 +272,24 @@ export const HistoryView = ({ workouts, onViewWorkoutDetail, onDeleteWorkout, on
           const current = isEditing ? editData : workout;
 
           return (
-            <div key={workout.id} className={`bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-4 transition-all ui-card-mount-anim ${!isEditing ? 'hover:border-slate-600/70 hover:from-slate-800/60 hover:to-slate-900/60' : ''}`}>
+            <div key={workout.id} data-workout-id={workout.id} data-workout-date={workout.date} className={`bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-4 transition-all ui-card-mount-anim ${!isEditing ? 'hover:border-slate-600/70 hover:from-slate-800/60 hover:to-slate-900/60' : ''}`}>
               {isEditing ? (
                 // Edit Mode
                 <div className="space-y-4">
-                  <div className="flex gap-3">
-                    <input 
-                      type="text" 
-                      value={current.name} 
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <input
+                      type="text"
+                      value={current.name}
                       onChange={(e) => setEditData({...current, name: e.target.value})}
-                      className="flex-1 bg-slate-800/50 border border-slate-600/50 text-white px-4 py-2 rounded-lg text-sm font-semibold focus:border-accent focus:outline-none focus:accent-ring transition"
+                      className="touch-input flex-1 bg-slate-800/50 border border-slate-600/50 text-white px-4 rounded-xl font-semibold focus:border-accent focus:outline-none focus:accent-ring transition"
                       placeholder="Workout name"
                     />
-                    <input 
-                      type="number" 
+                    <input
+                      type="number"
+                      inputMode="decimal"
                       value={current.duration || 0}
                       onChange={(e) => setEditData({...current, duration: Number(e.target.value) || 0})}
-                      className="w-24 bg-slate-800/50 border border-slate-600/50 text-white px-4 py-2 rounded-lg text-sm font-semibold focus:border-accent focus:outline-none focus:accent-ring transition"
+                      className="touch-input w-full sm:w-24 bg-slate-800/50 border border-slate-600/50 text-white px-4 rounded-xl font-semibold focus:border-accent focus:outline-none focus:accent-ring transition"
                       placeholder="min"
                     />
                   </div>
@@ -303,8 +342,9 @@ export const HistoryView = ({ workouts, onViewWorkoutDetail, onDeleteWorkout, on
                           <div className="bg-slate-900/50 p-4 rounded-lg border-l-2 accent-border space-y-2">
                             <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Add set</label>
                             <div className="flex flex-col sm:flex-row gap-2 items-end">
-                              <input 
-                                type="number" 
+                              <input
+                                type="number"
+                                inputMode="decimal"
                                 placeholder="kg"
                                 defaultValue={0}
                                 onBlur={(e) => {
@@ -313,12 +353,13 @@ export const HistoryView = ({ workouts, onViewWorkoutDetail, onDeleteWorkout, on
                                   setEditData(updated);
                                   setExpandedExerciseIdx(null);
                                 }}
-                                className="w-full sm:flex-1 bg-slate-800/50 border border-slate-600/50 text-white px-3 py-2 rounded text-sm focus:border-blue-500 focus:outline-none"
+                                className="touch-input w-full sm:flex-1 bg-slate-800/50 border border-slate-600/50 text-white px-3 rounded-lg focus:border-accent focus:outline-none"
                               />
                               <span className="hidden sm:inline text-slate-500 font-bold">×</span>
                               <span className="sm:hidden text-slate-500 font-bold text-center w-full">×</span>
-                              <input 
-                                type="number" 
+                              <input
+                                type="number"
+                                inputMode="decimal"
                                 placeholder="reps"
                                 defaultValue={0}
                                 onBlur={(e) => {
@@ -330,7 +371,7 @@ export const HistoryView = ({ workouts, onViewWorkoutDetail, onDeleteWorkout, on
                                     setExpandedExerciseIdx(null);
                                   }
                                 }}
-                                className="w-full sm:flex-1 bg-slate-800/50 border border-slate-600/50 text-white px-3 py-2 rounded text-sm focus:border-blue-500 focus:outline-none"
+                                className="touch-input w-full sm:flex-1 bg-slate-800/50 border border-slate-600/50 text-white px-3 rounded-lg focus:border-accent focus:outline-none"
                               />
                               <button
                                 onClick={() => {
@@ -356,27 +397,29 @@ export const HistoryView = ({ workouts, onViewWorkoutDetail, onDeleteWorkout, on
                                 className="w-4 h-4 cursor-pointer rounded border-slate-600/50 accent-emerald-600 ui-checkbox"
                               />
                               <span className="min-w-[2rem] text-slate-400 font-bold">#{setIdx + 1}</span>
-                              <input 
-                                type="number" 
+                              <input
+                                type="number"
+                                inputMode="decimal"
                                 value={set.kg}
                                 onChange={(e) => {
                                   const updated = { ...current };
                                   updated.exercises[exIdx].sets[setIdx].kg = Number(e.target.value) || 0;
                                   setEditData(updated);
                                 }}
-                                className="w-16 bg-slate-800/50 border border-slate-600/50 text-white px-2 py-1 rounded text-xs focus:border-blue-500 focus:outline-none"
+                                className="touch-input flex-1 sm:w-16 bg-slate-800/50 border border-slate-600/50 text-white px-2 rounded-lg font-bold focus:border-accent focus:outline-none"
                                 placeholder="kg"
                               />
                               <span className="text-slate-500">×</span>
-                              <input 
-                                type="number" 
+                              <input
+                                type="number"
+                                inputMode="decimal"
                                 value={set.reps}
                                 onChange={(e) => {
                                   const updated = { ...current };
                                   updated.exercises[exIdx].sets[setIdx].reps = Number(e.target.value) || 0;
                                   setEditData(updated);
                                 }}
-                                className="w-16 bg-slate-800/50 border border-slate-600/50 text-white px-2 py-1 rounded text-xs focus:border-blue-500 focus:outline-none"
+                                className="touch-input flex-1 sm:w-16 bg-slate-800/50 border border-slate-600/50 text-white px-2 rounded-lg font-bold focus:border-accent focus:outline-none"
                                 placeholder="reps"
                               />
                               <button
@@ -420,11 +463,11 @@ export const HistoryView = ({ workouts, onViewWorkoutDetail, onDeleteWorkout, on
                         </div>
 
                         {!useExerciseDB ? (
-                          <input 
-                            type="text" 
+                          <input
+                            type="text"
                             value={newExercise.name}
                             onChange={(e) => setNewExercise({...newExercise, name: e.target.value})}
-                            className="w-full bg-slate-800/50 border border-slate-600/50 text-white px-3 py-2 rounded-lg text-sm focus:border-blue-500 focus:outline-none"
+                            className="touch-input w-full bg-slate-800/50 border border-slate-600/50 text-white px-3 rounded-xl focus:border-accent focus:outline-none"
                             placeholder="Exercise name"
                             autoFocus
                           />
@@ -457,27 +500,29 @@ export const HistoryView = ({ workouts, onViewWorkoutDetail, onDeleteWorkout, on
                           {newExercise.sets?.map((set, setIdx) => (
                             <div key={setIdx} className="flex items-center gap-2 text-xs p-2 bg-slate-900/40 rounded">
                               <span className="text-slate-400 font-bold">#{setIdx + 1}</span>
-                              <input 
-                                type="number" 
+                              <input
+                                type="number"
+                                inputMode="decimal"
                                 value={set.kg}
                                 onChange={(e) => {
                                   const updated = [...newExercise.sets];
                                   updated[setIdx].kg = Number(e.target.value) || 0;
                                   setNewExercise({...newExercise, sets: updated});
                                 }}
-                                className="w-16 bg-slate-800/50 border border-slate-600/50 text-white px-2 py-1 rounded text-xs focus:border-blue-500 focus:outline-none"
+                                className="touch-input w-14 sm:w-16 bg-slate-800/50 border border-slate-600/50 text-white px-2 rounded-lg font-bold focus:border-accent focus:outline-none"
                                 placeholder="kg"
                               />
                               <span className="text-slate-500">×</span>
-                              <input 
-                                type="number" 
+                              <input
+                                type="number"
+                                inputMode="decimal"
                                 value={set.reps}
                                 onChange={(e) => {
                                   const updated = [...newExercise.sets];
                                   updated[setIdx].reps = Number(e.target.value) || 0;
                                   setNewExercise({...newExercise, sets: updated});
                                 }}
-                                className="w-16 bg-slate-800/50 border border-slate-600/50 text-white px-2 py-1 rounded text-xs focus:border-blue-500 focus:outline-none"
+                                className="touch-input w-14 sm:w-16 bg-slate-800/50 border border-slate-600/50 text-white px-2 rounded-lg font-bold focus:border-accent focus:outline-none"
                                 placeholder="reps"
                               />
                               <button
@@ -526,12 +571,12 @@ export const HistoryView = ({ workouts, onViewWorkoutDetail, onDeleteWorkout, on
                     <Plus size={14} /> Add Exercise
                   </button>
 
-                  <textarea 
+                  <textarea
                     value={current.note || ''}
                     onChange={(e) => setEditData({...current, note: e.target.value})}
-                    className="w-full bg-slate-800/50 border border-slate-600/50 text-white px-4 py-2 rounded-lg text-sm resize-none focus:border-blue-500 focus:outline-none transition"
+                    className="touch-input w-full bg-slate-800/50 border border-slate-600/50 text-white px-4 rounded-xl resize-none focus:border-accent focus:outline-none transition"
                     placeholder="Workout notes..."
-                    rows={2}
+                    rows={3}
                   />
 
                   {/* Tags Section */}
@@ -607,7 +652,7 @@ export const HistoryView = ({ workouts, onViewWorkoutDetail, onDeleteWorkout, on
   ));
 
   return (
-    <div className="min-h-screen bg-black text-white pb-24">
+    <div className="min-h-screen bg-black text-white pb-24" ref={scrollContainerRef} onScroll={handleScroll} style={{ overflow: 'auto' }}>
       {/* Header */}
       <div className="bg-gradient-to-b from-black to-black/80 border-b border-white/10 p-4 sticky top-0 z-20">
         <h1 className="text-4xl font-black">HISTORY</h1>
@@ -682,15 +727,15 @@ export const HistoryView = ({ workouts, onViewWorkoutDetail, onDeleteWorkout, on
               {(filter || 'all') === 'all' ? 'Start your first workout to see it here' : 'Try a different filter'}
             </p>
           </div>
-        ) : filteredWorkouts.length > 200 ? (
-          // Use virtual list for large datasets (>200 workouts)
+        ) : filteredWorkouts.length > 50 ? (
+          // Use virtual list for larger datasets (>50 workouts)
           <VirtualList
             items={filteredWorkouts}
             itemHeight={320} // Approximate height of workout card
             containerHeight={window.innerHeight - 250}
             keyExtractor={(item) => item.id}
             renderItem={(workout) => (
-              <div key={workout.id} className="mb-3">
+              <div key={workout.id} data-workout-id={workout.id} data-workout-date={workout.date} className="mb-3">
                 <WorkoutCard 
                   workout={workout}
                   onViewDetail={() => onViewWorkoutDetail && onViewWorkoutDetail(workout.date)}
@@ -703,10 +748,12 @@ export const HistoryView = ({ workouts, onViewWorkoutDetail, onDeleteWorkout, on
             )}
           />
         ) : (
-          // Use grouped layout for small datasets (<200 workouts)
+          // Use grouped layout for small datasets (≤50 workouts)
           groupElements
         )}
       </div>
     </div>
   );
 };
+
+export const HistoryView = React.memo(HistoryViewInner);

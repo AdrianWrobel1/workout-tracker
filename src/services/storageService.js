@@ -269,26 +269,27 @@ class StorageService {
         }
       }
 
-      // Migrate settings
+      // Migrate settings (await all before marking migrated)
       const settingKeys = [
         'weeklyGoal', 'defaultStatsRange', 'userWeight',
         'enablePerformanceAlerts', 'enableHapticFeedback', 'trainingNotes'
       ];
 
+      const settingPromises = [];
       settingKeys.forEach(key => {
         const value = localStorage.getItem(key);
         if (value !== null) {
           try {
             const parsed = JSON.parse(value);
-            this.setSetting(key, parsed);
+            settingPromises.push(this.setSetting(key, parsed));
             stats.migratedSettings++;
           } catch (e) {
-            // Store as-is if not JSON
-            this.setSetting(key, value);
+            settingPromises.push(this.setSetting(key, value));
             stats.migratedSettings++;
           }
         }
       });
+      await Promise.all(settingPromises);
 
       // Mark as migrated
       await this.setSetting('_migratedFromLocalStorage', true);
@@ -511,7 +512,7 @@ class StorageService {
       workouts.forEach(workout => {
         if (Array.isArray(workout.exercises)) {
           workout.exercises.forEach(exercise => {
-            const exId = exercise.id;
+            const exId = exercise.exerciseId;
             if (!reverseMap.has(exId)) {
               reverseMap.set(exId, new Set());
             }
@@ -573,8 +574,8 @@ class StorageService {
       // Fallback: index miss, do full scan (slow path)
       const allWorkouts = await this.getAllFromStore(STORES.WORKOUTS);
       return allWorkouts
-        .filter(w => Array.isArray(w.exercises) && 
-                    w.exercises.some(e => e.id === exerciseId))
+        .filter(w => Array.isArray(w.exercises) &&
+                    w.exercises.some(e => e.exerciseId === exerciseId))
         .map(w => w.id);
     } catch (error) {
       console.error('✗ Failed to get workouts with exercise:', error);

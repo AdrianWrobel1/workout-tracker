@@ -28,6 +28,7 @@ function SortableExerciseItem({
   exIndex,
   workouts,
   activeWorkoutStartTime,
+  templateLastSnapshot,
   menuOpenIndex,
   setMenuOpenIndex,
   onAddExerciseNote,
@@ -86,7 +87,7 @@ function SortableExerciseItem({
     ? allExercises.filter((ex, idx) => ex.supersetId === exercise.supersetId && idx !== exIndex)
     : [];
 
-  const previousSets = getPreviousSets(exercise.exerciseId, workouts, activeWorkoutStartTime);
+  const previousSets = getPreviousSets(exercise.exerciseId, workouts, activeWorkoutStartTime, templateLastSnapshot);
   
   // Auto-scroll on new set added
   const prevSetCountRef = useRef(exercise.sets.length);
@@ -366,6 +367,7 @@ export function SortableExerciseList({
   exercises,
   workouts,
   activeWorkoutStartTime,
+  templateLastSnapshot = null,
   menuOpenIndex,
   setMenuOpenIndex,
   onReorderExercises,
@@ -439,6 +441,7 @@ export function SortableExerciseList({
               exIndex={exIndex}
               workouts={workouts}
               activeWorkoutStartTime={activeWorkoutStartTime}
+              templateLastSnapshot={templateLastSnapshot}
               menuOpenIndex={menuOpenIndex}
               setMenuOpenIndex={setMenuOpenIndex}
               onAddExerciseNote={onAddExerciseNote}

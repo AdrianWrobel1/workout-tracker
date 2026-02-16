@@ -38,7 +38,7 @@ export const TemplatesView = ({
             value={editingTemplate.name}
             onChange={(e) => onChange({ ...editingTemplate, name: e.target.value })}
             placeholder="Template Name"
-            className="w-full bg-slate-800/50 border border-slate-600/50 rounded-lg p-3 text-white font-black focus:border-accent focus:outline-none focus:accent-ring transition\"
+            className="touch-input w-full bg-slate-800/50 border border-slate-600/50 rounded-xl text-white font-black focus:border-accent focus:outline-none focus:accent-ring transition"
           />
 
           {/* Exercises List */}
@@ -77,10 +77,11 @@ export const TemplatesView = ({
                       <p className="text-xs text-slate-500 text-center py-2">No sets</p>
                     ) : (
                       exercise.sets.map((set, sIndex) => (
-                        <div key={sIndex} className="flex gap-1.5 items-center text-xs">
-                          <span className="text-slate-500 font-bold min-w-[1.5rem]">#{sIndex + 1}</span>
+                        <div key={sIndex} className="flex gap-2 items-center flex-wrap sm:flex-nowrap">
+                          <span className="text-slate-500 font-bold min-w-[2rem] text-sm">#{sIndex + 1}</span>
                           <input
                             type="number"
+                            inputMode="decimal"
                             placeholder="kg"
                             value={set.kg ?? 0}
                             onChange={(e) => {
@@ -88,11 +89,12 @@ export const TemplatesView = ({
                               updated.exercises[exIndex].sets[sIndex].kg = Number(e.target.value) || 0;
                               onChange(updated);
                             }}
-                            className="w-12 bg-slate-800/60 border border-slate-600/50 rounded p-1 text-center text-white font-bold text-xs focus:border-blue-500 focus:outline-none"
+                            className="touch-input flex-1 sm:w-16 bg-slate-800/60 border border-slate-600/50 rounded-lg text-center text-white font-bold focus:border-accent focus:outline-none"
                           />
                           <span className="text-slate-500">×</span>
                           <input
                             type="number"
+                            inputMode="decimal"
                             placeholder="reps"
                             value={set.reps ?? 0}
                             onChange={(e) => {
@@ -100,7 +102,7 @@ export const TemplatesView = ({
                               updated.exercises[exIndex].sets[sIndex].reps = Number(e.target.value) || 0;
                               onChange(updated);
                             }}
-                            className="w-12 bg-slate-800/60 border border-slate-600/50 rounded p-1 text-center text-white font-bold text-xs focus:border-blue-500 focus:outline-none"
+                            className="touch-input flex-1 sm:w-16 bg-slate-800/60 border border-slate-600/50 rounded-lg text-center text-white font-bold focus:border-accent focus:outline-none"
                           />
                           <button
                             onClick={() => {

@@ -16,7 +16,7 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { storage } from '../services/storageService';
+import { storage, STORES } from '../services/storageService';
 import { getExerciseRecords, getExerciseHistory } from '../domain/exercises';
 
 /**
@@ -34,7 +34,7 @@ export const useRecordsIndex = () => {
 
     (async () => {
       try {
-        const cached = await storage.getAllFromStore('recordsIndex');
+        const cached = await storage.getAllFromStore(STORES.RECORDS_INDEX);
         const map = new Map();
         cached.forEach(item => {
           map.set(item.exerciseId, item.records);
@@ -95,30 +95,31 @@ export const useRecordsIndex = () => {
 
       try {
         const updates = {};
-        const newMap = new Map(recordsIndex);
 
         // Calculate records for each exercise
         exerciseIds.forEach(exId => {
           if (exId) {
-            const records = getExerciseRecords(exId, workouts);
-            updates[exId] = records;
-            newMap.set(exId, records);
+            updates[exId] = getExerciseRecords(exId, workouts);
           }
         });
 
-        // Batch update in-memory map
-        setRecordsIndex(newMap);
+        // Batch update in-memory map (functional update to avoid race)
+        setRecordsIndex(prev => {
+          const newMap = new Map(prev);
+          Object.entries(updates).forEach(([exId, records]) => newMap.set(Number(exId) || exId, records));
+          return newMap;
+        });
 
         // Batch persist to IndexedDB
         const promises = Object.entries(updates).map(([exId, records]) =>
-          storage.setRecordsIndex(exId, records)
+          storage.setRecordsIndex(Number(exId) || exId, records)
         );
         await Promise.all(promises);
       } catch (error) {
         console.error('Failed to update records for exercises:', error);
       }
     },
-    [recordsIndex]
+    []
   );
 
   /**

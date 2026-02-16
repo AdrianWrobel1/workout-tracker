@@ -2,8 +2,34 @@
  * Workout-related domain logic
  */
 
-export const getPreviousSets = (exerciseId, workouts, excludeStartTime = null) => {
+/**
+ * Get previous sets from template's last workout snapshot (for prev/suggestions per template).
+ * Template.lastWorkoutSnapshot = { date, exercises: [{ exerciseId, name, sets: [{ kg, reps }] }] }.
+ */
+export const getPreviousSetsFromTemplate = (template, exerciseId) => {
+  if (!exerciseId || !template?.lastWorkoutSnapshot?.exercises) return [];
+  const ex = template.lastWorkoutSnapshot.exercises.find(e => e.exerciseId === exerciseId);
+  if (!ex?.sets?.length) return [];
+  const aligned = ex.sets.map(s => (s.kg != null || s.reps != null) ? { kg: Number(s.kg) || 0, reps: Number(s.reps) || 0 } : null);
+  if (aligned.some(a => a !== null)) return aligned;
+  return [];
+};
+
+/**
+ * Get previous sets for an exercise. If templateLastSnapshot is provided (from template.lastWorkoutSnapshot),
+ * use that first (prev per template); otherwise use global workout history.
+ */
+export const getPreviousSets = (exerciseId, workouts, excludeStartTime = null, templateLastSnapshot = null) => {
   if (!exerciseId) return [];
+
+  // Prefer template's last workout (prev per template: Pull A vs Pull B)
+  if (templateLastSnapshot?.exercises) {
+    const ex = templateLastSnapshot.exercises.find(e => e.exerciseId === exerciseId);
+    if (ex?.sets?.length) {
+      const aligned = ex.sets.map(s => (s.kg != null || s.reps != null) ? { kg: Number(s.kg) || 0, reps: Number(s.reps) || 0 } : null);
+      if (aligned.some(a => a !== null)) return aligned;
+    }
+  }
 
   const relevantWorkouts = workouts
     .filter(w => {
@@ -16,13 +42,29 @@ export const getPreviousSets = (exerciseId, workouts, excludeStartTime = null) =
     const ex = w.exercises.find(e => e.exerciseId === exerciseId);
     if (!ex) continue;
 
-    // Return an array aligned to set indices; value present only when that set was completed
     const aligned = ex.sets.map(s => (s.completed && !s.warmup) ? { kg: s.kg, reps: s.reps } : null);
-    // If there is at least one completed set, return this aligned array
     if (aligned.some(a => a !== null)) return aligned;
   }
 
   return [];
+};
+
+/**
+ * Build snapshot of completed sets for template.lastWorkoutSnapshot (prev per template).
+ * Only completed, non-warmup sets; used to suggest weights next time this template is run.
+ */
+export const buildLastWorkoutSnapshot = (completedWorkout) => {
+  if (!completedWorkout?.exercises) return null;
+  return {
+    date: completedWorkout.date,
+    exercises: (completedWorkout.exercises || [])
+      .map(ex => ({
+        exerciseId: ex.exerciseId,
+        name: ex.name,
+        sets: (ex.sets || []).filter(s => s.completed && !s.warmup).map(s => ({ kg: Number(s.kg) || 0, reps: Number(s.reps) || 0 }))
+      }))
+      .filter(ex => ex.sets.length > 0)
+  };
 };
 
 export const getWeekWorkouts = (workouts) => {
@@ -306,7 +348,7 @@ export const detectPRsInWorkout = (completedWorkout, previousWorkouts, calculate
     // Only add to prDetected if records were found
     if (recordTypesThisExercise.size > 0) {
       prDetected[ex.exerciseId] = {
-        exerciseName: ex.exerciseName,
+        exerciseName: ex.name,
         recordTypes: Array.from(recordTypesThisExercise),
         recordsPerSet: recordTypesPerSet
       };

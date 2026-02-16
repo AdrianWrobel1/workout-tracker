@@ -1,26 +1,33 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, Grid3X3, List } from 'lucide-react';
 import { ExerciseCard } from '../components/ExerciseCard';
 import { VirtualList } from '../components/VirtualList';
 
+const SORT_OPTIONS = [
+  { id: 'name-asc', label: 'Name A–Z' },
+  { id: 'name-desc', label: 'Name Z–A' },
+  { id: 'category', label: 'Category' },
+];
+
 export const ExercisesView = ({ exercisesDB, onAddExercise, onEditExercise, onDeleteExercise, onViewDetail, onToggleFavorite }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState(null); // null for all categories
+  const [categoryFilter, setCategoryFilter] = useState(null);
+  const [sortBy, setSortBy] = useState('name-asc');
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const [showSortDropdown, setShowSortDropdown] = useState(false);
+  const [compactMode, setCompactMode] = useState(false);
   const dropdownRef = useRef(null);
+  const sortDropdownRef = useRef(null);
 
-  // Close dropdown when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setShowCategoryDropdown(false);
-      }
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setShowCategoryDropdown(false);
+      if (sortDropdownRef.current && !sortDropdownRef.current.contains(e.target)) setShowSortDropdown(false);
     };
-    if (showCategoryDropdown) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [showCategoryDropdown]);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showCategoryDropdown, showSortDropdown]);
 
   // Get unique categories
   const categories = useMemo(() => {
@@ -50,24 +57,38 @@ export const ExercisesView = ({ exercisesDB, onAddExercise, onEditExercise, onDe
     
     // Category filter
     if (categoryFilter) {
-      result = result.filter(ex => 
-        ex.category === categoryFilter || 
+      result = result.filter(ex =>
+        ex.category === categoryFilter ||
         (ex.muscles && ex.muscles.includes(categoryFilter))
       );
     }
-    
-    // Separate favorites from others
-    const favorites = result.filter(ex => ex.isFavorite).sort((a, b) => a.name.localeCompare(b.name));
-    const others = result.filter(ex => !ex.isFavorite).sort((a, b) => a.name.localeCompare(b.name));
-    
+
+    // Sort
+    if (sortBy === 'name-asc') result = [...result].sort((a, b) => a.name.localeCompare(b.name));
+    else if (sortBy === 'name-desc') result = [...result].sort((a, b) => b.name.localeCompare(a.name));
+    else if (sortBy === 'category') result = [...result].sort((a, b) => (a.category || '').localeCompare(b.category || '') || a.name.localeCompare(b.name));
+
+    // Separate favorites from others (order preserved from sort)
+    const favorites = result.filter(ex => ex.isFavorite);
+    const others = result.filter(ex => !ex.isFavorite);
+
     return { favorites, others, all: result };
-  }, [exercisesDB, searchQuery, categoryFilter]);
+  }, [exercisesDB, searchQuery, categoryFilter, sortBy]);
 
   return (
     <div className="min-h-screen bg-black text-white pb-24 flex flex-col">
       {/* Header */}
       <div className="bg-gradient-to-b from-black to-black/80 border-b border-white/10 p-4 shrink-0 shadow-2xl sticky top-0 z-20">
-        <h1 className="text-4xl font-black">EXERCISES</h1>
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-4xl font-black">EXERCISES</h1>
+          <button
+            onClick={() => setCompactMode(!compactMode)}
+            className="p-2 hover:bg-white/10 rounded-lg transition text-slate-400 hover:text-white"
+            title={compactMode ? 'Grid view' : 'Compact list view'}
+          >
+            {compactMode ? <Grid3X3 size={20} /> : <List size={20} />}
+          </button>
+        </div>
         <p className="text-xs text-slate-400 mt-2 font-semibold tracking-widest">YOUR EXERCISE LIBRARY</p>
       </div>
 
@@ -93,16 +114,41 @@ export const ExercisesView = ({ exercisesDB, onAddExercise, onEditExercise, onDe
           />
         </div>
 
-        {/* Category Filter Dropdown */}
-        {categories.length > 0 && (
-          <div className="relative mb-4" ref={dropdownRef}>
+        {/* Sort + Category row */}
+        <div className="flex gap-2 mb-4">
+          <div className="relative flex-1" ref={sortDropdownRef}>
             <button
-              onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
-              className="w-full bg-slate-800/50 border border-slate-600/50 hover:bg-slate-700/50 text-white rounded-lg px-4 py-3 text-sm font-bold flex items-center justify-between transition"
+              onClick={() => setShowSortDropdown(!showSortDropdown)}
+              className="w-full bg-slate-800/50 border border-slate-600/50 hover:bg-slate-700/50 text-white rounded-lg px-4 py-3 text-sm font-bold flex items-center justify-between transition touch-input"
             >
-              <span>Category: {categoryFilter || 'All'}</span>
-              <span className={`text-xs transition-transform ${showCategoryDropdown ? 'rotate-180' : ''}`}>▾</span>
+              <span>Sort: {SORT_OPTIONS.find(o => o.id === sortBy)?.label || 'Name A–Z'}</span>
+              <span className={`text-xs transition-transform ${showSortDropdown ? 'rotate-180' : ''}`}>▾</span>
             </button>
+            {showSortDropdown && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-slate-900/95 border border-slate-700/50 rounded-lg shadow-lg z-50">
+                {SORT_OPTIONS.map(opt => (
+                  <button
+                    key={opt.id}
+                    onClick={() => { setSortBy(opt.id); setShowSortDropdown(false); }}
+                    className={`w-full text-left px-4 py-3 text-sm font-semibold transition-colors ${
+                      sortBy === opt.id ? 'accent-bg-light text-white' : 'text-slate-300 hover:bg-slate-800/50'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          {categories.length > 0 && (
+            <div className="relative flex-1" ref={dropdownRef}>
+              <button
+                onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
+                className="w-full bg-slate-800/50 border border-slate-600/50 hover:bg-slate-700/50 text-white rounded-lg px-4 py-3 text-sm font-bold flex items-center justify-between transition touch-input"
+              >
+                <span className="truncate">Tag: {categoryFilter || 'All'}</span>
+                <span className={`text-xs shrink-0 transition-transform ${showCategoryDropdown ? 'rotate-180' : ''}`}>▾</span>
+              </button>
             {showCategoryDropdown && (
               <div className="absolute top-full left-0 right-0 mt-2 bg-slate-900/95 border border-slate-700/50 rounded-lg shadow-lg z-50">
                 <button
@@ -136,8 +182,9 @@ export const ExercisesView = ({ exercisesDB, onAddExercise, onEditExercise, onDe
                 ))}
               </div>
             )}
-          </div>
-        )}
+            </div>
+          )}
+        </div>
 
         {/* Results Count */}
         {searchQuery && (
@@ -155,6 +202,25 @@ export const ExercisesView = ({ exercisesDB, onAddExercise, onEditExercise, onDe
                 {searchQuery ? 'Try a different search term' : 'Create your first exercise to get started'}
               </p>
             </div>
+          </div>
+        ) : compactMode ? (
+          // Compact list view for screenshots
+          <div className="space-y-1 flex-1">
+            {filtered.all.map(exercise => (
+              <button
+                key={exercise.id}
+                onClick={() => onViewDetail(exercise.id)}
+                className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800/50 transition text-sm group"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-white group-hover:accent-text transition truncate">{exercise.name}</div>
+                    <div className="text-xs text-slate-500">{exercise.category} • {exercise.muscles?.join(', ') || 'General'}</div>
+                  </div>
+                  {exercise.isFavorite && <span className="text-amber-400 ml-2 shrink-0">⭐</span>}
+                </div>
+              </button>
+            ))}
           </div>
         ) : filtered.all.length > 50 ? (
           // OPTIMIZED: Use virtual list for 50+ exercises - 95% DOM reduction
