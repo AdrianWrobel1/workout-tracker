@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ChevronLeft } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { ChevronLeft, Download, CalendarRange, FileJson, FileText } from 'lucide-react';
 
 export const ExportDataView = ({ onBack, onExport }) => {
   const [exportMode, setExportMode] = useState('period'); // 'period' | 'all'
@@ -7,133 +7,145 @@ export const ExportDataView = ({ onBack, onExport }) => {
   const [toDate, setToDate] = useState('');
   const [format, setFormat] = useState('');
 
-  const isValid = exportMode === 'all' 
-    ? format 
-    : (fromDate && toDate && format);
-  const fromDateObj = new Date(fromDate);
-  const toDateObj = new Date(toDate);
-  const isDateRangeValid = exportMode === 'all' || (fromDateObj <= toDateObj);
+  const isDateRangeValid = useMemo(() => {
+    if (exportMode === 'all') return true;
+    if (!fromDate || !toDate) return false;
+    return new Date(fromDate) <= new Date(toDate);
+  }, [exportMode, fromDate, toDate]);
+
+  const isValid = exportMode === 'all'
+    ? Boolean(format)
+    : Boolean(fromDate && toDate && format && isDateRangeValid);
 
   const handleExport = () => {
-    if (isValid && isDateRangeValid) {
-      onExport({ fromDate, toDate, format, exportMode });
-    }
+    if (!isValid) return;
+    onExport({ fromDate, toDate, format, exportMode });
   };
 
   return (
-    <div className="min-h-screen bg-zinc-900 text-white pb-24">
-      {/* Header */}
-      <div className="bg-zinc-800 p-4 flex items-center gap-4 sticky top-0 z-10 shadow-md">
-        <button onClick={onBack} className="hover:text-zinc-300 transition">
-          <ChevronLeft size={24} />
-        </button>
-        <h1 className="text-xl font-bold">Eksport danych</h1>
+    <div className="min-h-screen bg-black text-white pb-24">
+      <div className="sticky top-0 z-20 bg-gradient-to-b from-black to-black/80 border-b border-white/10 px-4 py-4 shadow-2xl">
+        <div className="flex items-center gap-3">
+          <button onClick={onBack} className="p-2 rounded-lg hover:bg-white/10 transition">
+            <ChevronLeft size={20} />
+          </button>
+          <div>
+            <h1 className="text-2xl font-black">Export Data</h1>
+            <p className="text-[11px] text-slate-400 font-semibold tracking-widest mt-0.5">CUSTOM EXPORT</p>
+          </div>
+        </div>
       </div>
 
-      <div className="p-6 space-y-6">
-        {/* Export Mode Section */}
-        <div className="space-y-4">
-          <h2 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider">Zakres eksportu</h2>
-          
-          <div className="space-y-2.5">
-            {[
-              { value: 'period', label: 'Treningi z zakresu dat' },
-              { value: 'all', label: 'Wszystko (treningi + ćwiczenia + szablony)' }
-            ].map(opt => (
-              <label key={opt.value} className="flex items-center gap-3 p-4 rounded-lg bg-zinc-800 hover:bg-zinc-750 cursor-pointer transition border border-zinc-700 hover:border-zinc-600"
-              >
-                <input
-                  type="radio"
-                  name="exportMode"
-                  value={opt.value}
-                  checked={exportMode === opt.value}
-                  onChange={(e) => setExportMode(e.target.value)}
-                  className="w-4 h-4 cursor-pointer accent-rose-500"
-                />
-                <span className="text-sm text-white flex-1">{opt.label}</span>
-              </label>
-            ))}
+      <div className="p-4 space-y-4">
+        <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <CalendarRange size={16} className="text-slate-300" />
+            <p className="text-xs font-semibold tracking-widest text-slate-400">SCOPE</p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-2">
+            <button
+              onClick={() => setExportMode('period')}
+              className={`text-left rounded-lg border px-3 py-2.5 transition ${
+                exportMode === 'period'
+                  ? 'accent-bg-light accent-border-light text-white'
+                  : 'bg-slate-900/50 border-slate-700/60 text-slate-300 hover:border-slate-600/70'
+              }`}
+            >
+              <p className="text-sm font-bold">Date range</p>
+              <p className="text-[11px] opacity-80 mt-0.5">Export workouts from selected period</p>
+            </button>
+            <button
+              onClick={() => setExportMode('all')}
+              className={`text-left rounded-lg border px-3 py-2.5 transition ${
+                exportMode === 'all'
+                  ? 'accent-bg-light accent-border-light text-white'
+                  : 'bg-slate-900/50 border-slate-700/60 text-slate-300 hover:border-slate-600/70'
+              }`}
+            >
+              <p className="text-sm font-bold">Full backup</p>
+              <p className="text-[11px] opacity-80 mt-0.5">Workouts + exercises + templates</p>
+            </button>
           </div>
         </div>
 
-        {/* Date Range Section - visible only for period mode */}
         {exportMode === 'period' && (
-          <div className="space-y-4 pt-4 border-t border-zinc-700">
-            <h2 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider">Zakres dat</h2>
-            
-            <div className="space-y-2">
-              <label className="block text-xs text-zinc-400">Od</label>
-              <input
-                type="date"
-                value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:border-zinc-600 hover:border-zinc-600 transition"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-xs text-zinc-400">Do</label>
+          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-4">
+            <p className="text-xs font-semibold tracking-widest text-slate-400 mb-3">DATE RANGE</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] text-slate-400 font-semibold mb-1.5">From</label>
+                <input
+                  type="date"
+                  value={fromDate}
+                  onChange={(event) => setFromDate(event.target.value)}
+                  className="w-full bg-slate-900/60 border border-slate-700/60 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:accent-ring focus:border-accent transition"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] text-slate-400 font-semibold mb-1.5">To</label>
                 <input
                   type="date"
                   value={toDate}
-                  onChange={(e) => setToDate(e.target.value)}
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:border-zinc-600 hover:border-zinc-600 transition"
+                  onChange={(event) => setToDate(event.target.value)}
+                  className="w-full bg-slate-900/60 border border-slate-700/60 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:accent-ring focus:border-accent transition"
                 />
-            </div>
-
-            {fromDate && toDate && !isDateRangeValid && (
-              <div className="text-xs text-red-400 bg-red-500/10 p-2 rounded border border-red-500/20">
-                Data początkowa nie może być po dacie końcowej
               </div>
+            </div>
+            {!isDateRangeValid && fromDate && toDate && (
+              <p className="text-xs text-rose-300 mt-2">Start date must be earlier than end date.</p>
             )}
           </div>
         )}
 
-        {/* Format Section */}
-        <div className="space-y-4 pt-4 border-t border-zinc-700">
-          <h2 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider">Format</h2>
-          
-          <div className="space-y-2.5">
-            {[
-              { value: 'txt', label: 'Tekst' },
-              { value: 'json', label: 'JSON' }
-            ].map(opt => (
-              <label key={opt.value} className="flex items-center gap-3 p-4 rounded-lg bg-zinc-800 hover:bg-zinc-750 cursor-pointer transition border border-zinc-700 hover:border-zinc-600"
-              >
-                <input
-                  type="radio"
-                  name="format"
-                  value={opt.value}
-                  checked={format === opt.value}
-                  onChange={(e) => setFormat(e.target.value)}
-                  className="w-4 h-4 cursor-pointer accent-rose-500"
-                />
-                <span className="text-sm text-white flex-1">{opt.label}</span>
-              </label>
-            ))}
+        <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-4">
+          <p className="text-xs font-semibold tracking-widest text-slate-400 mb-3">FORMAT</p>
+          <div className="grid grid-cols-2 gap-2.5">
+            <button
+              onClick={() => setFormat('txt')}
+              className={`rounded-lg border px-3 py-3 transition ${
+                format === 'txt'
+                  ? 'accent-bg-light accent-border-light text-white'
+                  : 'bg-slate-900/50 border-slate-700/60 text-slate-300 hover:border-slate-600/70'
+              }`}
+            >
+              <div className="flex items-center justify-center gap-2">
+                <FileText size={16} />
+                <span className="text-sm font-bold">TXT</span>
+              </div>
+            </button>
+            <button
+              onClick={() => setFormat('json')}
+              className={`rounded-lg border px-3 py-3 transition ${
+                format === 'json'
+                  ? 'accent-bg-light accent-border-light text-white'
+                  : 'bg-slate-900/50 border-slate-700/60 text-slate-300 hover:border-slate-600/70'
+              }`}
+            >
+              <div className="flex items-center justify-center gap-2">
+                <FileJson size={16} />
+                <span className="text-sm font-bold">JSON</span>
+              </div>
+            </button>
           </div>
         </div>
 
-        {/* Export Button */}
-        <div className="pt-6 border-t border-zinc-700">
-          <button
-            onClick={handleExport}
-            disabled={!isValid || !isDateRangeValid}
-            className={`w-full py-3 rounded-lg font-semibold transition text-white ${
-              isValid && isDateRangeValid
-                ? 'bg-rose-500 hover:bg-rose-600 ui-press cursor-pointer'
-                : 'bg-zinc-700 text-zinc-500 cursor-not-allowed opacity-50'
-            }`}
-          >
-            Eksportuj
-          </button>
-        </div>
+        <button
+          onClick={handleExport}
+          disabled={!isValid}
+          className={`w-full py-3.5 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${
+            isValid
+              ? 'bg-gradient-accent text-white shadow-lg ui-press'
+              : 'bg-slate-700/50 text-slate-500 cursor-not-allowed'
+          }`}
+        >
+          <Download size={18} />
+          Export
+        </button>
 
-        {/* Info */}
-        <div className="text-xs text-zinc-500 text-center pt-4">
-          {format && `Format: ${format.toUpperCase()}`}
-          {format && fromDate && toDate && ` • Zakres: ${fromDate} do ${toDate}`}
-        </div>
+        <p className="text-[11px] text-slate-500 text-center">
+          {format ? `Format: ${format.toUpperCase()}` : 'Choose format to continue'}
+        </p>
       </div>
     </div>
   );

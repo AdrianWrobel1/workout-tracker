@@ -167,6 +167,40 @@ body {
   animation: pr-bounce 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
 }
 
+/* Intentional set-state motion: planned -> done -> PR */
+.ui-set-planned {
+  transition: background-color 180ms var(--anim-ease), border-color 180ms var(--anim-ease), transform 180ms var(--anim-ease);
+}
+@keyframes ui-set-done-pop {
+  0% { transform: scale(0.985); filter: saturate(0.95); }
+  60% { transform: scale(1.01); filter: saturate(1.12); }
+  100% { transform: scale(1); filter: saturate(1); }
+}
+.ui-set-done {
+  animation: ui-set-done-pop 220ms var(--anim-ease);
+}
+@keyframes ui-set-pr-flash {
+  0% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.0); }
+  50% { box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.16); }
+  100% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.0); }
+}
+.ui-set-pr {
+  animation: ui-set-pr-flash 320ms var(--anim-ease);
+}
+
+@keyframes ui-set-pr-hit {
+  0% { transform: scale(0.985) translateX(0); filter: saturate(1); }
+  20% { transform: scale(1.01) translateX(-1px); filter: saturate(1.12); }
+  40% { transform: scale(1.005) translateX(1px); }
+  65% { transform: scale(1.01) translateX(-1px); }
+  100% { transform: scale(1) translateX(0); filter: saturate(1); }
+}
+.ui-set-done-pr {
+  animation:
+    ui-set-pr-hit 420ms var(--anim-ease),
+    ui-set-pr-flash 380ms var(--anim-ease);
+}
+
 /* Checkbox micro animation: scale + color transition when checked */
 .ui-checkbox { transition: transform 140ms var(--anim-ease), background-color var(--anim-duration) var(--anim-ease), border-color var(--anim-duration) var(--anim-ease); }
 .ui-checkbox:active { transform: scale(0.98); }

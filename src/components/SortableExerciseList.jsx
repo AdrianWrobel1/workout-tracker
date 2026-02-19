@@ -40,6 +40,7 @@ function SortableExerciseItem({
   onAddNote,
   onDeleteSet,
   onToggleWarmup,
+  onSetSetType,
   onAddWarmupSet,
   exercisesDB,
   deleteModeIndex,
@@ -83,9 +84,6 @@ function SortableExerciseItem({
   };
 
   const supersetColor = getSupersetColor(exercise.supersetId);
-  const otherSupersetExercises = exercise.supersetId 
-    ? allExercises.filter((ex, idx) => ex.supersetId === exercise.supersetId && idx !== exIndex)
-    : [];
 
   const previousSets = getPreviousSets(exercise.exerciseId, workouts, activeWorkoutStartTime, templateLastSnapshot);
   
@@ -186,9 +184,9 @@ function SortableExerciseItem({
                 </button>
               </div>
               
-              {/* Warmup Section */}
+              {/* Set Type Section */}
               <div className="border-t border-slate-700 p-2">
-                <div className="text-xs font-bold text-slate-500 uppercase tracking-widest px-3 py-2">Warmup</div>
+                <div className="text-xs font-bold text-slate-500 uppercase tracking-widest px-3 py-2">Set Types</div>
                 <button
                   onClick={() => {
                     onAddWarmupSet(exIndex);
@@ -207,7 +205,7 @@ function SortableExerciseItem({
                   className="flex items-center gap-3 w-full text-left px-3 py-2.5 text-sm hover:bg-slate-800 rounded-lg transition text-amber-300 font-medium"
                 >
                   <Zap size={16} className="flex-shrink-0" />
-                  <span>Edit Warmup Sets</span>
+                  <span>Edit Set Types</span>
                 </button>
               </div>
               
@@ -324,12 +322,12 @@ function SortableExerciseItem({
         </div>
       )}
 
-      {/* Warmup mode - Toggle warmup on individual sets */}
+      {/* Set type mode - cycle set type on individual sets */}
       {warmupModeIndex === exIndex && (
         <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg flex items-center justify-between gap-3">
           <div>
-            <p className="text-sm font-bold text-amber-400">🔥 Warmup edit mode</p>
-            <p className="text-xs text-amber-300 mt-1">Toggle warmup sets or swipe to delete</p>
+            <p className="text-sm font-bold text-amber-400">Set type edit mode</p>
+            <p className="text-xs text-amber-300 mt-1">Choose type directly per set from the selector</p>
           </div>
           <button
             onClick={() => setWarmupModeIndex(null)}
@@ -351,6 +349,7 @@ function SortableExerciseItem({
         onAddNote={onAddNote}
         onDeleteSet={onDeleteSet}
         onToggleWarmup={onToggleWarmup}
+        onSetSetType={onSetSetType}
         deleteModeActive={deleteModeIndex === exIndex}
         warmupModeActive={warmupModeIndex === exIndex}
         onOpenKeypad={onOpenKeypad}
@@ -380,6 +379,7 @@ export function SortableExerciseList({
   onAddNote,
   onDeleteSet,
   onToggleWarmup,
+  onSetSetType,
   onAddWarmupSet,
   exercisesDB,
   deleteModeIndex,
@@ -453,6 +453,7 @@ export function SortableExerciseList({
               onAddNote={onAddNote}
               onDeleteSet={onDeleteSet}
               onToggleWarmup={onToggleWarmup}
+              onSetSetType={onSetSetType}
               onAddWarmupSet={onAddWarmupSet}
               exercisesDB={exercisesDB}
               deleteModeIndex={deleteModeIndex}
@@ -470,3 +471,4 @@ export function SortableExerciseList({
     </DndContext>
   );
 }
+

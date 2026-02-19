@@ -3,7 +3,9 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 // DOMAIN
 import { calculate1RM } from './domain/calculations';
 import { getExerciseRecords, getLastCompletedSets, suggestNextWeight, checkSetRecords } from './domain/exercises';
-import { prepareCleanWorkoutData, compareWorkoutToPrevious, generateSessionFeedback, calculateMuscleDistribution, detectPRsInWorkout, buildLastWorkoutSnapshot } from './domain/workouts';
+import { prepareCleanWorkoutData, compareWorkoutToPrevious, generateSessionFeedback, calculateMuscleDistribution, detectPRsInWorkout, buildLastWorkoutSnapshot, generateCoachLens } from './domain/workouts';
+import { normalizeSetForStorage, normalizeWorkoutExerciseForStorage, isWarmupSet } from './domain/workoutExtensions';
+import { calculateReadiness, calculateBlockProgress, optimizeSession, calculateMuscleBalance } from './analytics';
 
 // HOOKS
 import { useDebouncedLocalStorage, useDebouncedLocalStorageManual } from './hooks/useLocalStorage';
@@ -39,6 +41,10 @@ import { ProfileCalendarView } from './views/ProfileCalendarView';
 import { SettingsView } from './views/SettingsView';
 import { MonthlyProgressView } from './views/MonthlyProgressView';
 import { ExportDataView } from './views/ExportDataView';
+
+const ENABLE_BLOCKS = true;
+const ENABLE_OPTIMIZER = true;
+const ENABLE_READINESS = true;
 
 
 export default function App() {
@@ -102,9 +108,12 @@ export default function App() {
   const [selectedExerciseIndex, setSelectedExerciseIndex] = useState(null);
   const [historyScrollPosition, setHistoryScrollPosition] = useState(null);
   const [scrollToWorkoutDate, setScrollToWorkoutDate] = useState(null);
+  const [autosaveStatus, setAutosaveStatus] = useState({ state: 'idle', savedAt: null }); // idle | saving | saved | error
   
   // Undo deleted workout
   const undoTimeoutRef = useRef(null);
+  const autosaveRequestRef = useRef(0);
+  const prBannerTimeoutRef = useRef(null);
 
   // Initialize accent color from localStorage on app startup
   useEffect(() => {
@@ -192,11 +201,27 @@ export default function App() {
   // activeWorkout requires immediate async save (no debounce for critical data)
   const { saveAsync } = useIndexedDBDirect();
   useEffect(() => {
+    if (!activeWorkout) {
+      setAutosaveStatus({ state: 'idle', savedAt: null });
+      return;
+    }
+
+    const requestId = ++autosaveRequestRef.current;
+    setAutosaveStatus(prev => ({ state: 'saving', savedAt: prev.savedAt }));
+
     const timeoutId = setTimeout(() => {
-      if (activeWorkout) {
-        saveAsync(STORES.WORKOUTS, { ...activeWorkout, id: 'activeWorkout' });
-      }
+      (async () => {
+        const ok = await saveAsync(STORES.WORKOUTS, { ...activeWorkout, id: 'activeWorkout' });
+        if (requestId !== autosaveRequestRef.current) return;
+
+        if (ok) {
+          setAutosaveStatus({ state: 'saved', savedAt: new Date().toISOString() });
+        } else {
+          setAutosaveStatus(prev => ({ state: 'error', savedAt: prev.savedAt }));
+        }
+      })();
     }, 100); // Small debounce to batch rapid updates
+
     return () => clearTimeout(timeoutId);
   }, [activeWorkout, saveAsync]);
 
@@ -210,6 +235,45 @@ export default function App() {
     }
     return () => clearInterval(interval);
   }, [activeWorkout]);
+
+  const readiness = useMemo(() => (
+    ENABLE_READINESS ? calculateReadiness(workouts) : null
+  ), [workouts]);
+  const muscleBalance = useMemo(() => (
+    calculateMuscleBalance(workouts, exercisesDB)
+  ), [workouts, exercisesDB]);
+
+  const activeTemplateForProgress = useMemo(() => {
+    if (!activeWorkout?.templateId) return null;
+    return templates.find(template => template.id === activeWorkout.templateId) || null;
+  }, [activeWorkout?.templateId, templates]);
+
+  const activeBlockProgress = useMemo(() => {
+    if (!ENABLE_BLOCKS || !activeTemplateForProgress?.block) return null;
+    return calculateBlockProgress(activeTemplateForProgress, workouts, { strictTemplateIdMatch: true });
+  }, [activeTemplateForProgress, workouts]);
+
+  // Fallback auto-close for PR banner (prevents stuck banner states)
+  useEffect(() => {
+    if (prBannerTimeoutRef.current) {
+      clearTimeout(prBannerTimeoutRef.current);
+      prBannerTimeoutRef.current = null;
+    }
+    if (!prBannerVisible) return;
+
+    const recordsCount = Math.max(1, Number(activePRBanner?.recordTypes?.length) || 1);
+    const ttl = 2100 * recordsCount + 1200;
+    prBannerTimeoutRef.current = setTimeout(() => {
+      setPRBannerVisible(false);
+    }, ttl);
+
+    return () => {
+      if (prBannerTimeoutRef.current) {
+        clearTimeout(prBannerTimeoutRef.current);
+        prBannerTimeoutRef.current = null;
+      }
+    };
+  }, [prBannerVisible, activePRBanner, setPRBannerVisible]);
 
   // --- ACTIONS: EXERCISES ---
 
@@ -236,12 +300,14 @@ export default function App() {
 
     // If exercise was created from activeWorkout, add it and return
     if (exerciseCreateSource === 'activeWorkout' && activeWorkout) {
-      const newExercise = { 
+      const newExercise = normalizeWorkoutExerciseForStorage({
         exerciseId: newExerciseId, 
         name: exercise.name, 
         category: exercise.category,
-        sets: exercise.defaultSets?.map(s => ({ kg: 0, reps: 0, completed: false, warmup: false })) || [{ kg: 0, reps: 0, completed: false, warmup: false }]
-      };
+        priority: 3,
+        nonNegotiable: false,
+        sets: exercise.defaultSets?.map(() => normalizeSetForStorage({ kg: 0, reps: 0, completed: false }, 'work')) || [normalizeSetForStorage({ kg: 0, reps: 0, completed: false }, 'work')]
+      });
       setActiveWorkout({
         ...activeWorkout,
         exercises: [...(activeWorkout.exercises || []), newExercise]
@@ -265,27 +331,71 @@ export default function App() {
   // --- ACTIONS: WORKOUTS ---
 
   const handleStartWorkout = useCallback((template) => {
+    if (!template) return;
+
+    const now = new Date();
+    const timeLimit = Number(template?.optimizerRules?.defaultTimeLimitMin) || 0;
+    let sourceTemplate = template;
+    let optimizerMeta;
+
+    if (ENABLE_OPTIMIZER && timeLimit > 0) {
+      const optimized = optimizeSession(template, timeLimit, workouts, {
+        minWorkSetsPerExercise: Number(template?.optimizerRules?.minWorkSetsPerExercise) || 1,
+        keepTopPriorityCount: Number(template?.optimizerRules?.keepTopPriorityCount) || 1
+      });
+      sourceTemplate = optimized.optimizedTemplate || template;
+      optimizerMeta = {
+        timeLimitMin: timeLimit,
+        mode: optimized.removed.length > 0 ? 'minimum-effective' : 'full',
+        reduced: optimized.removed.length > 0
+      };
+    }
+
+    const block = sourceTemplate?.block || template?.block;
+    const currentWeek = Number(block?.currentWeek) || undefined;
+    const currentWeekPlan = Array.isArray(block?.weekPlan)
+      ? block.weekPlan.find((week) => Number(week?.weekIndex) === currentWeek)
+      : null;
+
+    const blockRef = ENABLE_BLOCKS && block?.blockId
+      ? {
+          blockId: block.blockId,
+          weekIndex: currentWeek,
+          microcycle: currentWeek,
+          isDeloadWeek: Boolean(currentWeekPlan?.isDeload)
+        }
+      : undefined;
+
+    const exercises = (sourceTemplate.exercises || []).map((exercise) => {
+      const dbExercise = exercise.exerciseId != null
+        ? exercisesDB.find(item => item.id === exercise.exerciseId)
+        : exercisesDB.find(item => item.name === exercise.name);
+
+      return normalizeWorkoutExerciseForStorage({
+        ...exercise,
+        exerciseId: exercise.exerciseId ?? dbExercise?.id ?? null,
+        sets: (exercise.sets || []).map(set => normalizeSetForStorage({
+          ...set,
+          completed: false
+        }))
+      });
+    });
+
     setActiveWorkout({
       templateId: template.id,
       name: template.name,
       note: '',
-      date: new Date().toISOString().split('T')[0],
-      startTime: new Date().toISOString(),
-      exercises: template.exercises.map(ex => ({
-        // Mapujemy nazwę na ID jeśli możliwe, dla spójności
-        exerciseId: exercisesDB.find(e => e.name === ex.name)?.id || null,
-        name: ex.name,
-        category: ex.category,
-        sets: ex.sets.map(set => ({ ...set, completed: false }))
-      }))
-    ,
-    // keep snapshot of template at start so diff can be computed even if templates change
-    templateSnapshot: JSON.parse(JSON.stringify(template))
+      date: now.toISOString().split('T')[0],
+      startTime: now.toISOString(),
+      exercises,
+      ...(blockRef ? { blockRef } : {}),
+      ...(optimizerMeta ? { optimizerMeta } : {}),
+      templateSnapshot: JSON.parse(JSON.stringify(template))
     });
     setWorkoutTimer(0);
     setView('activeWorkout');
     setActiveTab('home');
-  }, [exercisesDB]);
+  }, [exercisesDB, workouts]);
 
   const computeTemplateDiff = (template, workout) => {
     const tEx = template?.exercises || [];
@@ -369,6 +479,12 @@ export default function App() {
     // Pre-calculate PR status (on clone; no mutation of activeWorkout)
     const prStatus = detectPRsInWorkout(completedWorkout, workouts, calculate1RM, getExerciseRecords);
     const hasPR = Object.keys(prStatus).length > 0;
+    const coachLens = generateCoachLens(
+      completedWorkout,
+      workouts,
+      comparison,
+      prStatus
+    );
     
     setSelectedTags([]); // reset tag selection
     setPendingSummary({ 
@@ -378,9 +494,10 @@ export default function App() {
       metrics: { ...metrics, muscleTotals },
       cleanData,
       comparison,
-      feedback
+      feedback,
+      coachLens
     });
-  }, [activeWorkout, templates, workouts, exercisesDB]);
+  }, [activeWorkout, templates, workouts, exercisesDB, getExerciseRecords]);
   const handleMinimizeWorkout = useCallback(() => {
     setIsWorkoutMinimized(true);
     setView('home');
@@ -568,7 +685,7 @@ export default function App() {
       if (exId) {
         const kg = Number(set.kg) || 0;
         const reps = Number(set.reps) || 0;
-        if (kg > 0 && reps > 0 && !set.warmup) {
+        if (kg > 0 && reps > 0 && !isWarmupSet(set)) {
           const this1RM = calculate1RM(kg, reps);
           
           // Use cache if available, fallback to calculation
@@ -603,11 +720,6 @@ export default function App() {
               if (enableHapticFeedback && navigator.vibrate) {
                 navigator.vibrate([20, 10, 20]);
               }
-
-              // Auto-dismiss banner after banner sequence completes (doubled time for mobile)
-              setTimeout(() => {
-                setPRBannerVisible(false);
-              }, 6000);
             }
           }
         }
@@ -650,15 +762,22 @@ export default function App() {
   }, [activeWorkout, workouts, exercisesDB, enablePerformanceAlerts, enableHapticFeedback, showToast]);
 
   const handleAddSet = useCallback((exIndex) => {
-    // FIXED: Deep copy for immutability
+    if (!activeWorkout) return;
     const updated = {
       ...activeWorkout,
-      exercises: activeWorkout.exercises.map((ex, idx) => {
-        if (idx !== exIndex) return ex;
-        const lastSet = ex.sets.at(-1) || { kg: 0, reps: 0 };
+      exercises: activeWorkout.exercises.map((exercise, idx) => {
+        if (idx !== exIndex) return exercise;
+        const lastSet = exercise.sets.at(-1) || { kg: 0, reps: 0, completed: false };
+        const nextSet = normalizeSetForStorage({
+          ...lastSet,
+          completed: false,
+          isBest1RM: false,
+          isBestSetVolume: false,
+          isHeaviestWeight: false
+        });
         return {
-          ...ex,
-          sets: [...ex.sets, { ...lastSet, completed: false }]
+          ...exercise,
+          sets: [...exercise.sets, nextSet]
         };
       })
     };
@@ -666,28 +785,79 @@ export default function App() {
   }, [activeWorkout]);
 
   const handleAddWarmupSet = useCallback((exIndex) => {
-    const updated = { ...activeWorkout };
-    const firstSet = updated.exercises[exIndex].sets[0] || { kg: 0, reps: 0 };
-    // insert before first set so it appears as #0
-    updated.exercises[exIndex].sets = [{ ...firstSet, completed: false, warmup: true }, ...updated.exercises[exIndex].sets];
+    if (!activeWorkout) return;
+    const updated = {
+      ...activeWorkout,
+      exercises: activeWorkout.exercises.map((exercise, idx) => {
+        if (idx !== exIndex) return exercise;
+        const firstSet = exercise.sets[0] || { kg: 0, reps: 0 };
+        const warmupSet = normalizeSetForStorage({
+          ...firstSet,
+          completed: false,
+          isBest1RM: false,
+          isBestSetVolume: false,
+          isHeaviestWeight: false
+        }, 'warmup');
+        return {
+          ...exercise,
+          sets: [warmupSet, ...(exercise.sets || [])]
+        };
+      })
+    };
     setActiveWorkout(updated);
   }, [activeWorkout]);
 
   const handleDeleteSet = useCallback((exIndex, setIndex) => {
-    const updated = { ...activeWorkout };
-    if (updated.exercises[exIndex] && updated.exercises[exIndex].sets[setIndex]) {
-      updated.exercises[exIndex].sets.splice(setIndex, 1);
-      setActiveWorkout(updated);
-    }
+    if (!activeWorkout?.exercises?.[exIndex]?.sets?.[setIndex]) return;
+    const updated = {
+      ...activeWorkout,
+      exercises: activeWorkout.exercises.map((exercise, idx) => {
+        if (idx !== exIndex) return exercise;
+        return {
+          ...exercise,
+          sets: exercise.sets.filter((_, sidx) => sidx !== setIndex)
+        };
+      })
+    };
+    setActiveWorkout(updated);
   }, [activeWorkout]);
 
   const handleToggleWarmup = useCallback((exIndex, setIndex) => {
-    const updated = { ...activeWorkout };
-    const set = updated.exercises[exIndex].sets[setIndex];
-    if (set) {
-      set.warmup = !set.warmup;
-      setActiveWorkout(updated);
-    }
+    if (!activeWorkout?.exercises?.[exIndex]?.sets?.[setIndex]) return;
+    const updated = {
+      ...activeWorkout,
+      exercises: activeWorkout.exercises.map((exercise, idx) => {
+        if (idx !== exIndex) return exercise;
+        return {
+          ...exercise,
+          sets: exercise.sets.map((set, sidx) => {
+            if (sidx !== setIndex) return set;
+            const toggledType = isWarmupSet(set) ? 'work' : 'warmup';
+            return normalizeSetForStorage(set, toggledType);
+          })
+        };
+      })
+    };
+    setActiveWorkout(updated);
+  }, [activeWorkout]);
+
+  const handleSetSetType = useCallback((exIndex, setIndex, nextType) => {
+    if (!activeWorkout?.exercises?.[exIndex]?.sets?.[setIndex]) return;
+    if (!nextType) return;
+    const updated = {
+      ...activeWorkout,
+      exercises: activeWorkout.exercises.map((exercise, idx) => {
+        if (idx !== exIndex) return exercise;
+        return {
+          ...exercise,
+          sets: exercise.sets.map((set, sidx) => {
+            if (sidx !== setIndex) return set;
+            return normalizeSetForStorage(set, nextType);
+          })
+        };
+      })
+    };
+    setActiveWorkout(updated);
   }, [activeWorkout]);
 
   const handleAddNote = useCallback(() => {
@@ -753,24 +923,38 @@ export default function App() {
     // Build sets with auto-memory
     let sets;
     if (lastSets.length > 0) {
-      sets = lastSets.map(s => ({ kg: Number(s.kg) || 0, reps: Number(s.reps) || 0, completed: false }));
+      sets = lastSets.map(s => normalizeSetForStorage({
+        kg: Number(s.kg) || 0,
+        reps: Number(s.reps) || 0,
+        completed: false
+      }, 'work'));
       if (suggested) {
-        sets = [...sets, { kg: suggested.suggestedKg, reps: suggested.suggestedReps, completed: false }];
+        sets = [...sets, normalizeSetForStorage({
+          kg: suggested.suggestedKg,
+          reps: suggested.suggestedReps,
+          completed: false
+        }, 'work')];
       }
     } else {
       sets = newExercise.defaultSets ? [...newExercise.defaultSets] : [{ kg: 0, reps: 0 }];
-      sets = sets.map(s => ({ ...s, completed: false }));
+      sets = sets.map(s => normalizeSetForStorage({ ...s, completed: false }, 'work'));
     }
     
-    const updated = { ...activeWorkout };
-    const exData = {
+    const exData = normalizeWorkoutExerciseForStorage({
       exerciseId: newExercise.id,
       name: newExercise.name,
       category: newExercise.category,
-      sets: sets,
+      priority: 3,
+      nonNegotiable: false,
+      sets,
       exerciseNote: ''
+    });
+    const updated = {
+      ...activeWorkout,
+      exercises: activeWorkout.exercises.map((exercise, idx) => (
+        idx === exIndex ? exData : exercise
+      ))
     };
-    updated.exercises[exIndex] = exData;
     setActiveWorkout(updated);
     closeExerciseSelector();
   }, [activeWorkout, workouts, templates, closeExerciseSelector]);
@@ -807,15 +991,27 @@ export default function App() {
 
   // --- ACTIONS: TEMPLATES ---
 
+  const normalizeTemplateForStorage = useCallback((template = {}) => ({
+    ...template,
+    exercises: (template.exercises || []).map(exercise => normalizeWorkoutExerciseForStorage({
+      ...exercise,
+      sets: (exercise.sets || []).map(set => normalizeSetForStorage({
+        ...set,
+        completed: false
+      }))
+    }))
+  }), []);
+
   const handleSaveTemplate = useCallback(() => {
     if (!editingTemplate.name.trim()) return;
+    const normalizedTemplate = normalizeTemplateForStorage(editingTemplate);
     if (editingTemplate.id) {
-      setTemplates(prev => prev.map(t => t.id === editingTemplate.id ? editingTemplate : t));
+      setTemplates(prev => prev.map(t => t.id === editingTemplate.id ? normalizedTemplate : t));
     } else {
-      setTemplates([...templates, { ...editingTemplate, id: Date.now() }]);
+      setTemplates([...templates, { ...normalizedTemplate, id: Date.now() }]);
     }
     setEditingTemplate(null);
-  }, [editingTemplate, templates]);
+  }, [editingTemplate, templates, normalizeTemplateForStorage]);
 
   // --- SELECTOR LOGIC ---
 
@@ -843,47 +1039,57 @@ export default function App() {
     // Build sets with suggested values as placeholder hints
     let sets;
     if (lastSets.length > 0) {
-      sets = lastSets.map(s => ({ 
-        kg: 0, 
-        reps: 0, 
+      sets = lastSets.map(s => normalizeSetForStorage({
+        kg: 0,
+        reps: 0,
         completed: false,
         suggestedKg: Number(s.kg) || 0,
         suggestedReps: Number(s.reps) || 0
-      }));
+      }, 'work'));
       if (suggested) {
-        sets = [...sets, { 
-          kg: 0, 
-          reps: 0, 
+        sets = [...sets, normalizeSetForStorage({
+          kg: 0,
+          reps: 0,
           completed: false,
           suggestedKg: suggested.suggestedKg,
           suggestedReps: suggested.suggestedReps
-        }];
+        }, 'work')];
       }
     } else {
       sets = exercise.defaultSets ? [...exercise.defaultSets] : [{ kg: 0, reps: 0 }];
-      sets = sets.map(s => ({ 
-        kg: 0, 
-        reps: 0, 
+      sets = sets.map(s => normalizeSetForStorage({
+        kg: 0,
+        reps: 0,
         completed: false,
         suggestedKg: Number(s.kg) || 0,
         suggestedReps: Number(s.reps) || 0
-      }));
+      }, 'work'));
     }
     
-    const exData = {
+    const exData = normalizeWorkoutExerciseForStorage({
       exerciseId: exercise.id,
       name: exercise.name,
       category: exercise.category,
-      sets: sets
-    };
+      priority: 3,
+      nonNegotiable: false,
+      sets
+    });
 
     if (selectorMode === 'template') {
       setEditingTemplate({
         ...editingTemplate,
-        exercises: [...(editingTemplate.exercises || []), { ...exData, sets: exData.sets.map(s => ({ kg: s.kg, reps: s.reps })) }]
+        exercises: [...(editingTemplate.exercises || []), {
+          ...exData,
+          sets: exData.sets.map(set => ({
+            kg: Number(set.kg) || 0,
+            reps: Number(set.reps) || 0,
+            warmup: Boolean(set.warmup),
+            setType: set.setType || (set.warmup ? 'warmup' : 'work')
+          }))
+        }]
       });
     } else if (selectorMode === 'activeWorkout') {
-      const newEx = { ...exData };
+      const newEx = normalizeWorkoutExerciseForStorage(exData);
       setActiveWorkout(prev => ({
         ...prev,
         exercises: [...(prev?.exercises || []), newEx]
@@ -1150,6 +1356,8 @@ export default function App() {
               <HomeView
                 workouts={workouts}
                 weeklyGoal={weeklyGoal}
+                readiness={readiness}
+                muscleBalance={muscleBalance}
                 trainingNotes={trainingNotes}
                 onTrainingNotesChange={setTrainingNotes}
                 onStartWorkout={() => setView('selectTemplate')}
@@ -1308,6 +1516,8 @@ export default function App() {
                 templates={templates}
                 workouts={workouts}
               workoutTimer={workoutTimer}
+              readiness={readiness}
+              blockProgress={activeBlockProgress}
               exercisesDB={exercisesDB}
               onCancel={() => { if (confirm('Cancel?')) { setActiveWorkout(null); setView('home'); } }}
               onFinish={handleFinishWorkout}
@@ -1323,10 +1533,12 @@ export default function App() {
               onMinimize={handleMinimizeWorkout}
               onDeleteSet={handleDeleteSet}
               onToggleWarmup={handleToggleWarmup}
+              onSetSetType={handleSetSetType}
               onAddWarmupSet={handleAddWarmupSet}
               onOpenKeypad={handleOpenKeypad}
               onCreateSuperset={handleCreateSuperset}
               onRemoveSuperset={handleRemoveSuperset}
+              autosaveStatus={autosaveStatus}
               />
               <PRBanner 
                 prData={activePRBanner}
@@ -1552,7 +1764,7 @@ export default function App() {
 
       {/* GLOBAL MODALS & NAV */}
       {/* Nav chowamy tylko w trybie aktywnego treningu, żeby nie przeszkadzał */}
-      {view !== 'activeWorkout' && (
+      {view !== 'activeWorkout' && !(view === 'templates' && editingTemplate) && (
         <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
       )}
 
@@ -1567,6 +1779,7 @@ export default function App() {
       {showExerciseSelector && (
         <ExerciseSelectorModal
           exercisesDB={exercisesDB}
+          mode={selectorMode}
           onClose={closeExerciseSelector}
           onSelectExercise={(ex) => {
             if (selectorMode === 'activeWorkout' && selectedExerciseIndex !== null) {
@@ -1628,6 +1841,21 @@ export default function App() {
             <div className="bg-accent/30 border border-accent/20 rounded-lg p-3 sm:p-4 text-center">
               <p className="text-sm sm:text-lg font-bold accent-text">{pendingSummary.feedback}</p>
             </div>
+
+            {pendingSummary.coachLens && (
+              <div className="bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-500/20 rounded-xl p-4 space-y-2">
+                <p className="text-xs text-cyan-200 font-semibold tracking-widest">COACH LENS (OFFLINE)</p>
+                <p className="text-sm text-slate-100">
+                  <span className="text-emerald-300 font-semibold">Keep:</span> {pendingSummary.coachLens.keep}
+                </p>
+                <p className="text-sm text-slate-100">
+                  <span className="text-amber-300 font-semibold">Improve:</span> {pendingSummary.coachLens.improve}
+                </p>
+                <p className="text-sm text-slate-100">
+                  <span className="text-blue-300 font-semibold">Focus:</span> {pendingSummary.coachLens.focus}
+                </p>
+              </div>
+            )}
 
             {/* PR Celebration */}
             {pendingSummary.completedWorkout.hasPR && (
@@ -1932,14 +2160,26 @@ export default function App() {
                       const ti = templates.findIndex(t => t.id === pendingSummary.templateId);
                       if (ti !== -1) {
                         const newTemplate = { ...templates[ti] };
-                        newTemplate.exercises = (pendingSummary.completedWorkout.exercises || []).map(ex => ({ name: ex.name, category: ex.category, sets: (ex.sets || []).map(s => ({ kg: 0, reps: 0 })) }));
+                        newTemplate.exercises = (pendingSummary.completedWorkout.exercises || []).map(ex => normalizeWorkoutExerciseForStorage({
+                          name: ex.name,
+                          exerciseId: ex.exerciseId ?? null,
+                          category: ex.category,
+                          priority: ex.priority ?? 3,
+                          nonNegotiable: Boolean(ex.nonNegotiable),
+                          estimatedSetSec: ex.estimatedSetSec ?? null,
+                          sets: (ex.sets || []).map(set => normalizeSetForStorage({
+                            kg: 0,
+                            reps: 0,
+                            completed: false
+                          }, isWarmupSet(set) ? 'warmup' : 'work'))
+                        }));
                         newTemplate.lastWorkoutSnapshot = buildLastWorkoutSnapshot(workoutWithTags);
                         
                         // Store template-specific previous sets for each exercise
                         if (!newTemplate.templatePrevious) newTemplate.templatePrevious = {};
                         (pendingSummary.completedWorkout.exercises || []).forEach(ex => {
                           if (ex.exerciseId) {
-                            const completedSets = (ex.sets || []).filter(s => s.completed);
+                            const completedSets = (ex.sets || []).filter(s => s.completed && !isWarmupSet(s));
                             if (completedSets.length > 0) {
                               newTemplate.templatePrevious[ex.exerciseId] = {
                                 sets: completedSets.map(s => ({ kg: Number(s.kg) || 0, reps: Number(s.reps) || 0 })),
@@ -2037,3 +2277,4 @@ export default function App() {
     </>
   );
 }
+

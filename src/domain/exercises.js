@@ -1,4 +1,5 @@
 import { calculate1RM, calculateTotalVolume } from './calculations';
+import { isWarmupSet, isWorkSet } from './workoutExtensions';
 
 export const getExerciseHistory = (exerciseId, workouts) => {
   if (!exerciseId) return [];
@@ -11,7 +12,7 @@ export const getExerciseHistory = (exerciseId, workouts) => {
     const exData = w.exercises.find(e => e.exerciseId === exerciseId);
     // include all completed sets in history, but compute best 1RM excluding warmup sets
     const allCompleted = exData.sets.filter(s => s.completed).map(s => ({ ...s }));
-    const nonWarmupSets = exData.sets.filter(s => s.completed && !s.warmup);
+    const nonWarmupSets = exData.sets.filter(s => isWorkSet(s));
     const max1RM = nonWarmupSets.length ? Math.max(0, ...nonWarmupSets.map(s => calculate1RM(s.kg, s.reps))) : 0;
 
     return {
@@ -38,7 +39,7 @@ export const getExerciseRecords = (exerciseId, workouts) => {
     if (day.max1RM > best1RM) { best1RM = day.max1RM; best1RMDate = day.date; }
     day.sets.forEach(s => {
       // ignore warmup sets for record calculations
-      if (s.warmup) return;
+      if (isWarmupSet(s)) return;
       const kg = Number(s.kg) || 0;
       const reps = Number(s.reps) || 0;
       
@@ -91,7 +92,7 @@ export const getLastCompletedSets = (exerciseId, workouts) => {
     const ex = w.exercises.find(e => e.exerciseId === exerciseId);
     if (!ex) continue;
     
-    const completed = ex.sets.filter(s => s.completed && !s.warmup);
+    const completed = ex.sets.filter(s => isWorkSet(s));
     if (completed.length > 0) {
       return completed;
     }
@@ -105,7 +106,7 @@ export const suggestNextWeight = (sets) => {
   if (!sets || sets.length < 2) return null;
   
   const validSets = sets
-    .filter(s => s && !s.warmup)
+    .filter(s => s && !isWarmupSet(s))
     .map(s => ({ kg: Number(s.kg) || 0, reps: Number(s.reps) || 0 }));
   
   if (validSets.length < 2) return null;

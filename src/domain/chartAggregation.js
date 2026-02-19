@@ -3,6 +3,7 @@
  * Deduplicates aggregation logic that was previously split between UnifiedChart.jsx and profileCharts.js
  * All metric aggregations (daily, weekly, monthly) now go through a single source of truth
  */
+import { isWorkSet } from './workoutExtensions';
 
 export const aggregateDaily = (workouts, metric, exerciseId, userWeight, exercisesDB) => {
   const days = {};
@@ -27,7 +28,7 @@ export const aggregateDaily = (workouts, metric, exerciseId, userWeight, exercis
     (w.exercises || []).forEach(ex => {
       if (exerciseId && ex.exerciseId !== exerciseId) return; // Filter by exerciseId if specified
       
-      const completed = (ex.sets || []).filter(s => s.completed && !s.warmup);
+      const completed = (ex.sets || []).filter(s => isWorkSet(s));
       
       completed.forEach(set => {
         const kg = Number(set.kg) || 0;
@@ -92,7 +93,7 @@ export const aggregateWeekly = (workouts, metric, exerciseId, userWeight, exerci
     (w.exercises || []).forEach(ex => {
       if (exerciseId && ex.exerciseId !== exerciseId) return;
       
-      const completed = (ex.sets || []).filter(s => s.completed && !s.warmup);
+      const completed = (ex.sets || []).filter(s => isWorkSet(s));
       
       completed.forEach(set => {
         const kg = Number(set.kg) || 0;
@@ -159,7 +160,7 @@ export const aggregateMonthly = (workouts, metric, exerciseId, userWeight, exerc
     (w.exercises || []).forEach(ex => {
       if (exerciseId && ex.exerciseId !== exerciseId) return;
       
-      const completed = (ex.sets || []).filter(s => s.completed && !s.warmup);
+      const completed = (ex.sets || []).filter(s => isWorkSet(s));
       
       completed.forEach(set => {
         const kg = Number(set.kg) || 0;

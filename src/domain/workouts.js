@@ -1,6 +1,7 @@
 /**
  * Workout-related domain logic
  */
+import { isWorkSet } from './workoutExtensions';
 
 /**
  * Get previous sets from template's last workout snapshot (for prev/suggestions per template).
@@ -42,7 +43,7 @@ export const getPreviousSets = (exerciseId, workouts, excludeStartTime = null, t
     const ex = w.exercises.find(e => e.exerciseId === exerciseId);
     if (!ex) continue;
 
-    const aligned = ex.sets.map(s => (s.completed && !s.warmup) ? { kg: s.kg, reps: s.reps } : null);
+    const aligned = ex.sets.map(s => (isWorkSet(s)) ? { kg: s.kg, reps: s.reps } : null);
     if (aligned.some(a => a !== null)) return aligned;
   }
 
@@ -61,7 +62,7 @@ export const buildLastWorkoutSnapshot = (completedWorkout) => {
       .map(ex => ({
         exerciseId: ex.exerciseId,
         name: ex.name,
-        sets: (ex.sets || []).filter(s => s.completed && !s.warmup).map(s => ({ kg: Number(s.kg) || 0, reps: Number(s.reps) || 0 }))
+        sets: (ex.sets || []).filter(s => isWorkSet(s)).map(s => ({ kg: Number(s.kg) || 0, reps: Number(s.reps) || 0 }))
       }))
       .filter(ex => ex.sets.length > 0)
   };
@@ -104,7 +105,7 @@ export const prepareCleanWorkoutData = (workout, exercisesDB = []) => {
     const muscles = (exDef?.muscles && exDef.muscles.length > 0) ? exDef.muscles : [ex.category || 'Other'];
     
     (ex.sets || []).forEach(s => {
-      if (s.completed && !s.warmup) {
+      if (isWorkSet(s)) {
         const kg = Number(s.kg) || 0;
         const reps = Number(s.reps) || 0;
         const volume = kg * reps;
@@ -141,7 +142,7 @@ export const compareWorkoutToPrevious = (currentWorkout, allWorkouts) => {
     let vol = 0;
     (w.exercises || []).forEach(ex => {
       (ex.sets || []).forEach(s => {
-        if (s.completed && !s.warmup) {
+        if (isWorkSet(s)) {
           vol += (Number(s.kg) || 0) * (Number(s.reps) || 0);
         }
       });
@@ -197,6 +198,205 @@ export const generateSessionFeedback = (volume, sets, trend) => {
   return text + trendIcon;
 };
 
+const getCompletedVolume = (workout) => {
+  let volume = 0;
+  (workout?.exercises || []).forEach(ex => {
+    (ex.sets || []).forEach(set => {
+      if (!isWorkSet(set)) return;
+      volume += (Number(set.kg) || 0) * (Number(set.reps) || 0);
+    });
+  });
+  return volume;
+};
+
+const getPreviousWorkout = (currentWorkout, allWorkouts = []) => {
+  if (!currentWorkout?.date) return null;
+  const currentDate = new Date(currentWorkout.date);
+  const filtered = (allWorkouts || [])
+    .filter(w => new Date(w.date) < currentDate)
+    .sort((a, b) => new Date(b.date) - new Date(a.date));
+  return filtered[0] || null;
+};
+
+const getBestSetByEstimated1RM = (workout) => {
+  let best = null;
+  (workout?.exercises || []).forEach(ex => {
+    (ex.sets || []).forEach(set => {
+      if (!isWorkSet(set)) return;
+      const kg = Number(set.kg) || 0;
+      const reps = Number(set.reps) || 0;
+      if (kg <= 0 || reps <= 0) return;
+      const estimated1RM = Math.round(kg * (1 + reps / 30));
+      if (!best || estimated1RM > best.estimated1RM) {
+        best = {
+          exerciseId: ex.exerciseId || null,
+          exerciseName: ex.name || 'Exercise',
+          estimated1RM,
+          kg,
+          reps
+        };
+      }
+    });
+  });
+  return best;
+};
+
+const getExerciseWorkVolume = (exercise) => {
+  return (exercise?.sets || []).reduce((sum, set) => {
+    if (!isWorkSet(set)) return sum;
+    return sum + (Number(set.kg) || 0) * (Number(set.reps) || 0);
+  }, 0);
+};
+
+const findMostRegressedExercise = (currentWorkout, previousWorkout) => {
+  if (!currentWorkout?.exercises?.length || !previousWorkout?.exercises?.length) return null;
+
+  const prevByKey = new Map();
+  (previousWorkout.exercises || []).forEach(ex => {
+    const key = ex.exerciseId || ex.name;
+    if (!key) return;
+    prevByKey.set(key, ex);
+  });
+
+  let regressed = null;
+
+  (currentWorkout.exercises || []).forEach(ex => {
+    const key = ex.exerciseId || ex.name;
+    if (!key || !prevByKey.has(key)) return;
+
+    const prevEx = prevByKey.get(key);
+    const prevVolume = getExerciseWorkVolume(prevEx);
+    const currentVolume = getExerciseWorkVolume(ex);
+    if (prevVolume <= 0) return;
+
+    const deltaRatio = (currentVolume - prevVolume) / prevVolume;
+    if (deltaRatio < -0.1 && (!regressed || deltaRatio < regressed.deltaRatio)) {
+      regressed = {
+        exerciseName: ex.name || 'Exercise',
+        deltaRatio,
+        currentVolume,
+        prevVolume
+      };
+    }
+  });
+
+  return regressed;
+};
+
+/**
+ * Deterministic post-workout insight card.
+ * Returns exactly three short sentences:
+ * 1) what went well, 2) what slowed down, 3) what to change next.
+ */
+export const generatePostWorkoutInsights = (
+  currentWorkout,
+  allWorkouts = [],
+  comparison = null,
+  prStatus = {},
+  getExerciseRecords = null
+) => {
+  if (!currentWorkout) {
+    return {
+      win: 'No workout data available.',
+      slowdown: 'No slowdown signal detected.',
+      next: 'Run one more session to unlock actionable insights.'
+    };
+  }
+
+  const effectiveComparison = comparison || compareWorkoutToPrevious(currentWorkout, allWorkouts);
+  const previousWorkout = getPreviousWorkout(currentWorkout, allWorkouts);
+  const currentVolume = getCompletedVolume(currentWorkout);
+  const prevVolume = effectiveComparison?.prevVolume || 0;
+  const volumeDelta = currentVolume - prevVolume;
+  const volumeDeltaPercent = prevVolume > 0 ? Math.round((volumeDelta / prevVolume) * 100) : 0;
+
+  const prCount = Object.keys(prStatus || {}).length;
+  const topSet = getBestSetByEstimated1RM(currentWorkout);
+
+  let win = `Completed ${currentVolume.toLocaleString()} total volume.`;
+  if (prCount > 0) {
+    win = `Hit ${prCount} new ${prCount === 1 ? 'PR' : 'PRs'} in this session.`;
+  } else if (topSet && typeof getExerciseRecords === 'function' && topSet.exerciseId) {
+    const previousRecords = getExerciseRecords(topSet.exerciseId, allWorkouts);
+    const previousBest = Number(previousRecords?.best1RM) || 0;
+    if (topSet.estimated1RM > previousBest) {
+      win = `${topSet.exerciseName}: estimated 1RM up to ${topSet.estimated1RM} kg (${topSet.kg} x ${topSet.reps}).`;
+    }
+  } else if (effectiveComparison && volumeDeltaPercent > 5) {
+    win = `Volume increased by ${Math.abs(volumeDeltaPercent)}% vs previous session.`;
+  }
+
+  const regressedExercise = findMostRegressedExercise(currentWorkout, previousWorkout);
+  let slowdown = 'No major slowdown detected versus your previous session.';
+  if (effectiveComparison && volumeDeltaPercent < -5) {
+    slowdown = `Total volume dropped by ${Math.abs(volumeDeltaPercent)}% vs previous session.`;
+  } else if (regressedExercise) {
+    slowdown = `${regressedExercise.exerciseName} volume was lower than last time.`;
+  }
+
+  let next = 'Next session: repeat the main lifts and add a small load (+2.5 kg) where reps stay clean.';
+  if (effectiveComparison && volumeDeltaPercent < -5) {
+    next = 'Next session: keep current load, trim 1 accessory set, and focus on matching last session volume.';
+  } else if (regressedExercise) {
+    next = `Next session: keep ${regressedExercise.exerciseName} load stable and aim for +1-2 reps on the first work set.`;
+  } else if (prCount > 0) {
+    next = 'Next session: keep the same opener and progress only one top set to lock in today\'s PR pace.';
+  }
+
+  return { win, slowdown, next };
+};
+
+/**
+ * Coach Lens card (offline, deterministic).
+ * Returns one practical keep/improve/focus suggestion.
+ */
+export const generateCoachLens = (
+  currentWorkout,
+  allWorkouts = [],
+  comparison = null,
+  prStatus = {}
+) => {
+  if (!currentWorkout) {
+    return {
+      keep: 'No workout data yet.',
+      improve: 'No slowdown pattern detected.',
+      focus: 'Complete one full session to unlock Coach Lens.'
+    };
+  }
+
+  const effectiveComparison = comparison || compareWorkoutToPrevious(currentWorkout, allWorkouts);
+  const previousWorkout = getPreviousWorkout(currentWorkout, allWorkouts);
+  const regressedExercise = findMostRegressedExercise(currentWorkout, previousWorkout);
+  const prCount = Object.keys(prStatus || {}).length;
+  const topSet = getBestSetByEstimated1RM(currentWorkout);
+  const currentVolume = getCompletedVolume(currentWorkout);
+  const prevVolume = Number(effectiveComparison?.prevVolume) || 0;
+  const deltaPct = prevVolume > 0 ? Math.round(((currentVolume - prevVolume) / prevVolume) * 100) : 0;
+
+  let keep = 'Keep your main lift setup and tempo consistent next session.';
+  if (prCount > 0 && topSet?.exerciseName) {
+    keep = `Keep ${topSet.exerciseName} as your opener; today's top set quality was high.`;
+  } else if (deltaPct >= 5) {
+    keep = `Keep this session density; total volume is up ${Math.abs(deltaPct)}% vs previous session.`;
+  }
+
+  let improve = 'No clear weak point this session.';
+  if (deltaPct <= -5) {
+    improve = `Volume dropped ${Math.abs(deltaPct)}% vs previous session.`;
+  } else if (regressedExercise?.exerciseName) {
+    improve = `${regressedExercise.exerciseName} underperformed versus your last exposure.`;
+  }
+
+  let focus = 'Next session focus: add +1 rep on the first work set of one priority lift.';
+  if (regressedExercise?.exerciseName) {
+    focus = `Next session focus: recover ${regressedExercise.exerciseName} first set quality before adding load.`;
+  } else if (topSet?.exerciseName) {
+    focus = `Next session focus: repeat ${topSet.exerciseName} top set, then add +2.5 kg only if reps stay clean.`;
+  }
+
+  return { keep, improve, focus };
+};
+
 // Map category names to actual muscle groups
 export const mapCategoryToMuscles = (category) => {
   if (!category) return ['Other'];
@@ -245,7 +445,7 @@ export const calculateMuscleDistribution = (workout, exercisesDB = []) => {
     // Calculate volume for this exercise (completed sets only, exclude warmups)
     let exVolume = 0;
     (ex.sets || []).forEach(s => {
-      if (s.completed && !s.warmup) {
+      if (isWorkSet(s)) {
         const kg = Number(s.kg) || 0;
         const reps = Number(s.reps) || 0;
         exVolume += kg * reps;
@@ -309,7 +509,7 @@ export const detectPRsInWorkout = (completedWorkout, previousWorkouts, calculate
 
     // Check all completed sets (excluding warmups)
     (ex.sets || []).forEach((set, setIndex) => {
-      if (!set.completed || set.warmup) return;
+      if (!isWorkSet(set)) return;
 
       const kg = Number(set.kg) || 0;
       const reps = Number(set.reps) || 0;

@@ -4,6 +4,10 @@ import { UnifiedChart } from '../components/UnifiedChart';
 import { VirtualList } from '../components/VirtualList';
 import { getExerciseHistory, getExerciseRecords, getLastSet, getExerciseTrend, getChartContext } from '../domain/exercises';
 import { formatLastSetDate } from '../domain/calculations';
+import { detectPlateau } from '../analytics/plateau';
+
+const ENABLE_PLATEAU_ALERT = true;
+const ENABLE_ADVANCED_CHART_INTERACTIONS = true;
 
 const ExerciseDetailViewInner = ({ exerciseId, workouts, exercisesDB, onBack, onOpenWorkout, userWeight }) => {
   const [activeTab, setActiveTab] = useState('history');
@@ -20,6 +24,7 @@ const ExerciseDetailViewInner = ({ exerciseId, workouts, exercisesDB, onBack, on
   const exerciseDef = exercisesDB.find(e => e.id === exerciseId);
   const history = useMemo(() => getExerciseHistory(exerciseId, workouts), [exerciseId, workouts]);
   const records = useMemo(() => getExerciseRecords(exerciseId, workouts), [exerciseId, workouts]);
+  const plateau = useMemo(() => detectPlateau(exerciseId, workouts), [exerciseId, workouts]);
 
   if (!exerciseDef) return null;
 
@@ -160,6 +165,22 @@ const ExerciseDetailViewInner = ({ exerciseId, workouts, exercisesDB, onBack, on
               })()}
             </div>
           </div>
+        </div>
+      )}
+
+      {ENABLE_PLATEAU_ALERT && plateau?.isPlateau && (
+        <div className="px-4 py-3 border-b border-amber-500/20 bg-amber-500/10">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs font-black tracking-wider text-amber-300 uppercase">
+              Plateau Risk ({plateau.confidence})
+            </p>
+            <span className="text-[11px] font-semibold text-amber-200">
+              {plateau.lastImprovementSessionsAgo} sessions without improvement
+            </span>
+          </div>
+          <p className="text-xs text-amber-100/90 mt-1">
+            Stagnation: {plateau.stagnationType} • exposures checked: {plateau.exposuresChecked}
+          </p>
         </div>
       )}
 
@@ -324,6 +345,7 @@ const ExerciseDetailViewInner = ({ exerciseId, workouts, exercisesDB, onBack, on
                 unit="kg"
                 userWeight={userWeight}
                 exercisesDB={exercisesDB}
+                enableAdvancedInteractions={ENABLE_ADVANCED_CHART_INTERACTIONS}
               />
             </div>
 
@@ -339,6 +361,7 @@ const ExerciseDetailViewInner = ({ exerciseId, workouts, exercisesDB, onBack, on
                 unit="kg"
                 userWeight={userWeight}
                 exercisesDB={exercisesDB}
+                enableAdvancedInteractions={ENABLE_ADVANCED_CHART_INTERACTIONS}
               />
             </div>
           </div>

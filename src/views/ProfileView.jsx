@@ -185,23 +185,24 @@ export const ProfileView = ({
 
           {/* Metric Toggle */}
           <div className="flex justify-center">
-            <div className="grid grid-cols-4 gap-2 w-full max-w-sm">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full">
               {[
-                { key: 'duration', label: 'Duration' },
-                { key: 'workouts', label: 'Workouts' },
+                { key: 'duration', label: 'Duration', mobileLabel: 'Time' },
+                { key: 'workouts', label: 'Workouts', mobileLabel: 'Sessions' },
                 { key: 'volume', label: 'Volume' },
                 { key: 'reps', label: 'Reps' }
               ].map(metric => (
                 <button
                   key={metric.key}
                   onClick={() => setChartMetric(metric.key)}
-                  className={`py-2 px-3 rounded-lg font-bold text-xs uppercase tracking-wider transition-all ${
+                  className={`min-h-[44px] py-2 px-2 rounded-lg font-bold text-[11px] sm:text-xs leading-tight transition-all flex items-center justify-center text-center ${
                     chartMetric === metric.key
                       ? 'accent-bg text-white shadow-lg shadow-accent/30'
                       : 'bg-slate-800/50 text-slate-400 hover:bg-slate-700/50'
                   }`}
                 >
-                  {metric.label}
+                  <span className="sm:hidden">{metric.mobileLabel || metric.label}</span>
+                  <span className="hidden sm:inline">{metric.label}</span>
                 </button>
               ))}
             </div>

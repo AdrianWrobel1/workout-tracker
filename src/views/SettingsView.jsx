@@ -144,14 +144,14 @@ export const SettingsView = ({
           <h3 className="font-black text-white mb-4">Accent Color</h3>
           <div className="grid grid-cols-2 gap-3">
             {[
-              { name: 'Orange', hex: '#ea580c' },
-              { name: 'App Blue', hex: '#4F7BFF' },
-              { name: 'Neon Green', hex: '#10b981' },
-              { name: 'Deep Purple', hex: '#7c3aed' },
+              { name: 'Emerald', hex: '#059669' },
+              { name: 'Orchid', hex: '#a855f7' },
               { name: 'Crimson', hex: '#dc2626' },
-              { name: 'Hot Pink', hex: '#ec4899' },
+              { name: 'Rose Magenta', hex: '#db2777' },
+              { name: 'Deep Purple', hex: '#7c3aed' },
               { name: 'Indigo', hex: '#4f46e5' },
-              { name: 'Amber', hex: '#fbbf24' }
+              { name: 'Slate Steel', hex: '#64748b' },
+              { name: 'Deep Ocean', hex: '#0369a1' }
             ].map(color => (
               <button
                 key={color.hex}
@@ -259,8 +259,8 @@ export const SettingsView = ({
                     className="w-full bg-slate-800/50 border border-slate-600/50 rounded-lg px-4 py-2 text-white font-semibold focus:border-accent-text focus:outline-none focus:accent-ring transition"
                   >
                     <option value="">Choose an exercise...</option>
-                    {exercisesDB && exercisesDB.map(ex => (
-                      <option key={ex?.id || Math.random()} value={ex?.id || ''}>{ex?.name || 'Unknown'}</option>
+                    {exercisesDB && exercisesDB.map((ex, index) => (
+                      <option key={ex?.id || `exercise-${index}`} value={ex?.id || ''}>{ex?.name || 'Unknown'}</option>
                     ))}
                   </select>
                 </div>
