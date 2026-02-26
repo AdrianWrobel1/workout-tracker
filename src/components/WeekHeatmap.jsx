@@ -99,15 +99,18 @@ export const WeekHeatmap = ({ workouts = [] }) => {
           ))}
         </div>
 
-        {/* Clickable heatmap */}
+                {/* Clickable heatmap */}
         <div className="flex items-center gap-2 justify-center cursor-pointer" onClick={() => setShowMonthModal(true)}>
-          {volumes.map((v, i) => (
-            <div
-              key={i}
-              className={`w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full ${getColor(v)} transition-all duration-200 ease-out hover:scale-110`}
-              title={`${days[i].toDateString()}: ${v > 0 ? v + ' volume' : 'rest day'}`}
-            />
-          ))}
+          {volumes.map((v, i) => {
+            const isToday = i === volumes.length - 1;
+            return (
+              <div
+                key={i}
+                className={`w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full ${getColor(v)} transition-all duration-200 ease-out hover:scale-110 ${isToday ? 'heatmap-today ui-heatmap-today-pulse' : ''}`}
+                title={`${days[i].toDateString()}: ${v > 0 ? v + ' volume' : 'rest day'}`}
+              />
+            );
+          })}
         </div>
         <p className="text-xs text-slate-500 text-center mt-1">Click to see full month</p>
       </div>
@@ -173,7 +176,7 @@ export const WeekHeatmap = ({ workouts = [] }) => {
                     key={day}
                     className={`w-full aspect-square flex items-center justify-center text-xs font-bold rounded transition ${
                       vol > 0 ? getColor(vol) : 'bg-slate-800/30'
-                    } ${isToday ? 'heatmap-today' : ''}`}
+                    } ${isToday ? 'heatmap-today ui-heatmap-today-pulse' : ''}`}
                     title={vol > 0 ? `${vol} volume` : 'rest'}
                   >
                     {day}
@@ -193,3 +196,5 @@ export const WeekHeatmap = ({ workouts = [] }) => {
     </>
   );
 };
+
+

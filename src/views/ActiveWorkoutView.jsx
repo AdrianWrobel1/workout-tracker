@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { X, Plus, ChevronDown } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { X, Plus, ChevronDown, Check } from 'lucide-react';
 import { SortableExerciseList } from '../components/SortableExerciseList';
 import { SessionTimelineStrip } from '../components/SessionTimelineStrip';
 import { formatTime } from '../domain/calculations';
@@ -36,24 +36,28 @@ export const ActiveWorkoutView = ({
   const [deleteModeIndex, setDeleteModeIndex] = useState(null);
   const [warmupModeIndex, setWarmupModeIndex] = useState(null);
   const [progressViewMode, setProgressViewMode] = useState('bar'); // 'bar' | 'timeline'
+  const [finishTapPulse, setFinishTapPulse] = useState(false);
 
-  // OPTIMIZED: Use refs instead of expensive reduce() on every set edit
-  // Recalculate only when exercise count changes, not on every set edit keystroke
-  const totalSetCountRef = useRef(0);
-  const completedSetCountRef = useRef(0);
+  const progressStats = useMemo(() => {
+    const totalSets = (activeWorkout?.exercises || []).reduce(
+      (sum, ex) => sum + (ex?.sets?.length || 0),
+      0
+    );
+    const completedSets = (activeWorkout?.exercises || []).reduce(
+      (sum, ex) => sum + ((ex?.sets || []).filter(set => set?.completed).length),
+      0
+    );
+    const progressPercent = totalSets > 0 ? (completedSets / totalSets) * 100 : 0;
+    return { totalSets, completedSets, progressPercent };
+  }, [activeWorkout.exercises]);
+
+  const isWorkoutLockedIn = progressStats.totalSets > 0 && progressStats.completedSets >= progressStats.totalSets;
 
   useEffect(() => {
-    totalSetCountRef.current = activeWorkout.exercises.reduce(
-      (sum, ex) => sum + (ex.sets?.length || 0), 
-      0
-    );
-    completedSetCountRef.current = activeWorkout.exercises.reduce(
-      (sum, ex) => sum + (ex.sets?.filter(s => s.completed).length || 0), 
-      0
-    );
-  }, [activeWorkout.exercises.length]); // Only depend on exercise count
-
-  const progressPercent = totalSetCountRef.current > 0 ? (completedSetCountRef.current / totalSetCountRef.current) * 100 : 0;
+    if (!finishTapPulse) return undefined;
+    const timer = setTimeout(() => setFinishTapPulse(false), 320);
+    return () => clearTimeout(timer);
+  }, [finishTapPulse]);
 
   const autosaveLabel = useMemo(() => {
     if (!autosaveStatus || autosaveStatus.state === 'idle') return '';
@@ -71,10 +75,18 @@ export const ActiveWorkoutView = ({
 
   const autosaveClass = useMemo(() => {
     if (!autosaveStatus) return 'text-slate-500';
-    if (autosaveStatus.state === 'saving') return 'text-slate-400';
-    if (autosaveStatus.state === 'saved') return 'text-emerald-400';
-    if (autosaveStatus.state === 'error') return 'text-red-400';
+    if (autosaveStatus.state === 'saving') return 'text-slate-300';
+    if (autosaveStatus.state === 'saved') return 'text-emerald-300';
+    if (autosaveStatus.state === 'error') return 'text-red-300';
     return 'text-slate-500';
+  }, [autosaveStatus]);
+
+  const autosaveMotionClass = useMemo(() => {
+    if (!autosaveStatus) return '';
+    if (autosaveStatus.state === 'saving') return 'ui-autosave-saving';
+    if (autosaveStatus.state === 'saved') return 'ui-autosave-saved';
+    if (autosaveStatus.state === 'error') return 'ui-autosave-error';
+    return '';
   }, [autosaveStatus]);
 
   const readinessBadge = useMemo(() => {
@@ -84,13 +96,17 @@ export const ActiveWorkoutView = ({
     return { label: 'Readiness: optimal', className: 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10' };
   }, [readiness]);
 
+  const readinessStatusKey = readiness?.status || 'none';
+
+  const handleFinishPress = () => {
+    if (isWorkoutLockedIn) setFinishTapPulse(true);
+    onFinish();
+  };
 
   return (
-    <div className="min-h-screen bg-black text-white pb-24 flex flex-col">
-      {/* Sticky Header - Workout Info & Timer */}
-      <div className="sticky top-0 z-30 bg-gradient-to-b from-black to-black/80 border-b border-white/10 px-4 pt-4 pb-4 shadow-2xl">
-        {/* Top Action Row */}
-        <div className="flex items-center justify-between mb-4">
+    <div className="bg-black text-white pb-24 flex flex-col">
+      <div className="sticky top-0 z-30 bg-gradient-to-b from-black to-black/80 border-b border-white/10 px-3 sm:px-4 pt-3 sm:pt-4 pb-3 sm:pb-4 shadow-2xl">
+        <div className="flex items-center justify-between mb-3 sm:mb-4">
           <button
             onClick={onMinimize}
             className="p-2 hover:bg-white/10 rounded-lg transition-colors"
@@ -102,9 +118,24 @@ export const ActiveWorkoutView = ({
             <p className="text-xs text-slate-500 font-semibold tracking-widest mb-1">ELAPSED TIME</p>
             <div className="text-sm font-black">{formatTime(workoutTimer)}</div>
             {autosaveLabel && (
-              <p className={`text-[10px] mt-1 font-semibold tracking-wide ${autosaveClass}`}>
-                {autosaveLabel}
-              </p>
+              <div className={`relative mt-1 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border border-slate-700/70 bg-slate-900/65 overflow-hidden ${autosaveMotionClass}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${
+                  autosaveStatus?.state === 'saved'
+                    ? 'bg-emerald-300'
+                    : autosaveStatus?.state === 'error'
+                    ? 'bg-red-300'
+                    : 'bg-slate-300'
+                }`} />
+                <p className={`text-[10px] font-semibold tracking-wide ${autosaveClass}`}>
+                  {autosaveLabel}
+                </p>
+                {autosaveStatus?.state === 'saved' && (
+                  <>
+                    <Check size={11} className="text-emerald-300" />
+                    <span className="ui-save-lock-sweep" />
+                  </>
+                )}
+              </div>
             )}
           </div>
 
@@ -116,12 +147,13 @@ export const ActiveWorkoutView = ({
           </button>
         </div>
 
-        {/* Workout Title */}
-        {/* Progress Info */}
-        <div className="space-y-2.5">
+        <div className="space-y-2">
           {readinessBadge && (
             <div className="flex justify-end">
-              <span className={`text-[10px] font-bold tracking-wider px-2 py-1 rounded-full border ${readinessBadge.className}`}>
+              <span
+                key={readinessStatusKey}
+                className={`text-[10px] font-bold tracking-wider px-2 py-1 rounded-full border ui-readiness-morph ${readinessBadge.className}`}
+              >
                 {readinessBadge.label}
               </span>
             </div>
@@ -129,7 +161,7 @@ export const ActiveWorkoutView = ({
           <div className="flex items-baseline justify-between">
             <p className="text-xs text-slate-400 font-semibold tracking-widest">PROGRESS</p>
             <div className="flex items-center gap-2">
-              <p className="text-sm font-bold text-white">{completedSetCountRef.current} / {totalSetCountRef.current} Sets</p>
+              <p className="text-xs sm:text-sm font-bold text-white">{progressStats.completedSets} / {progressStats.totalSets} Sets</p>
               <div className="flex items-center bg-slate-900/70 border border-slate-700/70 rounded-md overflow-hidden">
                 <button
                   onClick={() => setProgressViewMode('bar')}
@@ -150,28 +182,42 @@ export const ActiveWorkoutView = ({
               </div>
             </div>
           </div>
-          {progressViewMode === 'bar' ? (
-            <div className="w-full h-2 bg-slate-800/50 rounded-full overflow-hidden border border-white/10">
-              <div
-                className="h-full bg-gradient-to-r from-accent to-accent transition-all duration-200 ease-out"
-                style={{ width: `${progressPercent}%` }}
-              />
+          <div className="relative min-h-[14px]">
+            <div
+              className={`ui-view-crossfade ${
+                progressViewMode === 'bar'
+                  ? 'opacity-100 scale-100 relative'
+                  : 'opacity-0 scale-[0.985] absolute inset-0 pointer-events-none'
+              }`}
+            >
+              <div className="w-full h-2 bg-slate-800/50 rounded-full overflow-hidden border border-white/10">
+                <div
+                  className={`h-full bg-gradient-to-r from-accent to-accent transition-all duration-200 ease-out ${isWorkoutLockedIn ? 'ui-progress-done-flash' : ''}`}
+                  style={{ width: `${progressStats.progressPercent}%` }}
+                />
+              </div>
             </div>
-          ) : (
-            <SessionTimelineStrip activeWorkout={activeWorkout} />
-          )}
+
+            <div
+              className={`ui-view-crossfade ${
+                progressViewMode === 'timeline'
+                  ? 'opacity-100 scale-100 relative'
+                  : 'opacity-0 scale-[0.985] absolute inset-0 pointer-events-none'
+              }`}
+            >
+              <SessionTimelineStrip activeWorkout={activeWorkout} />
+            </div>
+          </div>
         </div>
 
-        {/* Finish Button */}
         <button
-          onClick={onFinish}
-          className="w-full mt-4 py-3 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white font-bold rounded-xl transition-all duration-200 ease-out shadow-lg shadow-emerald-900/50 ui-press"
+          onClick={handleFinishPress}
+          className={`w-full mt-3 sm:mt-4 py-2.5 sm:py-3 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white font-bold rounded-xl transition-all duration-200 ease-out shadow-lg shadow-emerald-900/50 ui-press ${isWorkoutLockedIn ? 'ui-finish-ready' : ''} ${finishTapPulse ? 'ui-finish-click-bounce' : ''}`}
         >
           Finish Workout
         </button>
       </div>
 
-      {/* Exercises Scroll Area */}
       <div className="flex-1 overflow-y-auto px-3 sm:px-4 pt-3 sm:pt-4 pb-4">
         <SortableExerciseList
           exercises={activeWorkout.exercises}
@@ -213,3 +259,7 @@ export const ActiveWorkoutView = ({
     </div>
   );
 };
+
+
+
+

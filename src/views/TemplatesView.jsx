@@ -15,7 +15,7 @@ export const TemplatesView = ({
 }) => {
   if (editingTemplate) {
     return (
-      <div className="min-h-screen bg-black text-white pb-32">
+      <div className="bg-black text-white pb-32">
         <div className="sticky top-0 z-30 bg-gradient-to-b from-black to-black/90 border-b border-slate-700/50 px-4 py-3 flex items-center gap-3 shadow-lg">
           <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg transition text-slate-400 hover:text-white">
             <X size={22} />
@@ -149,13 +149,13 @@ export const TemplatesView = ({
           <div className="w-full max-w-2xl mx-auto flex flex-col sm:flex-row gap-2">
             <button
               onClick={onAddExercise}
-              className="flex-1 accent-bg hover:opacity-90 text-white rounded-lg p-3 font-bold text-sm shadow-lg shadow-accent/30 transition ui-press"
+              className="flex-1 accent-bg hover:opacity-90 text-white rounded-lg p-3 font-bold text-sm shadow-lg shadow-accent/30 transition ui-press ui-template-cta-breathe"
             >
               + Add Exercise
             </button>
             <button
               onClick={onSave}
-              className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg p-3 font-bold text-sm transition shadow-lg shadow-emerald-600/30"
+              className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg p-3 font-bold text-sm transition shadow-lg shadow-emerald-600/30 ui-template-cta-breathe"
             >
               Save Template
             </button>
@@ -166,7 +166,7 @@ export const TemplatesView = ({
   }
 
   return (
-    <div className="min-h-screen bg-black text-white pb-24">
+    <div className="bg-black text-white pb-24">
       <div className="bg-gradient-to-b from-black to-black/80 border-b border-white/10 p-4 sticky top-0 z-20 shadow-2xl">
         <div className="flex justify-between items-center gap-4">
           <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg transition">
@@ -207,3 +207,7 @@ export const TemplatesView = ({
     </div>
   );
 };
+
+
+
+

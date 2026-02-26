@@ -54,7 +54,7 @@ export class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-gradient-to-b from-slate-900 to-black text-white flex items-center justify-center p-6">
+        <div className="bg-gradient-to-b from-slate-900 to-black text-white flex items-center justify-center p-6">
           <div className="bg-slate-900/80 border border-red-500/30 rounded-2xl p-8 max-w-md w-full">
             <div className="text-center mb-6">
               <div className="text-5xl mb-4">⚠️</div>
@@ -104,3 +104,6 @@ export class ErrorBoundary extends React.Component {
     return this.props.children;
   }
 }
+
+
+

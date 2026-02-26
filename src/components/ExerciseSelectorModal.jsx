@@ -42,7 +42,7 @@ export const ExerciseSelectorModal = ({
     <button
       key={exercise.id}
       onClick={() => onSelectExercise(exercise)}
-      className="w-full bg-slate-800/40 hover:bg-slate-800/60 border border-slate-700/50 hover:border-slate-600/50 rounded-lg p-4 text-left transition group"
+      className="w-full bg-slate-800/40 hover:bg-slate-800/60 border border-slate-700/50 hover:border-slate-600/50 rounded-lg p-4 text-left transition group ui-list-item-lift"
     >
       <div className="flex justify-between items-center">
         <div className="flex-1 min-w-0">
@@ -57,9 +57,10 @@ export const ExerciseSelectorModal = ({
   );
 
   return (
-    <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-      <div className="bg-gradient-to-br from-slate-900/95 to-black/95 border border-slate-700/50 rounded-2xl w-full max-w-md max-h-[85vh] flex flex-col shadow-2xl ui-modal-scale ui-fade-scale-anim">
+    <div className="fixed inset-0 bg-black/80 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 ui-backdrop-in">
+      <div className="bg-gradient-to-br from-slate-900/95 to-black/95 border border-slate-700/50 rounded-t-2xl sm:rounded-2xl w-full max-w-md max-h-[88dvh] sm:max-h-[85dvh] flex flex-col shadow-2xl ui-modal-scale ui-sheet-rise-anim">
         <div className="p-4 border-b border-slate-700/50 shrink-0">
+          <div className="sm:hidden w-12 h-1 rounded-full bg-slate-600/70 mx-auto mb-3" />
           <div className="flex justify-between items-center mb-4">
             <h2 className="font-black text-2xl text-white">SELECT EXERCISE</h2>
             <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg transition text-slate-400">
@@ -134,3 +135,4 @@ export const ExerciseSelectorModal = ({
     </div>
   );
 };
+

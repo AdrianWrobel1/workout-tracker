@@ -66,7 +66,7 @@ export const CalendarModal = ({ workouts, onClose, onSelectDate }) => {
 
   return (
     <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-      <div className="bg-gradient-to-br from-slate-900/95 to-black/95 border border-slate-700/50 rounded-2xl p-6 max-w-md w-full max-h-[85vh] overflow-y-auto shadow-2xl ui-modal-scale ui-fade-scale-anim">
+      <div className="bg-gradient-to-br from-slate-900/95 to-black/95 border border-slate-700/50 rounded-2xl p-6 max-w-md w-full max-h-[85dvh] overflow-y-auto shadow-2xl ui-modal-scale ui-fade-scale-anim">
         <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-700/50">
           <h2 className="text-2xl font-black">SELECT DATE</h2>
           <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg transition text-slate-400">

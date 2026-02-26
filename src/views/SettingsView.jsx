@@ -26,10 +26,20 @@ export const SettingsView = ({
   enablePerformanceAlerts = true,
   onEnablePerformanceAlertsChange,
   enableHapticFeedback = false,
-  onEnableHapticFeedbackChange
+  onEnableHapticFeedbackChange,
+  reduceAnimations = false,
+  onReduceAnimationsChange
 }) => {
+  const applyAccentColor = (hex) => {
+    const root = document.documentElement;
+    root.classList.add('ui-accent-transition');
+    root.style.setProperty('--accent', hex);
+    localStorage.setItem('accentColor', hex);
+    window.setTimeout(() => root.classList.remove('ui-accent-transition'), 220);
+  };
+
   return (
-    <div className="min-h-screen bg-black text-white pb-24">
+    <div className="bg-black text-white pb-24">
       {/* Header */}
       <div className="bg-gradient-to-b from-black to-black/80 border-b border-white/10 p-4 sticky top-0 z-20 shadow-2xl">
         <h1 className="text-4xl font-black">SETTINGS</h1>
@@ -80,7 +90,7 @@ export const SettingsView = ({
                   : 'bg-slate-600'
               }`}
             >
-              <div className={`w-5 h-5 rounded-full bg-white transition-transform ${enablePerformanceAlerts ? 'translate-x-5' : ''}`} />
+              <div className={`w-5 h-5 rounded-full bg-white transition-transform ui-toggle-thumb-spring ${enablePerformanceAlerts ? 'translate-x-5' : ''}`} />
             </button>
           </div>
 
@@ -111,12 +121,28 @@ export const SettingsView = ({
                       : 'bg-slate-600'
                   }`}
                 >
-                  <div className={`w-5 h-5 rounded-full bg-white transition-transform ${enableHapticFeedback ? 'translate-x-5' : ''}`} />
+                  <div className={`w-5 h-5 rounded-full bg-white transition-transform ui-toggle-thumb-spring ${enableHapticFeedback ? 'translate-x-5' : ''}`} />
                 </button>
               </div>
             </div>
           )}
           
+          <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-700/30">
+            <div>
+              <label className="font-bold text-white">Reduce Animations</label>
+              <p className="text-[11px] text-slate-400 mt-0.5">Improves smoothness on slower devices.</p>
+            </div>
+            <button
+              onClick={() => onReduceAnimationsChange && onReduceAnimationsChange(!reduceAnimations)}
+              className={`w-12 h-7 rounded-full transition-all flex items-center px-1 ${
+                reduceAnimations
+                  ? 'bg-amber-600'
+                  : 'bg-slate-600'
+              }`}
+            >
+              <div className={`w-5 h-5 rounded-full bg-white transition-transform ui-toggle-thumb-spring ${reduceAnimations ? 'translate-x-5' : ''}`} />
+            </button>
+          </div>
           <p className="text-xs text-slate-400 mt-3">Personal record detection only applies from your second workout per exercise</p>
         </div>
 
@@ -155,17 +181,14 @@ export const SettingsView = ({
             ].map(color => (
               <button
                 key={color.hex}
-                onClick={() => {
-                  document.documentElement.style.setProperty('--accent', color.hex);
-                  localStorage.setItem('accentColor', color.hex);
-                }}
-                className="p-4 rounded-lg border-2 border-slate-700/50 hover:border-slate-600 transition-all relative group"
+                onClick={() => applyAccentColor(color.hex)}
+                className="p-4 rounded-lg border-2 border-slate-700/50 hover:border-slate-600 transition-all relative group ui-accent-chip-pop"
                 style={{
                   backgroundColor: `${color.hex}20`,
                   borderColor: localStorage.getItem('accentColor') === color.hex ? color.hex : undefined
                 }}
               >
-                <div className="absolute top-2 right-2 w-3 h-3 rounded-full" style={{ backgroundColor: color.hex }} />
+                <div className="absolute top-2 right-2 w-3 h-3 rounded-full ui-accent-chip-pulse" style={{ backgroundColor: color.hex }} />
                 <p className="text-sm font-bold text-white">{color.name}</p>
                 <p className="text-xs text-slate-400 mt-1">{color.hex}</p>
               </button>
@@ -280,3 +303,8 @@ export const SettingsView = ({
     </div>
   );
 };
+
+
+
+
+

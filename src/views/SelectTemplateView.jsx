@@ -4,7 +4,7 @@ import { TemplateCard } from '../components/TemplateCard';
 
 export const SelectTemplateView = ({ templates, onClose, onSelectTemplate, onEditTemplate }) => {
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="bg-black text-white">
       {/* Header */}
       <div className="bg-gradient-to-b from-black to-black/80 border-b border-white/10 p-4 sticky top-0 z-20 shadow-2xl">
         <div className="flex items-center justify-between gap-4">
@@ -46,3 +46,5 @@ export const SelectTemplateView = ({ templates, onClose, onSelectTemplate, onEdi
     </div>
   );
 };
+
+

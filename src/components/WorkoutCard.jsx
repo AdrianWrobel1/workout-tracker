@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronRight, Trash2, Edit2, Medal } from 'lucide-react';
+import { ChevronRight, Trash2, Edit2 } from 'lucide-react';
 import { formatDate, calculateTotalVolume } from '../domain/calculations';
 
 /**
@@ -12,7 +12,6 @@ export const WorkoutCard = React.memo(({
   onDelete,
   onEdit,
   showActions = true,
-  exercisesDB = [],
   getRecordsFn = null
 }) => {
   return (
@@ -21,7 +20,7 @@ export const WorkoutCard = React.memo(({
         {showActions && (
           <>
             {onEdit && (
-              <button 
+              <button
                 onClick={() => onEdit(workout)}
                 className="px-3 py-1.5 accent-bg-light hover:opacity-80 accent-border-light rounded-lg accent-text text-xs font-bold transition flex items-center gap-1"
               >
@@ -29,7 +28,7 @@ export const WorkoutCard = React.memo(({
               </button>
             )}
             {onDelete && (
-              <button 
+              <button
                 onClick={() => onDelete(workout.id)}
                 className="px-3 py-1.5 bg-red-600/20 hover:bg-red-600/30 border border-red-500/30 rounded-lg text-red-400 text-xs font-bold transition flex items-center gap-1"
               >
@@ -39,31 +38,32 @@ export const WorkoutCard = React.memo(({
           </>
         )}
       </div>
+
       <div onClick={() => onViewDetail && onViewDetail(workout.date)} className="cursor-pointer hover:opacity-80 transition">
         <div className="flex justify-between items-start mb-3 gap-3">
           <div className="flex-1 min-w-0">
             <h3 className="font-black text-lg text-white">{workout.name}</h3>
             <p className="text-xs text-slate-400 mt-1 font-semibold">
-              {formatDate(workout.date)} • {workout.duration || 0} min
+              {formatDate(workout.date)} - {workout.duration || 0} min
             </p>
           </div>
           <ChevronRight className="text-slate-600" size={20} />
         </div>
-        
+
         {/* Exercises with volume and PR count */}
         <div className="space-y-1.5 mb-3">
           {workout.exercises?.slice(0, 4).map((ex, i) => {
             const volume = calculateTotalVolume(ex.sets || []);
             const prCount = getRecordsFn && ex.exerciseId ? getRecordsFn(ex.exerciseId, ex).prCount || 0 : 0;
-            
+
             return (
               <div key={`${workout.id}-${ex.exerciseId}-${i}`} className="flex items-center justify-between text-xs bg-slate-700/30 text-slate-300 px-2.5 py-1.5 rounded-lg font-semibold">
                 <span className="truncate flex-1">{ex.name}</span>
                 <div className="flex items-center gap-2 ml-2 whitespace-nowrap">
-                  {volume > 0 && <span className="text-slate-400">{(volume / 1000).toFixed(1)}k</span>}
+                  {volume > 0 && <span className="text-slate-400">{"\u{1F3CB}\uFE0F"} {(volume / 1000).toFixed(1)}k</span>}
                   {prCount > 0 && (
                     <span className="flex items-center gap-1 text-amber-400">
-                      <Medal size={12} />
+                      <span aria-hidden>{"\u{1F396}\uFE0F"}</span>
                       {prCount}
                     </span>
                   )}
@@ -81,8 +81,8 @@ export const WorkoutCard = React.memo(({
         {/* Tags */}
         {workout.tags && workout.tags.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
-            {workout.tags.map(tag => (
-              <span 
+            {workout.tags.map((tag) => (
+              <span
                 key={tag}
                 className="text-xs px-2 py-1 rounded-full font-bold accent-bg-light accent-text accent-border-light"
               >
@@ -95,8 +95,6 @@ export const WorkoutCard = React.memo(({
     </div>
   );
 }, (prevProps, nextProps) => {
-  // Custom comparison: only re-render if workout data actually changed
-  // or if callbacks changed (which means parent re-rendered intentionally)
   return (
     prevProps.workout.id === nextProps.workout.id &&
     prevProps.workout.name === nextProps.workout.name &&
@@ -108,3 +106,4 @@ export const WorkoutCard = React.memo(({
 });
 
 WorkoutCard.displayName = 'WorkoutCard';
+

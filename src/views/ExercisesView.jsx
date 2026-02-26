@@ -76,7 +76,7 @@ export const ExercisesView = ({ exercisesDB, onAddExercise, onEditExercise, onDe
   }, [exercisesDB, searchQuery, categoryFilter, sortBy]);
 
   return (
-    <div className="min-h-screen bg-black text-white pb-24 flex flex-col">
+    <div className="bg-black text-white pb-24 flex flex-col">
       {/* Header */}
       <div className="bg-gradient-to-b from-black to-black/80 border-b border-white/10 p-4 shrink-0 shadow-2xl sticky top-0 z-20">
         <div className="flex items-center justify-between gap-3">
@@ -285,3 +285,5 @@ export const ExercisesView = ({ exercisesDB, onAddExercise, onEditExercise, onDe
     </div>
   );
 };
+
+

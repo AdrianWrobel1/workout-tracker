@@ -122,6 +122,7 @@ export const RadarChart = ({
         stroke={strokeColor}
         strokeWidth="2"
         strokeLinejoin="round"
+        className="ui-radar-draw"
       />
       
       {/* Data points (circles at each vertex) */}
@@ -136,6 +137,7 @@ export const RadarChart = ({
             fill={strokeColor}
             stroke="#18181b"
             strokeWidth="2"
+            className="ui-radar-point"
           />
         );
       })}
@@ -202,3 +204,4 @@ export const RadarChart = ({
 //   }} 
 //   size={220}
 // />
+

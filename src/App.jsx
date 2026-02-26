@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { calculate1RM } from './domain/calculations';
 import { getExerciseRecords, getLastCompletedSets, suggestNextWeight, checkSetRecords } from './domain/exercises';
 import { prepareCleanWorkoutData, compareWorkoutToPrevious, generateSessionFeedback, calculateMuscleDistribution, detectPRsInWorkout, buildLastWorkoutSnapshot, generateCoachLens } from './domain/workouts';
-import { normalizeSetForStorage, normalizeWorkoutExerciseForStorage, isWarmupSet } from './domain/workoutExtensions';
+import { normalizeSetForStorage, normalizeWorkoutExerciseForStorage, isWarmupSet, resolveSetType } from './domain/workoutExtensions';
 import { calculateReadiness, calculateBlockProgress, optimizeSession, calculateMuscleBalance } from './analytics';
 
 // HOOKS
@@ -45,6 +45,32 @@ import { ExportDataView } from './views/ExportDataView';
 const ENABLE_BLOCKS = true;
 const ENABLE_OPTIMIZER = true;
 const ENABLE_READINESS = true;
+
+const AnimatedMetricValue = ({ value, duration = 420, suffix = '' }) => {
+  const targetValue = Number(value) || 0;
+  const [display, setDisplay] = useState(targetValue);
+
+  useEffect(() => {
+    const startValue = display;
+    if (!Number.isFinite(targetValue) || targetValue === startValue) return undefined;
+
+    const startTime = performance.now();
+    let frame;
+
+    const step = (now) => {
+      const progress = Math.min(1, (now - startTime) / duration);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const next = Math.round(startValue + (targetValue - startValue) * eased);
+      setDisplay(next);
+      if (progress < 1) frame = requestAnimationFrame(step);
+    };
+
+    frame = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(frame);
+  }, [targetValue, duration]);
+
+  return <>{display}{suffix}</>;
+};
 
 
 export default function App() {
@@ -91,6 +117,7 @@ export default function App() {
     trainingNotes, setTrainingNotes,
     enablePerformanceAlerts, setEnablePerformanceAlerts,
     enableHapticFeedback, setEnableHapticFeedback,
+    reduceAnimations, setReduceAnimations,
     activePRBanner, setActivePRBanner,
     prBannerVisible, setPRBannerVisible,
   } = useSettings();
@@ -109,11 +136,29 @@ export default function App() {
   const [historyScrollPosition, setHistoryScrollPosition] = useState(null);
   const [scrollToWorkoutDate, setScrollToWorkoutDate] = useState(null);
   const [autosaveStatus, setAutosaveStatus] = useState({ state: 'idle', savedAt: null }); // idle | saving | saved | error
+  const [tabTransitionClass, setTabTransitionClass] = useState('ui-tab-slide-in-right');
   
   // Undo deleted workout
   const undoTimeoutRef = useRef(null);
   const autosaveRequestRef = useRef(0);
   const prBannerTimeoutRef = useRef(null);
+  const activeTabRef = useRef(activeTab);
+  const activeWorkoutRef = useRef(activeWorkout);
+
+  useEffect(() => {
+    activeTabRef.current = activeTab;
+  }, [activeTab]);
+
+  useEffect(() => {
+    activeWorkoutRef.current = activeWorkout;
+  }, [activeWorkout]);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-motion', reduceAnimations ? 'reduced' : 'full');
+    return () => {
+      document.documentElement.setAttribute('data-motion', 'full');
+    };
+  }, [reduceAnimations]);
 
   // Initialize accent color from localStorage on app startup
   useEffect(() => {
@@ -137,7 +182,7 @@ export default function App() {
         // Migrate from localStorage on first run
         const migrated = await storage.migrateFromLocalStorage();
         if (migrated.migratedWorkouts > 0) {
-          console.log(`✓ Migrated ${migrated.migratedWorkouts} workouts from localStorage`);
+          console.log(`[ok] Migrated ${migrated.migratedWorkouts} workouts from localStorage`);
         }
 
         // Load entities from IndexedDB
@@ -157,6 +202,7 @@ export default function App() {
         const enableAlerts = await storage.getSetting('enablePerformanceAlerts', true);
         const enableHaptic = await storage.getSetting('enableHapticFeedback', false);
         const notes = await storage.getSetting('trainingNotes', '');
+        const reduceMotion = await storage.getSetting('reduceAnimations', false);
 
         setWeeklyGoal(parseInt(goal) || 4);
         setDefaultStatsRange(statsRange || '12m');
@@ -164,6 +210,7 @@ export default function App() {
         setEnablePerformanceAlerts(enableAlerts !== null ? enableAlerts : true);
         setEnableHapticFeedback(enableHaptic !== null ? enableHaptic : false);
         setTrainingNotes(typeof notes === 'string' ? notes : '');
+        setReduceAnimations(Boolean(reduceMotion));
 
         // Load active workout if within 24h
         const activeWO = await storage.get(STORES.WORKOUTS, 'activeWorkout');
@@ -174,7 +221,7 @@ export default function App() {
           }
         }
 
-        console.log('✓ Data loaded from IndexedDB');
+        console.log('[ok] Data loaded from IndexedDB');
       } catch (error) {
         console.error('Error initializing storage:', error);
       }
@@ -197,11 +244,13 @@ export default function App() {
   useIndexedDBSetting('trainingNotes', trainingNotes, 500);
   useIndexedDBSetting('enablePerformanceAlerts', enablePerformanceAlerts, 500);
   useIndexedDBSetting('enableHapticFeedback', enableHapticFeedback, 500);
+  useIndexedDBSetting('reduceAnimations', reduceAnimations, 500);
   
   // activeWorkout requires immediate async save (no debounce for critical data)
   const { saveAsync } = useIndexedDBDirect();
   useEffect(() => {
     if (!activeWorkout) {
+      autosaveRequestRef.current += 1;
       setAutosaveStatus({ state: 'idle', savedAt: null });
       return;
     }
@@ -212,7 +261,14 @@ export default function App() {
     const timeoutId = setTimeout(() => {
       (async () => {
         const ok = await saveAsync(STORES.WORKOUTS, { ...activeWorkout, id: 'activeWorkout' });
-        if (requestId !== autosaveRequestRef.current) return;
+        if (requestId !== autosaveRequestRef.current) {
+          if (!activeWorkoutRef.current) {
+            storage.delete(STORES.WORKOUTS, 'activeWorkout').catch((err) => {
+              console.error('Error clearing stale active workout snapshot:', err);
+            });
+          }
+          return;
+        }
 
         if (ok) {
           setAutosaveStatus({ state: 'saved', savedAt: new Date().toISOString() });
@@ -224,6 +280,19 @@ export default function App() {
 
     return () => clearTimeout(timeoutId);
   }, [activeWorkout, saveAsync]);
+  // Safety cleanup: if active workout is cleared, remove snapshot entry after UI settles.
+  // Guarded by firstLoad to avoid deleting a restorable workout during initial hydration.
+  useEffect(() => {
+    if (firstLoad || activeWorkout) return;
+
+    const timer = setTimeout(() => {
+      storage.delete(STORES.WORKOUTS, 'activeWorkout').catch((err) => {
+        console.error('Error clearing inactive activeWorkout snapshot:', err);
+      });
+    }, 250);
+
+    return () => clearTimeout(timer);
+  }, [activeWorkout, firstLoad]);
 
   // Timer
   useEffect(() => {
@@ -262,7 +331,7 @@ export default function App() {
     if (!prBannerVisible) return;
 
     const recordsCount = Math.max(1, Number(activePRBanner?.recordTypes?.length) || 1);
-    const ttl = 2100 * recordsCount + 1200;
+    const ttl = 2600 * recordsCount + 1400;
     prBannerTimeoutRef.current = setTimeout(() => {
       setPRBannerVisible(false);
     }, ttl);
@@ -419,7 +488,7 @@ export default function App() {
       if (wi) {
         const ts = te.sets?.length || 0;
         const ws = wi.sets?.length || 0;
-        if (ts !== ws) reasons.push(`Sets changed for ${wi.name} (${ts} → ${ws})`);
+        if (ts !== ws) reasons.push(`Sets changed for ${wi.name} (${ts} -> ${ws})`);
       }
     });
 
@@ -474,7 +543,7 @@ export default function App() {
     // Prepare clean data and comparison
     const cleanData = prepareCleanWorkoutData(completedWorkout, exercisesDB);
     const comparison = compareWorkoutToPrevious(completedWorkout, workouts);
-    const feedback = generateSessionFeedback(cleanData.totalVolume, cleanData.completedSets, comparison?.trend || '→');
+    const feedback = generateSessionFeedback(cleanData.totalVolume, cleanData.completedSets, comparison?.trend || 'flat');
     
     // Pre-calculate PR status (on clone; no mutation of activeWorkout)
     const prStatus = detectPRsInWorkout(completedWorkout, workouts, calculate1RM, getExerciseRecords);
@@ -505,9 +574,10 @@ export default function App() {
   }, []);
 
   const handleMaximizeWorkout = useCallback(() => {
+    if (!activeWorkout) return;
     setIsWorkoutMinimized(false);
     setView('activeWorkout');
-  }, []);
+  }, [activeWorkout, setIsWorkoutMinimized, setView]);
 
 
   // Active Workout Modifications
@@ -712,7 +782,8 @@ export default function App() {
               // Trigger PR banner display
               setActivePRBanner({
                 exerciseName,
-                recordTypes
+                recordTypes,
+                eventId: Date.now() + Math.random()
               });
               setPRBannerVisible(true);
               
@@ -1155,16 +1226,33 @@ export default function App() {
         workout.exercises?.some(ex => ex.exerciseId === exportExerciseId)
       );
     }
+    const normalizedFilteredWorkouts = filteredWorkouts.map((workout) => ({
+      ...workout,
+      exercises: (workout.exercises || []).map((exercise) => ({
+        ...exercise,
+        sets: (exercise.sets || []).map((set) => {
+          const setType = resolveSetType(set);
+          return {
+            ...set,
+            setType,
+            warmup: setType === 'warmup',
+            rir: set.rir ?? null,
+            tempo: set.tempo ?? null,
+            pauseSec: set.pauseSec ?? null
+          };
+        })
+      }))
+    }));
 
     // Build export data
     if (exportType === 'all') {
-      dataToExport = { workouts: filteredWorkouts, templates, exercisesDB: filteredExercisesDB, weeklyGoal };
+      dataToExport = { workouts: normalizedFilteredWorkouts, templates, exercisesDB: filteredExercisesDB, weeklyGoal };
     } else if (exportType === 'workouts') {
-      dataToExport = { workouts: filteredWorkouts };
+      dataToExport = { workouts: normalizedFilteredWorkouts };
     } else if (exportType === 'exercises') {
-      dataToExport = { exercisesDB: filteredExercisesDB, workouts: filteredWorkouts }; // Include workouts for context
+      dataToExport = { exercisesDB: filteredExercisesDB, workouts: normalizedFilteredWorkouts }; // Include workouts for context
     } else if (exportType === 'singleExercise') {
-      dataToExport = { exercisesDB: filteredExercisesDB, workouts: filteredWorkouts }; // Include workouts for context
+      dataToExport = { exercisesDB: filteredExercisesDB, workouts: normalizedFilteredWorkouts }; // Include workouts for context
     }
 
     const dataStr = JSON.stringify(dataToExport, null, 2);
@@ -1312,34 +1400,49 @@ export default function App() {
 
   // --- NAVIGATION HANDLER ---
   const handleTabChange = useCallback((tabId) => {
+    const tabOrder = { home: 0, history: 1, profile: 2 };
+    const previousTab = activeTabRef.current;
+    const hasAnimatedTabs = tabOrder[previousTab] !== undefined && tabOrder[tabId] !== undefined && previousTab !== tabId;
+
+    if (hasAnimatedTabs) {
+      setTabTransitionClass(
+        tabOrder[tabId] > tabOrder[previousTab] ? 'ui-tab-slide-in-right' : 'ui-tab-slide-in-left'
+      );
+    }
+
+    activeTabRef.current = tabId;
     setActiveTab(tabId);
+    if (activeWorkout) setIsWorkoutMinimized(true);
     if (tabId === 'home') setView('home');
     else if (tabId === 'history') setView('history');
     else if (tabId === 'exercises') setView('exercises');
     else if (tabId === 'profile') setView('profile');
     else if (tabId === 'settings') setView('settings');
-  }, []);
+  }, [activeWorkout, setActiveTab, setIsWorkoutMinimized, setView]);
 
   // Scroll to top when opening a detail/overlay view so user always starts at top of the sub-view
   useEffect(() => {
     const detailViews = ['workoutDetail', 'exerciseDetail', 'createExercise', 'templates', 'selectTemplate', 'monthlyProgress', 'calendar', 'exportData', 'settings', 'profile', 'statistics'];
     if (detailViews.includes(view)) {
-      window.scrollTo({ top: 0, behavior: 'instant' });
-      const main = document.querySelector('.max-w-md.min-h-screen');
+      const main = document.querySelector('.app-content');
       if (main) main.scrollTo({ top: 0, behavior: 'instant' });
     }
   }, [view]);
 
+  const showBottomNav = view !== 'activeWorkout' && !(view === 'templates' && editingTemplate);
+  const miniWorkoutBarVisible = Boolean(activeWorkout) && view !== 'activeWorkout';
+  const showMiniWorkoutBar = miniWorkoutBarVisible;
+
   // --- RENDER ---
   return (
     <>
-      <div className="flex justify-center bg-zinc-900 min-h-screen">
-        <div className="w-full max-w-md bg-zinc-900 shadow-2xl min-h-screen relative">
+      <div className="app-wrapper bg-zinc-900">
+        <div className="app-content w-full max-w-md mx-auto bg-zinc-900 shadow-2xl">
 
           {/* VIEW ROUTING */}
           {view === 'home' && (
             firstLoad ? (
-              <div className="min-h-screen bg-black text-white pb-28 px-4 py-6">
+              <div className="bg-black text-white pb-28 px-4 py-6">
                 <div className="h-36 bg-slate-800/50 rounded-2xl mb-4 animate-pulse" />
                 <div className="h-14 bg-slate-800/50 rounded-xl mb-3 animate-pulse" />
                 <div className="grid grid-cols-2 gap-3 mb-3">
@@ -1363,7 +1466,7 @@ export default function App() {
                 onStartWorkout={() => setView('selectTemplate')}
                 onManageTemplates={() => { setEditingTemplate(null); setView('templates'); }}
                 onOpenCalendar={openCalendar}
-                onViewHistory={() => { setActiveTab('history'); setView('history'); }}
+                onViewHistory={() => handleTabChange('history')}
                 onViewWorkoutDetail={(date) => { setSelectedDate(date); setView('workoutDetail'); }}
                 onOpenMonthlyProgress={(offset) => { setMonthOffset(offset); setView('monthlyProgress'); }}
               />
@@ -1519,7 +1622,15 @@ export default function App() {
               readiness={readiness}
               blockProgress={activeBlockProgress}
               exercisesDB={exercisesDB}
-              onCancel={() => { if (confirm('Cancel?')) { setActiveWorkout(null); setView('home'); } }}
+              onCancel={async () => {
+                if (confirm('Cancel?')) {
+                  setActiveWorkout(null);
+                  setWorkoutTimer(0);
+                  setIsWorkoutMinimized(false);
+                  setView('home');
+                  try { await storage.delete(STORES.WORKOUTS, 'activeWorkout'); } catch (err) { console.error('Error clearing active workout snapshot:', err); }
+                }
+              }}
               onFinish={handleFinishWorkout}
               onUpdateSet={handleUpdateSet}
               onToggleSet={handleToggleSet}
@@ -1606,7 +1717,7 @@ export default function App() {
                     to.setHours(23, 59, 59, 999);
                     return wDate >= from && wDate <= to;
                   });
-                  
+
                   // Filter exercises to only those used in filtered workouts
                   const usedExerciseIds = new Set();
                   workoutsToExport.forEach(w => {
@@ -1618,80 +1729,189 @@ export default function App() {
                   templatesToExport = [];
                 }
 
-                let content = '';
-                const filename = data.exportMode === 'all' 
+                const normalizeExportSet = (set = {}) => {
+                  const setType = resolveSetType(set);
+                  return {
+                    ...set,
+                    setType,
+                    warmup: setType === 'warmup',
+                    rir: set.rir ?? null,
+                    tempo: set.tempo ?? null,
+                    pauseSec: set.pauseSec ?? null
+                  };
+                };
+
+                const normalizedWorkouts = workoutsToExport.map((workout) => ({
+                  ...workout,
+                  exercises: (workout.exercises || []).map((exercise) => ({
+                    ...exercise,
+                    sets: (exercise.sets || []).map((set) => normalizeExportSet(set))
+                  }))
+                }));
+
+                const filename = data.exportMode === 'all'
                   ? `backup_${new Date().toISOString().split('T')[0]}`
                   : `workouts_${data.fromDate}_to_${data.toDate}`;
 
-                switch(data.format) {
-                  case 'txt':
-                    if (data.exportMode === 'all') {
-                      content = `BACKUP PEŁNY\n`;
-                      content += `Data eksportu: ${new Date().toLocaleString('pl-PL')}\n`;
-                      content += `Treningi: ${workoutsToExport.length}\n`;
-                      content += `Ćwiczenia: ${exercisesToExport.length}\n`;
-                      content += `Szablony: ${templatesToExport.length}\n\n`;
-                      content += `${'─'.repeat(70)}\n\n`;
-                      
-                      content += `SZABLONY TRENINGÓW:\n`;
-                      templatesToExport.forEach((t, idx) => {
-                        content += `${idx + 1}. ${t.name}\n`;
-                        t.exercises?.forEach(ex => {
-                          content += `   • ${ex.name} - ${ex.sets?.length || 0} serii\n`;
-                        });
+                let content = '';
+
+                if (data.format === 'txt') {
+                  content += 'WORKOUT EXPORT REPORT\n';
+                  content += `Generated: ${new Date().toLocaleString('en-US')}\n`;
+                  if (data.exportMode !== 'all') {
+                    content += `Range: ${data.fromDate} to ${data.toDate}\n`;
+                  }
+                  content += `Workouts: ${normalizedWorkouts.length}\n`;
+                  content += `Exercises: ${exercisesToExport.length}\n`;
+                  if (data.exportMode === 'all') {
+                    content += `Templates: ${templatesToExport.length}\n`;
+                  }
+                  content += `\n${'-'.repeat(72)}\n\n`;
+
+                  if (data.exportMode === 'all' && templatesToExport.length > 0) {
+                    content += 'TEMPLATE SUMMARY\n';
+                    templatesToExport.forEach((template, index) => {
+                      content += `${index + 1}. ${template.name} (${template.exercises?.length || 0} exercises)\n`;
+                    });
+                    content += `\n${'-'.repeat(72)}\n\n`;
+                  }
+
+                  normalizedWorkouts.forEach((workout, index) => {
+                    content += `${index + 1}. ${workout.name} | ${workout.date}\n`;
+                    content += `   Duration: ${workout.duration || 0} min\n`;
+
+                    if (workout.tags?.length) {
+                      content += `   Tags: ${workout.tags.join(' ')}\n`;
+                    }
+
+                    if (workout.note) {
+                      content += `   Note: ${workout.note}\n`;
+                    }
+
+                    (workout.exercises || []).forEach((exercise) => {
+                      const completedSets = (exercise.sets || []).filter(set => set.completed);
+                      if (!completedSets.length) return;
+
+                      content += `   - ${exercise.name}\n`;
+                      completedSets.forEach((set, setIndex) => {
+                        const setType = resolveSetType(set);
+                        const kg = Number(set.kg) || 0;
+                        const reps = Number(set.reps) || 0;
+                        const estimated1RM = kg > 0 && reps > 0 && setType !== 'warmup'
+                          ? Math.round(kg * (1 + reps / 30))
+                          : null;
+
+                        const extras = [];
+                        if (set.rir != null) extras.push(`RIR ${set.rir}`);
+                        if (set.tempo) extras.push(`Tempo ${set.tempo}`);
+                        if (set.pauseSec) extras.push(`Pause ${set.pauseSec}s`);
+
+                        content += `      ${setIndex + 1}) [${setType.toUpperCase()}] ${kg} kg x ${reps}`;
+                        if (estimated1RM != null) content += ` (1RM ${estimated1RM})`;
+                        if (extras.length) content += ` | ${extras.join(' | ')}`;
                         content += '\n';
                       });
-                      
-                      content += `\n${'─'.repeat(70)}\n\n`;
-                      content += `ĆWICZENIA:\n`;
-                      exercisesToExport.forEach((e, idx) => {
-                        content += `${idx + 1}. ${e.name} (${e.category})\n`;
-                      });
-                    } else {
-                      content = `EXPORT TRENINGÓW\n`;
-                      content += `Zakres: ${data.fromDate} do ${data.toDate}\n`;
-                      content += `Data eksportu: ${new Date().toLocaleString('pl-PL')}\n`;
-                      content += `Ilość treningów: ${workoutsToExport.length}\n\n`;
-                      content += `${'─'.repeat(70)}\n\n`;
-                    }
-                    
-                    workoutsToExport.forEach((w, idx) => {
-                      content += `${idx + 1}. ${w.name} (${w.date})\n`;
-                      content += `   Czas: ${w.duration || 0} min\n`;
-                      if (w.note) content += `   Notatka: ${w.note}\n`;
-                      if (w.exercises?.length > 0) {
-                        content += `   Ćwiczenia:\n`;
-                        w.exercises.forEach(ex => {
-                          content += `     • ${ex.name}\n`;
-                          const doneSets = (ex.sets || []).filter(s => s.completed);
-                          doneSets.forEach(s => {
-                            content += `       - ${s.kg} kg × ${s.reps} rep${s.reps !== '1' ? 's' : ''}\n`;
-                          });
-                        });
-                      }
-                      content += '\n';
                     });
-                    break;
-                  case 'json':
-                    const exportData = {
-                      workouts: workoutsToExport,
-                      exercisesDB: exercisesToExport
-                    };
-                    if (data.exportMode === 'all') {
-                      exportData.templates = templatesToExport;
-                    }
-                    content = JSON.stringify(exportData, null, 2);
-                    break;
+
+                    content += '\n';
+                  });
+                } else if (data.format === 'csv') {
+                  const escapeCsv = (value) => {
+                    const text = value == null ? '' : String(value);
+                    if (/[",\n]/.test(text)) return `"${text.replace(/"/g, '""')}"`;
+                    return text;
+                  };
+
+                  const rows = [[
+                    'date',
+                    'workout_name',
+                    'duration_min',
+                    'exercise_name',
+                    'exercise_category',
+                    'set_index',
+                    'set_type',
+                    'completed',
+                    'kg',
+                    'reps',
+                    'volume',
+                    'estimated_1rm',
+                    'is_pr',
+                    'rir',
+                    'tempo',
+                    'pause_sec',
+                    'tags',
+                    'note'
+                  ]];
+
+                  normalizedWorkouts.forEach((workout) => {
+                    const tags = (workout.tags || []).join(' ');
+                    const note = workout.note || '';
+
+                    (workout.exercises || []).forEach((exercise) => {
+                      (exercise.sets || []).forEach((set, setIndex) => {
+                        const setType = resolveSetType(set);
+                        const kg = Number(set.kg) || 0;
+                        const reps = Number(set.reps) || 0;
+                        const volume = kg * reps;
+                        const estimated1RM = kg > 0 && reps > 0 && setType !== 'warmup'
+                          ? Math.round(kg * (1 + reps / 30))
+                          : '';
+                        const isPR = Boolean(set.isBest1RM || set.isBestSetVolume || set.isHeaviestWeight);
+
+                        rows.push([
+                          workout.date || '',
+                          workout.name || '',
+                          workout.duration || 0,
+                          exercise.name || '',
+                          exercise.category || '',
+                          setIndex + 1,
+                          setType,
+                          set.completed ? 'yes' : 'no',
+                          kg,
+                          reps,
+                          volume,
+                          estimated1RM,
+                          isPR ? 'yes' : 'no',
+                          set.rir ?? '',
+                          set.tempo ?? '',
+                          set.pauseSec ?? '',
+                          tags,
+                          note
+                        ]);
+                      });
+                    });
+                  });
+
+                  content = rows.map(row => row.map(escapeCsv).join(',')).join('\n');
+                } else {
+                  const exportData = {
+                    workouts: normalizedWorkouts,
+                    exercisesDB: exercisesToExport
+                  };
+                  if (data.exportMode === 'all') {
+                    exportData.templates = templatesToExport;
+                  }
+                  content = JSON.stringify(exportData, null, 2);
                 }
 
-                const blob = new Blob([content], { 
-                  type: data.format === 'json' ? 'application/json;charset=utf-8' : 'text/plain;charset=utf-8'
+                const mimeByFormat = {
+                  json: 'application/json;charset=utf-8',
+                  txt: 'text/plain;charset=utf-8',
+                  csv: 'text/csv;charset=utf-8'
+                };
+                const extByFormat = {
+                  json: 'json',
+                  txt: 'txt',
+                  csv: 'csv'
+                };
+
+                const blob = new Blob([content], {
+                  type: mimeByFormat[data.format] || 'text/plain;charset=utf-8'
                 });
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement('a');
                 link.href = url;
-                const ext = data.format === 'json' ? 'json' : 'txt';
-                link.download = `${filename}.${ext}`;
+                link.download = `${filename}.${extByFormat[data.format] || 'txt'}`;
                 link.setAttribute('type', blob.type);
                 link.click();
                 URL.revokeObjectURL(url);
@@ -1699,7 +1919,6 @@ export default function App() {
               }}
             />
           )}
-
           {view === 'settings' && (
             <SettingsView
               weeklyGoal={weeklyGoal}
@@ -1727,6 +1946,8 @@ export default function App() {
               onEnablePerformanceAlertsChange={setEnablePerformanceAlerts}
               enableHapticFeedback={enableHapticFeedback}
               onEnableHapticFeedbackChange={setEnableHapticFeedback}
+              reduceAnimations={reduceAnimations}
+              onReduceAnimationsChange={setReduceAnimations}
             />
           )}
 
@@ -1751,21 +1972,23 @@ export default function App() {
               onViewWorkoutDetail={(date) => { setSelectedDate(date); setView('workoutDetail'); }}
             />
           )}
-          {activeWorkout && isWorkoutMinimized && (
-            <MiniWorkoutBar
-              workoutName={activeWorkout.name}
-              timer={workoutTimer}
-              onMaximize={handleMaximizeWorkout}
-            />
-          )}
 
+          <div className="scroll-spacer" aria-hidden="true" />
         </div>
       </div>
 
       {/* GLOBAL MODALS & NAV */}
-      {/* Nav chowamy tylko w trybie aktywnego treningu, żeby nie przeszkadzał */}
-      {view !== 'activeWorkout' && !(view === 'templates' && editingTemplate) && (
+      {/* Nav chowamy tylko w trybie aktywnego treningu, zeby nie przeszkadzal */}
+      {showBottomNav && (
         <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
+      )}
+
+      {showMiniWorkoutBar && (
+        <MiniWorkoutBar
+          workoutName={activeWorkout?.name}
+          timer={workoutTimer}
+          onMaximize={handleMaximizeWorkout}
+        />
       )}
 
       {showCalendar && (
@@ -1799,12 +2022,12 @@ export default function App() {
         />
       )}
       {pendingSummary && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-3 sm:p-4 ui-backdrop-in">
           <div
             data-ui-anim
-            className={`bg-gradient-to-br from-slate-900/95 to-black/95 text-white rounded-2xl w-full max-w-md border border-slate-700/50 ui-modal-scale max-h-[90vh] overflow-y-auto ${summaryVisible ? 'animate-modal-fade-in' : 'opacity-0 scale-95'}`}
+            className={`bg-gradient-to-br from-slate-900/95 to-black/95 text-white rounded-2xl w-full max-w-[370px] sm:max-w-md border border-slate-700/50 ui-modal-scale max-h-[92dvh] overflow-y-auto ${summaryVisible ? 'animate-modal-fade-in' : 'opacity-0 scale-95'}`}
           >
-            <div className="p-6 sticky top-0 bg-gradient-to-b from-slate-900/95 to-transparent border-b border-slate-700/30 flex justify-between items-start">
+            <div className="p-4 sm:p-6 sticky top-0 bg-gradient-to-b from-slate-900/95 to-transparent border-b border-slate-700/30 flex justify-between items-start">
               <div>
                 <h2 className="text-2xl sm:text-3xl font-black bg-gradient-to-r from-blue-400 to-blue-300 bg-clip-text text-transparent">
                   {pendingSummary.cleanData.totalVolume.toLocaleString()}
@@ -1812,55 +2035,120 @@ export default function App() {
                 <p className="text-xs text-slate-400 mt-1 font-semibold tracking-widest">TOTAL VOLUME</p>
               </div>
               <button onClick={() => setPendingSummary(null)} className="text-slate-500 hover:text-slate-300 transition flex-shrink-0">
-                <span className="text-xl">✕</span>
+                <span className="text-xl">X</span>
               </button>
             </div>
 
-            <div className="p-6 space-y-4">
+            <div className="p-4 sm:p-6 space-y-3.5 sm:space-y-4">
             {/* Main stats row */}
             <div className="grid grid-cols-2 gap-3 sm:gap-4">
-              <div className="bg-slate-800/40 border border-slate-700/50 rounded-lg p-3 sm:p-4">
+              <div className="bg-slate-800/40 border border-slate-700/50 rounded-lg p-2.5 sm:p-4 ui-stagger-enter ui-stagger-d1">
                 <p className="text-slate-400 text-xs font-semibold tracking-widest mb-2">SETS COMPLETED</p>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-xl sm:text-2xl font-black text-white">{pendingSummary.cleanData.completedSets}</span>
+                  <span className="text-xl sm:text-2xl font-black text-white"><AnimatedMetricValue value={pendingSummary.cleanData.completedSets} /></span>
                   {pendingSummary.comparison && (
                     <span className="text-lg" title={`${pendingSummary.comparison.prevVolume ? 'vs ' + Math.round(pendingSummary.comparison.prevVolume / 1000) + 'k prev' : ''}`}>
-                      {pendingSummary.comparison.trend}
+                      {pendingSummary.comparison.trend === 'up' ? '\u2191' : pendingSummary.comparison.trend === 'down' ? '\u2193' : '\u2192'}
                     </span>
                   )}
                 </div>
               </div>
               
-              <div className="bg-slate-800/40 border border-slate-700/50 rounded-lg p-3 sm:p-4">
+              <div className="bg-slate-800/40 border border-slate-700/50 rounded-lg p-2.5 sm:p-4 ui-stagger-enter ui-stagger-d2">
                 <p className="text-slate-400 text-xs font-semibold tracking-widest mb-2">DURATION</p>
-                <p className="text-xl sm:text-2xl font-black text-white">{pendingSummary.metrics.duration}m</p>
+                <p className="text-xl sm:text-2xl font-black text-white"><AnimatedMetricValue value={pendingSummary.metrics.duration} suffix="m" /></p>
               </div>
             </div>
 
             {/* Feedback text */}
-            <div className="bg-accent/30 border border-accent/20 rounded-lg p-3 sm:p-4 text-center">
+            <div className="bg-accent/30 border border-accent/20 rounded-lg p-2.5 sm:p-4 text-center ui-stagger-enter ui-stagger-d3">
               <p className="text-sm sm:text-lg font-bold accent-text">{pendingSummary.feedback}</p>
             </div>
 
-            {pendingSummary.coachLens && (
-              <div className="bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-500/20 rounded-xl p-4 space-y-2">
-                <p className="text-xs text-cyan-200 font-semibold tracking-widest">COACH LENS (OFFLINE)</p>
-                <p className="text-sm text-slate-100">
-                  <span className="text-emerald-300 font-semibold">Keep:</span> {pendingSummary.coachLens.keep}
-                </p>
-                <p className="text-sm text-slate-100">
-                  <span className="text-amber-300 font-semibold">Improve:</span> {pendingSummary.coachLens.improve}
-                </p>
-                <p className="text-sm text-slate-100">
-                  <span className="text-blue-300 font-semibold">Focus:</span> {pendingSummary.coachLens.focus}
-                </p>
+                                    {pendingSummary.coachLens && (
+              <div className="bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-500/20 rounded-xl p-3 sm:p-3.5 ui-stagger-enter ui-stagger-d4 ui-coach-card-in space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs text-cyan-200 font-semibold tracking-widest">COACH LENS</p>
+                    <p className="text-sm text-slate-100 mt-1">{pendingSummary.coachLens.headline || pendingSummary.coachLens.focus}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-[10px] px-2 py-1 rounded-full border font-bold uppercase tracking-wide ${
+                      pendingSummary.coachLens.status === 'push'
+                        ? 'text-emerald-300 bg-emerald-500/10 border-emerald-500/30'
+                        : pendingSummary.coachLens.status === 'recover'
+                        ? 'text-amber-300 bg-amber-500/10 border-amber-500/30'
+                        : 'text-sky-300 bg-sky-500/10 border-sky-500/30'
+                    }`}>
+                      {pendingSummary.coachLens.status || 'steady'}
+                    </span>
+                    <span className={`text-[10px] px-2 py-1 rounded-full border font-bold uppercase tracking-wide ${
+                      pendingSummary.coachLens.confidence === 'high'
+                        ? 'text-emerald-200 bg-emerald-500/10 border-emerald-500/30'
+                        : pendingSummary.coachLens.confidence === 'medium'
+                        ? 'text-sky-200 bg-sky-500/10 border-sky-500/30'
+                        : 'text-slate-300 bg-slate-700/40 border-slate-600/60'
+                    }`}>
+                      confidence: {pendingSummary.coachLens.confidence || 'low'}
+                    </span>
+                  </div>
+                </div>
+
+                {pendingSummary.coachLens.scores && (
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="rounded-lg border border-slate-700/50 bg-slate-900/40 p-2 ui-coach-metric-enter ui-coach-metric-d1">
+                      <p className="text-[10px] text-slate-500 font-semibold tracking-widest">OUTPUT</p>
+                      <p className="text-sm font-black text-white">{pendingSummary.coachLens.scores.progression ?? 0}</p>
+                      <div className="h-1.5 mt-1.5 bg-slate-700/70 rounded-full overflow-hidden">
+                        <div className="h-full bg-cyan-400/80" style={{ width: `${Math.max(0, Math.min(100, pendingSummary.coachLens.scores.progression ?? 0))}%` }} />
+                      </div>
+                      <p className="text-[9px] text-slate-500 mt-1">{pendingSummary.coachLens.scoreLegend?.progression || 'Output trend and PR momentum.'}</p>
+                    </div>
+                    <div className="rounded-lg border border-slate-700/50 bg-slate-900/40 p-2 ui-coach-metric-enter ui-coach-metric-d2">
+                      <p className="text-[10px] text-slate-500 font-semibold tracking-widest">EXECUTION</p>
+                      <p className="text-sm font-black text-white">{pendingSummary.coachLens.scores.execution ?? 0}</p>
+                      <div className="h-1.5 mt-1.5 bg-slate-700/70 rounded-full overflow-hidden">
+                        <div className="h-full bg-emerald-400/80" style={{ width: `${Math.max(0, Math.min(100, pendingSummary.coachLens.scores.execution ?? 0))}%` }} />
+                      </div>
+                      <p className="text-[9px] text-slate-500 mt-1">{pendingSummary.coachLens.scoreLegend?.execution || 'Work set completion quality.'}</p>
+                    </div>
+                    <div className="rounded-lg border border-slate-700/50 bg-slate-900/40 p-2 ui-coach-metric-enter ui-coach-metric-d3">
+                      <p className="text-[10px] text-slate-500 font-semibold tracking-widest">FATIGUE</p>
+                      <p className="text-sm font-black text-white">{pendingSummary.coachLens.scores.fatigueRisk ?? 0}</p>
+                      <div className="h-1.5 mt-1.5 bg-slate-700/70 rounded-full overflow-hidden">
+                        <div className="h-full bg-amber-400/80" style={{ width: `${Math.max(0, Math.min(100, pendingSummary.coachLens.scores.fatigueRisk ?? 0))}%` }} />
+                      </div>
+                      <p className="text-[9px] text-slate-500 mt-1">{pendingSummary.coachLens.scoreLegend?.fatigueRisk || 'Next-session slowdown risk.'}</p>
+                    </div>
+                  </div>
+                )}
+
+                {pendingSummary.coachLens.snapshot && (
+                  <div className="grid grid-cols-4 gap-2">
+                    <div className="rounded-lg border border-slate-700/50 bg-slate-900/35 px-2 py-1.5">
+                      <p className="text-[10px] text-slate-500">VOL DELTA</p>
+                      <p className="text-xs font-bold text-slate-100">{pendingSummary.coachLens.snapshot.volumeDeltaPct > 0 ? '+' : ''}{pendingSummary.coachLens.snapshot.volumeDeltaPct}%</p>
+                    </div>
+                    <div className="rounded-lg border border-slate-700/50 bg-slate-900/35 px-2 py-1.5">
+                      <p className="text-[10px] text-slate-500">WORK SETS</p>
+                      <p className="text-xs font-bold text-slate-100">{pendingSummary.coachLens.snapshot.completedWorkSets}/{pendingSummary.coachLens.snapshot.plannedWorkSets}</p>
+                    </div>
+                    <div className="rounded-lg border border-slate-700/50 bg-slate-900/35 px-2 py-1.5">
+                      <p className="text-[10px] text-slate-500">DENSITY</p>
+                      <p className="text-xs font-bold text-slate-100">{pendingSummary.coachLens.snapshot.density}/min</p>
+                    </div>
+                    <div className="rounded-lg border border-slate-700/50 bg-slate-900/35 px-2 py-1.5">
+                      <p className="text-[10px] text-slate-500">PRS</p>
+                      <p className="text-xs font-bold text-slate-100">{pendingSummary.coachLens.snapshot.prCount ?? 0}</p>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
-
             {/* PR Celebration */}
             {pendingSummary.completedWorkout.hasPR && (
               <div className="bg-gradient-to-br from-amber-600/20 to-amber-700/10 border border-amber-500/30 rounded-xl p-4 mb-6 flex items-center justify-center gap-3 animate-pulse-gentle">
-                <span className="text-4xl animate-bounce">🏆</span>
+                <span className="text-4xl animate-bounce">{"\u{1F3C6}"}</span>
                 <div className="text-center">
                   <p className="text-xs text-amber-400 font-black uppercase tracking-wider">PERSONAL RECORD!</p>
                   <p className="text-sm text-amber-300 font-bold mt-1">
@@ -2097,7 +2385,7 @@ export default function App() {
             </div>
 
             {/* Action buttons */}
-            <div className="p-6 pt-0 flex flex-col gap-2 sticky bottom-0 bg-gradient-to-t from-slate-900/95 to-transparent border-t border-slate-700/30">
+            <div className="p-4 sm:p-6 pt-0 flex flex-col gap-2 sticky bottom-0 bg-gradient-to-t from-slate-900/95 to-transparent border-t border-slate-700/30">
               <button 
                 onClick={async () => {
                   const workoutWithTags = { ...pendingSummary.completedWorkout, tags: selectedTags };
@@ -2130,10 +2418,10 @@ export default function App() {
 
                   setActiveWorkout(null);
                   setWorkoutTimer(0);
+                  try { await storage.delete(STORES.WORKOUTS, 'activeWorkout'); } catch (err) { console.error('Error clearing active workout snapshot:', err); }
                   setPendingSummary(null);
                   setSelectedTags([]);
-                  setActiveTab('history');
-                  setView('history');
+                  handleTabChange('history');
                   setScrollToWorkoutDate(workoutWithTags.date);
                 }}
                 className="w-full px-4 py-3 rounded-lg bg-gradient-to-r from-accent to-accent hover:opacity-90 text-white font-bold text-sm transition-all duration-200 ease-out ui-press shadow-lg shadow-accent/30"
@@ -2203,10 +2491,10 @@ export default function App() {
                     setWorkouts(newWorkouts);
                     setActiveWorkout(null);
                     setWorkoutTimer(0);
+                    try { await storage.delete(STORES.WORKOUTS, 'activeWorkout'); } catch (err) { console.error('Error clearing active workout snapshot:', err); }
                     setPendingSummary(null);
                     setSelectedTags([]);
-                    setActiveTab('history');
-                    setView('history');
+                    handleTabChange('history');
                     setScrollToWorkoutDate(workoutWithTags.date);
                   }}
                   className="w-full px-4 py-3 rounded-lg bg-slate-800/60 hover:bg-slate-700/60 border border-slate-600/50 text-slate-300 hover:text-white font-semibold text-sm transition-all"
@@ -2235,7 +2523,7 @@ export default function App() {
 
       {/* Undo Deleted Workout Toast */}
       {deletedWorkout && (
-        <div className="fixed bottom-24 left-4 right-4 bg-slate-800 border-2 border-slate-700 text-white px-6 py-4 rounded-xl shadow-xl flex items-center justify-between z-40 animate-pulse">
+        <div key={deletedWorkout.id || 'deleted'} className="fixed bottom-24 left-4 right-4 bg-slate-800 border-2 border-slate-700 text-white px-6 py-4 rounded-xl shadow-xl flex items-center justify-between z-40 relative overflow-hidden ui-undo-toast-enter">
           <div>
             <p className="text-base font-bold">Workout deleted</p>
             <p className="text-xs text-slate-400 mt-1">Undo within 10 seconds</p>
@@ -2261,6 +2549,7 @@ export default function App() {
           >
             Undo
           </button>
+                  <span className="ui-undo-sweep" />
         </div>
       )}
       
@@ -2277,4 +2566,43 @@ export default function App() {
     </>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

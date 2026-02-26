@@ -19,18 +19,22 @@ export const getPreviousRange = ({ start, days }) => {
   return { start: previousStart, end: previousEnd, days };
 };
 
+const createAlignedPoint = (baseItem, mappedItem) => ({
+  ...baseItem,
+  value: mappedItem?.value || 0,
+  hasValue: Number.isFinite(mappedItem?.value),
+  sourceLabel: mappedItem?.label || null,
+  sourceDate: mappedItem?.date || null
+});
+
 export const alignSeriesToCurrent = (currentSeries = [], previousSeries = []) => {
   if (!Array.isArray(currentSeries) || currentSeries.length === 0) return [];
   if (!Array.isArray(previousSeries) || previousSeries.length === 0) {
-    return currentSeries.map(item => ({ ...item, value: 0, hasValue: false }));
+    return currentSeries.map(item => createAlignedPoint(item, null));
   }
 
   if (currentSeries.length === previousSeries.length) {
-    return currentSeries.map((item, index) => ({
-      ...item,
-      value: previousSeries[index]?.value || 0,
-      hasValue: Number.isFinite(previousSeries[index]?.value)
-    }));
+    return currentSeries.map((item, index) => createAlignedPoint(item, previousSeries[index]));
   }
 
   const lastCurrent = currentSeries.length - 1;
@@ -40,12 +44,7 @@ export const alignSeriesToCurrent = (currentSeries = [], previousSeries = []) =>
     const mappedIndex = lastCurrent > 0
       ? Math.round((index / lastCurrent) * lastPrevious)
       : 0;
-    const mapped = previousSeries[mappedIndex];
-    return {
-      ...item,
-      value: mapped?.value || 0,
-      hasValue: Number.isFinite(mapped?.value)
-    };
+    return createAlignedPoint(item, previousSeries[mappedIndex]);
   });
 };
 

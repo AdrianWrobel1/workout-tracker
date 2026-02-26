@@ -27,17 +27,38 @@ const HistoryViewInner = ({
   const [showNewExercise, setShowNewExercise] = useState(false);
   const [useExerciseDB, setUseExerciseDB] = useState(false);
   const [newExercise, setNewExercise] = useState({ exerciseId: null, name: '', category: '', sets: [{ kg: 0, reps: 0, completed: false }] });
+  const [activeRecordFlashId, setActiveRecordFlashId] = useState(null);
+  const [listTransitionOn, setListTransitionOn] = useState(false);
   const scrollContainerRef = useRef(null);
 
   useEffect(() => {
-    if (scrollContainerRef.current && scrollPosition !== null && scrollPosition !== undefined) {
-      scrollContainerRef.current.scrollTop = scrollPosition;
-    }
+    scrollContainerRef.current = document.querySelector('.app-content');
+  }, []);
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container || scrollPosition === null || scrollPosition === undefined) return;
+    container.scrollTop = scrollPosition;
   }, [scrollPosition]);
 
-  const handleScroll = () => {
-    if (scrollContainerRef.current && onSaveScrollPosition) onSaveScrollPosition(scrollContainerRef.current.scrollTop);
-  };
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container || !onSaveScrollPosition) return;
+
+    const handleContainerScroll = () => onSaveScrollPosition(container.scrollTop);
+    container.addEventListener('scroll', handleContainerScroll, { passive: true });
+
+    return () => container.removeEventListener('scroll', handleContainerScroll);
+  }, [onSaveScrollPosition]);
+
+  useEffect(() => {
+    const start = setTimeout(() => setListTransitionOn(true), 0);
+    const timer = setTimeout(() => setListTransitionOn(false), 220);
+    return () => {
+      clearTimeout(start);
+      clearTimeout(timer);
+    };
+  }, [filter, selectedTags]);
 
   useEffect(() => {
     if (!scrollToWorkoutDate || !onScrollToWorkoutDone) return;
@@ -166,6 +187,17 @@ const HistoryViewInner = ({
     resetEditorHelpers();
   };
 
+  const handleOpenWorkoutFromHistory = (workout) => {
+    if (!onViewWorkoutDetail) return;
+    if (prWorkoutIds.has(workout.id)) {
+      setActiveRecordFlashId(workout.id);
+      setTimeout(() => setActiveRecordFlashId(null), 420);
+      setTimeout(() => onViewWorkoutDetail(workout.date), 120);
+      return;
+    }
+    onViewWorkoutDetail(workout.date);
+  };
+
   const groupedCards = sortedKeys.map(key => (
     <div key={key}>
       <div className="mb-4">
@@ -174,10 +206,10 @@ const HistoryViewInner = ({
       </div>
       <div className="space-y-3">
         {groups[key].map(workout => (
-          <div key={workout.id} data-workout-id={workout.id} data-workout-date={workout.date} className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-4 transition-all ui-card-mount-anim hover:border-slate-600/70 hover:from-slate-800/60 hover:to-slate-900/60">
+          <div key={workout.id} data-workout-id={workout.id} data-workout-date={workout.date} className={`bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-4 transition-all ui-card-mount-anim hover:border-slate-600/70 hover:from-slate-800/60 hover:to-slate-900/60 ${activeRecordFlashId === workout.id ? 'ui-record-click' : ''}` }>
             <WorkoutCard
               workout={workout}
-              onViewDetail={() => onViewWorkoutDetail(workout.date)}
+              onViewDetail={() => handleOpenWorkoutFromHistory(workout)}
               onEdit={() => handleEditStart(workout)}
               onDelete={() => onDeleteWorkout && onDeleteWorkout(workout.id)}
               showActions={true}
@@ -193,7 +225,7 @@ const HistoryViewInner = ({
   const current = editData;
 
   return (
-    <div className="min-h-screen bg-black text-white pb-24" ref={scrollContainerRef} onScroll={handleScroll} style={{ overflow: 'auto' }}>
+    <div className="bg-black text-white pb-24">
       <div className="bg-gradient-to-b from-black to-black/80 border-b border-white/10 p-4 sticky top-0 z-20">
         <h1 className="text-4xl font-black">HISTORY</h1>
         <p className="text-xs text-slate-400 mt-2 font-semibold tracking-widest">YOUR WORKOUT LOG</p>
@@ -219,7 +251,7 @@ const HistoryViewInner = ({
         </div>
       </div>
 
-      <div className="p-4 space-y-6">
+      <div className={"p-4 space-y-6 " + (listTransitionOn ? "ui-history-crossfade" : "")}>
         {filteredWorkouts.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-slate-400 text-sm font-semibold">{(filter || 'all') === 'all' ? 'No workouts yet' : 'No workouts match this filter'}</p>
@@ -233,7 +265,7 @@ const HistoryViewInner = ({
             keyExtractor={(item) => item.id}
             renderItem={(workout) => (
               <div key={workout.id} data-workout-id={workout.id} data-workout-date={workout.date} className="mb-3">
-                <WorkoutCard workout={workout} onViewDetail={() => onViewWorkoutDetail && onViewWorkoutDetail(workout.date)} onEdit={() => handleEditStart(workout)} onDelete={() => onDeleteWorkout && onDeleteWorkout(workout.id)} exercisesDB={exercisesDB} hasPR={false} />
+                <WorkoutCard workout={workout} onViewDetail={() => handleOpenWorkoutFromHistory(workout)} onEdit={() => handleEditStart(workout)} onDelete={() => onDeleteWorkout && onDeleteWorkout(workout.id)} exercisesDB={exercisesDB} hasPR={false} />
               </div>
             )}
           />
@@ -339,3 +371,11 @@ const HistoryViewInner = ({
 };
 
 export const HistoryView = React.memo(HistoryViewInner);
+
+
+
+
+
+
+
+

@@ -90,7 +90,7 @@ export const ProfileView = ({
   const workoutCount = workouts.length;
 
   return (
-    <div className="min-h-screen bg-black text-white pb-40">
+    <div className="bg-black text-white pb-40">
       {/* Header with Edit Button */}
       <div className="bg-gradient-to-b from-black to-black/80 border-b border-white/10 p-4 sticky top-0 z-20 shadow-2xl">
         <div className="flex items-center justify-between">
@@ -171,13 +171,14 @@ export const ProfileView = ({
           </div>
 
           {/* Chart - using UnifiedChart for consistency */}
-          <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700/30 mb-4">
+          <div key={`${dateRange}-${chartMetric}`} className="bg-slate-900/50 rounded-lg p-4 border border-slate-700/30 mb-4 ui-chart-range-fade ui-chart-card-enter">
             <UnifiedChart
               workouts={workouts}
               metric={chartMetric}
               timePeriod={getUnifiedChartPeriod(dateRange)}
               userWeight={userWeight}
               exercisesDB={exercisesDB}
+              enableAdvancedInteractions={true}
               color={chartMetric === 'duration' ? '#06b6d4' : chartMetric === 'workouts' ? '#10b981' : chartMetric === 'volume' ? '#f59e0b' : '#8b5cf6'}
               unit={chartMetric === 'duration' ? 'h' : chartMetric === 'workouts' ? 'workouts' : chartMetric === 'volume' ? 'k' : 'reps'}
             />
@@ -372,3 +373,6 @@ export const ProfileView = ({
     </div>
   );
 };
+
+
+

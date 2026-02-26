@@ -29,7 +29,7 @@ const ExerciseDetailViewInner = ({ exerciseId, workouts, exercisesDB, onBack, on
   if (!exerciseDef) return null;
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col">
+    <div className="bg-black text-white flex flex-col">
       {/* Header */}
       <div className="bg-gradient-to-b from-black to-black/80 border-b border-white/10 p-4 sticky top-0 z-20 shadow-2xl">
         <div className="flex items-center justify-between gap-4 mb-4">
@@ -113,7 +113,7 @@ const ExerciseDetailViewInner = ({ exerciseId, workouts, exercisesDB, onBack, on
       {/* Week Detail Modal */}
       {selectedWeek && (
         <div className="fixed inset-0 z-50 bg-black/80 flex items-start justify-center p-4 pt-20">
-          <div className="w-full max-w-xl bg-gradient-to-br from-slate-900/95 to-black/95 border border-slate-700/50 rounded-2xl p-5 shadow-2xl max-h-[80vh] overflow-y-auto ui-modal-scale ui-fade-scale-anim">
+          <div className="w-full max-w-xl bg-gradient-to-br from-slate-900/95 to-black/95 border border-slate-700/50 rounded-2xl p-5 shadow-2xl max-h-[80dvh] overflow-y-auto ui-modal-scale ui-fade-scale-anim">
             <div className="flex justify-between items-center mb-5 pb-4 border-b border-slate-700/50">
               <h3 className="text-2xl font-black">Week {selectedWeek.date}</h3>
               <button onClick={() => setSelectedWeek(null)} className="p-2 hover:bg-white/10 rounded-lg transition text-slate-400">
@@ -410,3 +410,7 @@ const ExerciseDetailViewInner = ({ exerciseId, workouts, exercisesDB, onBack, on
 };
 
 export const ExerciseDetailView = React.memo(ExerciseDetailViewInner);
+
+
+
+

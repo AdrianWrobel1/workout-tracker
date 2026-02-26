@@ -56,7 +56,7 @@ export const SessionTimelineStrip = React.memo(({ activeWorkout }) => {
                 }`}
               >
                 {item.isPr && (
-                  <span className="absolute top-0 right-0 w-2 h-2 rounded-full bg-yellow-300 border border-yellow-200 shadow-[0_0_8px_rgba(253,224,71,0.75)] translate-x-[35%] -translate-y-[35%]" />
+                  <span className="absolute top-0 right-0 w-2 h-2 rounded-full bg-yellow-300 border border-yellow-200 shadow-[0_0_8px_rgba(253,224,71,0.75)] translate-x-[35%] -translate-y-[35%] ui-pr-dot-pulse" />
                 )}
               </div>
             );
@@ -68,3 +68,4 @@ export const SessionTimelineStrip = React.memo(({ activeWorkout }) => {
 });
 
 SessionTimelineStrip.displayName = 'SessionTimelineStrip';
+

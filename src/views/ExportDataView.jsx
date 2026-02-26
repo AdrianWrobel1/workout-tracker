@@ -22,8 +22,15 @@ export const ExportDataView = ({ onBack, onExport }) => {
     onExport({ fromDate, toDate, format, exportMode });
   };
 
+  const formatHint = useMemo(() => {
+    if (format === 'json') return 'Full structured data. Best for backup/restore.';
+    if (format === 'csv') return 'Flat table per set. Best for spreadsheets and analysis.';
+    if (format === 'txt') return 'Readable session report. Best for quick review.';
+    return 'Choose output format.';
+  }, [format]);
+
   return (
-    <div className="min-h-screen bg-black text-white pb-24">
+    <div className="bg-black text-white pb-24">
       <div className="sticky top-0 z-20 bg-gradient-to-b from-black to-black/80 border-b border-white/10 px-4 py-4 shadow-2xl">
         <div className="flex items-center gap-3">
           <button onClick={onBack} className="p-2 rounded-lg hover:bg-white/10 transition">
@@ -31,13 +38,13 @@ export const ExportDataView = ({ onBack, onExport }) => {
           </button>
           <div>
             <h1 className="text-2xl font-black">Export Data</h1>
-            <p className="text-[11px] text-slate-400 font-semibold tracking-widest mt-0.5">CUSTOM EXPORT</p>
+            <p className="text-[11px] text-slate-400 font-semibold tracking-widest mt-0.5">BACKUP AND ANALYTICS EXPORT</p>
           </div>
         </div>
       </div>
 
       <div className="p-4 space-y-4">
-        <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-4">
+        <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-4 ui-export-step-slide">
           <div className="flex items-center gap-2 mb-3">
             <CalendarRange size={16} className="text-slate-300" />
             <p className="text-xs font-semibold tracking-widest text-slate-400">SCOPE</p>
@@ -46,20 +53,20 @@ export const ExportDataView = ({ onBack, onExport }) => {
           <div className="grid grid-cols-1 gap-2">
             <button
               onClick={() => setExportMode('period')}
-              className={`text-left rounded-lg border px-3 py-2.5 transition ${
+              className={`text-left rounded-lg border px-3 py-2.5 transition ui-export-step-slide ${
                 exportMode === 'period'
-                  ? 'accent-bg-light accent-border-light text-white'
+                  ? 'accent-bg-light accent-border-light text-white ui-export-chip-active'
                   : 'bg-slate-900/50 border-slate-700/60 text-slate-300 hover:border-slate-600/70'
               }`}
             >
               <p className="text-sm font-bold">Date range</p>
-              <p className="text-[11px] opacity-80 mt-0.5">Export workouts from selected period</p>
+              <p className="text-[11px] opacity-80 mt-0.5">Export only selected training period</p>
             </button>
             <button
               onClick={() => setExportMode('all')}
-              className={`text-left rounded-lg border px-3 py-2.5 transition ${
+              className={`text-left rounded-lg border px-3 py-2.5 transition ui-export-step-slide ${
                 exportMode === 'all'
-                  ? 'accent-bg-light accent-border-light text-white'
+                  ? 'accent-bg-light accent-border-light text-white ui-export-chip-active'
                   : 'bg-slate-900/50 border-slate-700/60 text-slate-300 hover:border-slate-600/70'
               }`}
             >
@@ -70,7 +77,7 @@ export const ExportDataView = ({ onBack, onExport }) => {
         </div>
 
         {exportMode === 'period' && (
-          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-4">
+          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-4 ui-export-step-slide">
             <p className="text-xs font-semibold tracking-widest text-slate-400 mb-3">DATE RANGE</p>
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -98,14 +105,14 @@ export const ExportDataView = ({ onBack, onExport }) => {
           </div>
         )}
 
-        <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-4">
+        <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-4 ui-export-step-slide">
           <p className="text-xs font-semibold tracking-widest text-slate-400 mb-3">FORMAT</p>
-          <div className="grid grid-cols-2 gap-2.5">
+          <div className="grid grid-cols-3 gap-2.5">
             <button
               onClick={() => setFormat('txt')}
-              className={`rounded-lg border px-3 py-3 transition ${
+              className={`rounded-lg border px-3 py-3 transition ui-export-chip-pop ${
                 format === 'txt'
-                  ? 'accent-bg-light accent-border-light text-white'
+                  ? 'accent-bg-light accent-border-light text-white ui-export-chip-active'
                   : 'bg-slate-900/50 border-slate-700/60 text-slate-300 hover:border-slate-600/70'
               }`}
             >
@@ -115,10 +122,22 @@ export const ExportDataView = ({ onBack, onExport }) => {
               </div>
             </button>
             <button
+              onClick={() => setFormat('csv')}
+              className={`rounded-lg border px-3 py-3 transition ui-export-chip-pop ${
+                format === 'csv'
+                  ? 'accent-bg-light accent-border-light text-white ui-export-chip-active'
+                  : 'bg-slate-900/50 border-slate-700/60 text-slate-300 hover:border-slate-600/70'
+              }`}
+            >
+              <div className="flex items-center justify-center gap-2">
+                <span className="text-[12px] font-black tracking-wide">CSV</span>
+              </div>
+            </button>
+            <button
               onClick={() => setFormat('json')}
-              className={`rounded-lg border px-3 py-3 transition ${
+              className={`rounded-lg border px-3 py-3 transition ui-export-chip-pop ${
                 format === 'json'
-                  ? 'accent-bg-light accent-border-light text-white'
+                  ? 'accent-bg-light accent-border-light text-white ui-export-chip-active'
                   : 'bg-slate-900/50 border-slate-700/60 text-slate-300 hover:border-slate-600/70'
               }`}
             >
@@ -128,6 +147,7 @@ export const ExportDataView = ({ onBack, onExport }) => {
               </div>
             </button>
           </div>
+          <p className="text-[11px] text-slate-500 mt-2.5">{formatHint}</p>
         </div>
 
         <button
@@ -142,11 +162,12 @@ export const ExportDataView = ({ onBack, onExport }) => {
           <Download size={18} />
           Export
         </button>
-
-        <p className="text-[11px] text-slate-500 text-center">
-          {format ? `Format: ${format.toUpperCase()}` : 'Choose format to continue'}
-        </p>
       </div>
     </div>
   );
 };
+
+
+
+
+

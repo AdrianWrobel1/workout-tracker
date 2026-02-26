@@ -12,7 +12,7 @@ export const TemplateCard = React.memo(({
   onDelete
 }) => {
   return (
-    <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 hover:from-slate-800/60 hover:to-slate-900/60 hover:border-slate-600/50 p-4 rounded-xl text-left flex items-start justify-between transition-all group ui-card-mount-anim">
+    <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 hover:from-slate-800/60 hover:to-slate-900/60 hover:border-slate-600/50 p-4 rounded-xl text-left flex items-start justify-between transition-all group ui-card-mount-anim ui-template-card-lift">
       <button
         onClick={() => onSelect && onSelect(template)}
         className="flex-1 text-left hover:opacity-80 transition"
@@ -80,3 +80,4 @@ export const TemplateCard = React.memo(({
 });
 
 TemplateCard.displayName = 'TemplateCard';
+

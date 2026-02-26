@@ -51,6 +51,31 @@ const QuickInsightsSection = ({ workouts, readiness, muscleBalance }) => {
     { key: 'quadHam', label: 'Quads / Ham' }
   ];
 
+  const readinessRatio = Number(readiness?.ratio) || 0;
+  const readinessRatioMarker = Math.max(0, Math.min(100, (readinessRatio / 1.8) * 100));
+  const readinessLoadMax = Math.max(1, Number(readiness?.acuteLoad) || 0, Number(readiness?.chronicLoad) || 0);
+  
+  // Calculate PRs this week
+  const thisWeekPRCount = useMemo(() => {
+    const now = new Date();
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - now.getDay());
+    weekStart.setHours(0, 0, 0, 0);
+    
+    let prCount = 0;
+    (workouts || []).forEach(w => {
+      const wDate = new Date(w.date);
+      if (wDate >= weekStart) {
+        Object.values(w.prStatus || {}).forEach(status => {
+          if (Array.isArray(status.recordsPerSet)) {
+            prCount += status.recordsPerSet.filter(records => records && records.length > 0).length;
+          }
+        });
+      }
+    });
+    return prCount;
+  }, [workouts]);
+
   return (
     <div>
       <button
@@ -69,14 +94,14 @@ const QuickInsightsSection = ({ workouts, readiness, muscleBalance }) => {
           <div className="grid grid-cols-2 gap-3 mt-3">
             <button
               onClick={() => setDetailModal('readiness')}
-              className="text-left bg-gradient-to-br from-slate-800/60 to-slate-900/60 border border-slate-700/30 rounded-xl p-3 transition hover:border-slate-600/50 ui-press"
+              className="text-left bg-gradient-to-br from-slate-800/60 to-slate-900/60 border border-slate-700/30 rounded-xl p-3 transition hover:border-slate-600/50 ui-press ui-stagger-enter ui-stagger-d1 ui-card-magnet"
             >
               <p className="text-[10px] text-slate-400 font-semibold tracking-widest">READINESS</p>
               <div className="flex items-end justify-between mt-1">
                 <p className="text-lg font-black text-white leading-none">
                   {readiness?.readinessScore ?? 0}
                 </p>
-                <span className={`text-[10px] px-2 py-0.5 rounded-full border font-bold ${
+                <span className={`text-[10px] px-2 py-0.5 rounded-full border font-bold ui-chip-pop-anim ui-readiness-morph transition-colors duration-200 ${
                   readiness?.status === 'fatigue'
                     ? 'text-amber-300 border-amber-500/30 bg-amber-500/10'
                     : readiness?.status === 'low'
@@ -91,7 +116,7 @@ const QuickInsightsSection = ({ workouts, readiness, muscleBalance }) => {
 
             <button
               onClick={() => setDetailModal('balance')}
-              className="text-left bg-gradient-to-br from-slate-800/60 to-slate-900/60 border border-slate-700/30 rounded-xl p-3 transition hover:border-slate-600/50 ui-press"
+              className="text-left bg-gradient-to-br from-slate-800/60 to-slate-900/60 border border-slate-700/30 rounded-xl p-3 transition hover:border-slate-600/50 ui-press ui-stagger-enter ui-stagger-d2 ui-card-magnet"
             >
               <p className="text-[10px] text-slate-400 font-semibold tracking-widest">MUSCLE BALANCE</p>
               <p className="text-lg font-black text-white mt-1 leading-none">
@@ -100,7 +125,7 @@ const QuickInsightsSection = ({ workouts, readiness, muscleBalance }) => {
               </p>
               <div className="mt-2 flex items-center justify-between text-[10px]">
                 <span className="text-slate-500">Block: {muscleBalance?.block?.score ?? 0}</span>
-                <span className={`px-2 py-0.5 rounded-full border font-bold ${getPairTone(muscleBalance?.week?.pushPull?.status || 'balanced')}`}>
+                <span className={`px-2 py-0.5 rounded-full border font-bold ui-chip-pop-anim transition-colors duration-200 ${getPairTone(muscleBalance?.week?.pushPull?.status || 'balanced')}`}>
                   {getPairLabel(muscleBalance?.week?.pushPull)}
                 </span>
               </div>
@@ -110,14 +135,14 @@ const QuickInsightsSection = ({ workouts, readiness, muscleBalance }) => {
           <div className="grid grid-cols-2 gap-3 mt-3">
             <button
               onClick={() => setSelectedInsight('progress')}
-              className="bg-gradient-to-br from-slate-800/60 to-slate-900/60 border border-slate-700/30 hover:border-slate-600/50 rounded-xl p-4 flex justify-center transition-all duration-200 hover:scale-105 active:scale-95"
+              className="bg-gradient-to-br from-slate-800/60 to-slate-900/60 border border-slate-700/30 hover:border-slate-600/50 rounded-xl p-4 flex justify-center transition-all duration-200 hover:scale-105 active:scale-95 ui-stagger-enter ui-stagger-d3 ui-card-magnet"
             >
               <ProgressRing workouts={workouts} />
             </button>
 
             <button
               onClick={() => setSelectedInsight('trend')}
-              className="bg-gradient-to-br from-slate-800/60 to-slate-900/60 border border-slate-700/30 hover:border-slate-600/50 rounded-xl p-4 flex flex-col justify-center transition-all duration-200 hover:scale-105 active:scale-95"
+              className="bg-gradient-to-br from-slate-800/60 to-slate-900/60 border border-slate-700/30 hover:border-slate-600/50 rounded-xl p-4 flex flex-col justify-center transition-all duration-200 hover:scale-105 active:scale-95 ui-stagger-enter ui-stagger-d4 ui-card-magnet"
             >
               <p className="text-xs text-slate-400 font-semibold tracking-widest mb-2">TREND</p>
               <div className="flex justify-center">
@@ -125,6 +150,22 @@ const QuickInsightsSection = ({ workouts, readiness, muscleBalance }) => {
               </div>
             </button>
           </div>
+
+          <button
+            onClick={() => setSelectedInsight('prs')}
+            className="w-full text-left mt-3 bg-gradient-to-br from-amber-900/30 to-amber-950/30 border border-amber-700/30 hover:border-amber-600/50 rounded-xl p-4 transition ui-stagger-enter ui-stagger-d5 ui-card-magnet"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[10px] text-amber-400 font-semibold tracking-widest">THIS WEEK RECORDS</p>
+                <p className="text-2xl font-black text-white mt-2">{thisWeekPRCount}</p>
+                <p className="text-xs text-amber-200 mt-1">{thisWeekPRCount === 1 ? 'Personal Record' : 'Personal Records'}</p>
+              </div>
+              <div className="text-4xl opacity-20">🏆</div>
+            </div>
+          </button>
+
+
 
           {/* Insight modals */}
           {selectedInsight === 'progress' && (
@@ -136,14 +177,14 @@ const QuickInsightsSection = ({ workouts, readiness, muscleBalance }) => {
                     onClick={() => setSelectedInsight(null)}
                     className="p-1 hover:bg-slate-800 rounded transition"
                   >
-                    ✕
+                    X
                   </button>
                 </div>
                 <div className="bg-slate-800/50 rounded-lg p-4">
                   <ProgressRing workouts={workouts} />
                 </div>
                 <p className="text-xs text-slate-400 text-center mt-4">
-                  You're on track with your weekly goal! Keep crushing it 💪
+                  You're on track with your weekly goal! Keep crushing it
                 </p>
               </div>
             </div>
@@ -158,7 +199,7 @@ const QuickInsightsSection = ({ workouts, readiness, muscleBalance }) => {
                     onClick={() => setSelectedInsight(null)}
                     className="p-1 hover:bg-slate-800 rounded transition"
                   >
-                    ✕
+                    X
                   </button>
                 </div>
                 <div className="bg-slate-800/50 rounded-lg p-4">
@@ -168,7 +209,7 @@ const QuickInsightsSection = ({ workouts, readiness, muscleBalance }) => {
                   onClick={() => setShowDetailedChart(true)}
                   className="w-full mt-4 px-3 py-2 accent-bg hover:opacity-90 rounded transition text-sm font-bold"
                 >
-                  See detailed chart →
+                  See detailed chart
                 </button>
               </div>
             </div>
@@ -177,7 +218,7 @@ const QuickInsightsSection = ({ workouts, readiness, muscleBalance }) => {
           {/* Detailed chart modal */}
           {showDetailedChart && (
             <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-              <div className="bg-slate-900 border border-slate-700 rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+              <div className="bg-slate-900 border border-slate-700 rounded-lg p-6 max-w-2xl w-full max-h-[80dvh] overflow-y-auto">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-2xl font-bold text-white">Volume Trend - Last 12 Weeks</h2>
                   <button
@@ -235,9 +276,9 @@ const QuickInsightsSection = ({ workouts, readiness, muscleBalance }) => {
             </div>
           )}
 
-          {detailModal === 'readiness' && (
-            <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-              <div className="bg-slate-900 border border-slate-700 rounded-xl p-5 max-w-sm w-full">
+                    {detailModal === 'readiness' && (
+            <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 ui-backdrop-in">
+              <div className="bg-slate-900 border border-slate-700 rounded-xl p-5 max-w-sm w-full ui-sheet-rise-anim">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-bold text-white">Readiness Details</h2>
                   <button onClick={() => setDetailModal(null)} className="p-1 hover:bg-slate-800 rounded transition">
@@ -246,28 +287,189 @@ const QuickInsightsSection = ({ workouts, readiness, muscleBalance }) => {
                 </div>
                 <div className="space-y-3 text-sm">
                   <div className="rounded-lg border border-slate-700/50 bg-slate-800/40 p-3">
-                    <p className="text-xs text-slate-400 font-semibold tracking-widest mb-1">SCORE</p>
-                    <p className="text-xl font-black text-white">{readiness?.readinessScore ?? 0}/100</p>
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-slate-400 font-semibold tracking-widest">SCORE</p>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full border font-bold ui-chip-pop-anim ui-readiness-morph transition-colors duration-200 ${
+                        readiness?.status === 'fatigue'
+                          ? 'text-amber-300 border-amber-500/30 bg-amber-500/10'
+                          : readiness?.status === 'low'
+                          ? 'text-sky-300 border-sky-500/30 bg-sky-500/10'
+                          : 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10'
+                      }`}>
+                        {readiness?.status || 'no data'}
+                      </span>
+                    </div>
+                    <p className="text-xl font-black text-white mt-1">{readiness?.readinessScore ?? 0}/100</p>
                   </div>
+
+                  <div className="rounded-lg border border-slate-700/50 bg-slate-800/30 p-3">
+                    <p className="text-[10px] text-slate-400 font-semibold tracking-widest mb-2">ACWR ZONES</p>
+                    <div className="relative h-2 rounded-full overflow-hidden border border-slate-700/60">
+                      <div className="absolute inset-y-0 left-0 w-[44%] bg-sky-500/35" />
+                      <div className="absolute inset-y-0 left-[44%] w-[22%] bg-emerald-500/35" />
+                      <div className="absolute inset-y-0 right-0 w-[34%] bg-amber-500/35" />
+                      <div
+                        className="absolute top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-white border border-slate-900 shadow ui-marker-spring"
+                        style={{ left: `calc(${readinessRatioMarker}% - 5px)` }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-[10px] text-slate-500 mt-1.5">
+                      <span>Under 0.8</span>
+                      <span>0.8-1.2</span>
+                      <span>Over 1.3</span>
+                    </div>
+                    <p className="text-[11px] text-slate-300 mt-2">Current ACWR: <span className="font-bold text-white">{readinessRatio.toFixed(2)}</span></p>
+                  </div>
+
                   <div className="grid grid-cols-2 gap-2">
                     <div className="rounded-lg border border-slate-700/50 bg-slate-800/40 p-2.5">
-                      <p className="text-[10px] text-slate-400 font-semibold tracking-widest">ACUTE</p>
+                      <p className="text-[10px] text-slate-400 font-semibold tracking-widest">ACUTE (7D)</p>
                       <p className="text-sm font-bold text-white">{readiness?.acuteLoad ?? 0}</p>
+                      <div className="h-1.5 bg-slate-700/70 rounded-full mt-2 overflow-hidden">
+                        <div className="h-full bg-sky-400 ui-meter-fill-anim" style={{ width: `${Math.round(((Number(readiness?.acuteLoad) || 0) / readinessLoadMax) * 100)}%` }} />
+                      </div>
                     </div>
                     <div className="rounded-lg border border-slate-700/50 bg-slate-800/40 p-2.5">
-                      <p className="text-[10px] text-slate-400 font-semibold tracking-widest">CHRONIC</p>
+                      <p className="text-[10px] text-slate-400 font-semibold tracking-widest">CHRONIC (28D)</p>
                       <p className="text-sm font-bold text-white">{readiness?.chronicLoad ?? 0}</p>
+                      <div className="h-1.5 bg-slate-700/70 rounded-full mt-2 overflow-hidden">
+                        <div className="h-full bg-emerald-400 ui-meter-fill-anim" style={{ width: `${Math.round(((Number(readiness?.chronicLoad) || 0) / readinessLoadMax) * 100)}%` }} />
+                      </div>
                     </div>
                   </div>
+
                   <p className="text-xs text-slate-300">{readiness?.suggestion || 'No readiness data available yet.'}</p>
                 </div>
               </div>
             </div>
           )}
 
+                    
+          {detailModal === 'coach' && coachLensQuick && (
+            <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 ui-backdrop-in">
+              <div className="bg-slate-900 border border-slate-700 rounded-xl p-5 max-w-sm w-full ui-sheet-rise-anim">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-bold text-white">Coach Lens</h2>
+                  <button onClick={() => setDetailModal(null)} className="p-1 hover:bg-slate-800 rounded transition">
+                    <X size={18} className="text-slate-400" />
+                  </button>
+                </div>
+                <p className="text-sm text-slate-100 font-semibold">{coachLensQuick.headline}</p>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full border font-bold ${
+                    coachLensQuick.status === 'push'
+                      ? 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10'
+                      : coachLensQuick.status === 'recover'
+                      ? 'text-amber-300 border-amber-500/30 bg-amber-500/10'
+                      : 'text-sky-300 border-sky-500/30 bg-sky-500/10'
+                  }`}>
+                    status: {coachLensQuick.status}
+                  </span>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full border font-bold ${
+                    coachLensQuick.confidence === 'high'
+                      ? 'text-emerald-200 border-emerald-500/30 bg-emerald-500/10'
+                      : coachLensQuick.confidence === 'medium'
+                      ? 'text-sky-200 border-sky-500/30 bg-sky-500/10'
+                      : 'text-slate-300 border-slate-600/50 bg-slate-700/30'
+                  }`}>
+                    confidence: {coachLensQuick.confidence || 'low'}
+                  </span>
+                  {coachLensQuick.actionCertainty && (
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full border font-bold ${getCertaintyTone(coachLensQuick.actionCertainty.level)}`}>
+                      certainty: {coachLensQuick.actionCertainty.score}/100
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-3 gap-2 mt-3">
+                  <div className="rounded-lg border border-slate-700/50 bg-slate-800/40 p-2.5">
+                    <p className="text-[10px] text-slate-500 font-semibold tracking-widest">PROGRESSION</p>
+                    <p className="text-sm font-bold text-white">{coachLensQuick.scores?.progression ?? 0}</p>
+                  </div>
+                  <div className="rounded-lg border border-slate-700/50 bg-slate-800/40 p-2.5">
+                    <p className="text-[10px] text-slate-500 font-semibold tracking-widest">EXECUTION</p>
+                    <p className="text-sm font-bold text-white">{coachLensQuick.scores?.execution ?? 0}</p>
+                  </div>
+                  <div className="rounded-lg border border-slate-700/50 bg-slate-800/40 p-2.5">
+                    <p className="text-[10px] text-slate-500 font-semibold tracking-widest">RISK</p>
+                    <p className="text-sm font-bold text-white">{coachLensQuick.scores?.fatigueRisk ?? 0}</p>
+                  </div>
+                </div>
+                <div className="space-y-1.5 mt-3 rounded-lg border border-cyan-500/15 bg-slate-900/30 px-3 py-2.5">
+                  <p className="text-sm text-slate-100"><span className="text-emerald-300 font-semibold">Keep:</span> {coachLensQuick.keep}</p>
+                  <p className="text-sm text-slate-100"><span className="text-amber-300 font-semibold">Improve:</span> {coachLensQuick.improve}</p>
+                  <p className="text-sm text-slate-100"><span className="text-blue-300 font-semibold">Focus:</span> {coachLensQuick.focus}</p>
+                </div>
+                {coachLensQuick.actionCertainty && (
+                  <div className="mt-2 rounded-lg border border-slate-700/60 bg-slate-900/45 px-3 py-2.5">
+                    <p className="text-[10px] text-slate-400 font-semibold tracking-widest">ACTION CERTAINTY</p>
+                    <p className="text-xs text-slate-300 mt-1">{coachLensQuick.actionCertainty.reason}</p>
+                    <div className="grid grid-cols-3 gap-2 mt-2 text-[10px]">
+                      <div className="rounded border border-slate-700/50 bg-slate-800/40 px-2 py-1">
+                        <p className="text-slate-500">Tracked</p>
+                        <p className="text-slate-100 font-bold">{coachLensQuick.actionCertainty.exposures?.trackedExercises ?? 0}</p>
+                      </div>
+                      <div className="rounded border border-slate-700/50 bg-slate-800/40 px-2 py-1">
+                        <p className="text-slate-500">Avg exp.</p>
+                        <p className="text-slate-100 font-bold">{coachLensQuick.actionCertainty.exposures?.average ?? 0}</p>
+                      </div>
+                      <div className="rounded border border-slate-700/50 bg-slate-800/40 px-2 py-1">
+                        <p className="text-slate-500">Stale</p>
+                        <p className="text-slate-100 font-bold">{coachLensQuick.actionCertainty.decay?.staleExercises ?? 0}</p>
+                      </div>
+                    </div>
+                    {(coachLensQuick.actionCertainty.perExercise || []).length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {(coachLensQuick.actionCertainty.perExercise || []).slice(0, 4).map((item) => (
+                          <span key={item.exerciseId} className={`text-[10px] px-2 py-0.5 rounded-full border ${getCertaintyTone(item.level)}`}>
+                            {item.exerciseName}: {item.score}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+                {(coachLensQuick.highlights || []).length > 0 && (
+                  <div className="mt-2 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2.5">
+                    <p className="text-[10px] text-emerald-300 font-semibold tracking-widest">WHAT WENT WELL</p>
+                    <div className="mt-1.5 space-y-1">
+                      {(coachLensQuick.highlights || []).slice(0, 3).map((item, idx) => (
+                        <p key={`quick-hl-${idx}`} className="text-xs text-emerald-100">- {item}</p>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {(coachLensQuick.risks || []).length > 0 && (
+                  <div className="mt-2 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2.5">
+                    <p className="text-[10px] text-amber-300 font-semibold tracking-widest">WATCH NEXT SESSION</p>
+                    <div className="mt-1.5 space-y-1">
+                      {(coachLensQuick.risks || []).slice(0, 2).map((item, idx) => (
+                        <p key={`quick-risk-${idx}`} className="text-xs text-amber-100">- {item}</p>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {(coachLensQuick.nextSessionPlan || []).length > 0 && (
+                  <div className="mt-2 rounded-lg border border-cyan-500/20 bg-cyan-500/5 px-3 py-2.5">
+                    <p className="text-[10px] text-cyan-300 font-semibold tracking-widest">NEXT SESSION PLAN</p>
+                    <div className="mt-1.5 space-y-1">
+                      {(coachLensQuick.nextSessionPlan || []).slice(0, 3).map((step, idx) => (
+                        <p key={`quick-plan-${idx}`} className="text-xs text-cyan-100">{idx + 1}. {step}</p>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div className="mt-3 rounded-lg border border-slate-700/50 bg-slate-800/30 p-2.5 text-xs text-slate-300">
+                  <p>Volume delta: <span className="font-bold text-white">{coachLensQuick.snapshot?.volumeDeltaPct ?? 0}%</span></p>
+                  <p className="mt-1">Work sets: <span className="font-bold text-white">{coachLensQuick.snapshot?.completedWorkSets ?? 0}/{coachLensQuick.snapshot?.plannedWorkSets ?? 0}</span></p>
+                  <p className="mt-1">Density: <span className="font-bold text-white">{coachLensQuick.snapshot?.density ?? 0}/min</span></p>
+                  <p className="mt-1">PRs: <span className="font-bold text-white">{coachLensQuick.snapshot?.prCount ?? 0}</span></p>
+                </div>
+              </div>
+            </div>
+          )}
           {detailModal === 'balance' && (
-            <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-              <div className="bg-slate-900 border border-slate-700 rounded-xl p-5 max-w-sm w-full">
+            <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 ui-backdrop-in">
+              <div className="bg-slate-900 border border-slate-700 rounded-xl p-5 max-w-sm w-full ui-sheet-rise-anim">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-bold text-white">Muscle Balance</h2>
                   <button onClick={() => setDetailModal(null)} className="p-1 hover:bg-slate-800 rounded transition">
@@ -282,20 +484,78 @@ const QuickInsightsSection = ({ workouts, readiness, muscleBalance }) => {
                   {balanceRows.map((row) => {
                     const week = muscleBalance?.week?.[row.key];
                     const block = muscleBalance?.block?.[row.key];
+                    const weekSplit = getPairSplit(week);
+                    const blockSplit = getPairSplit(block);
                     return (
                       <div key={row.key} className="rounded-lg border border-slate-700/50 bg-slate-800/30 p-2.5">
                         <div className="flex items-center justify-between mb-1">
                           <p className="text-xs font-semibold text-slate-200">{row.label}</p>
-                          <span className={`text-[10px] px-2 py-0.5 rounded-full border font-bold ${getPairTone(week?.status || 'balanced')}`}>
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full border font-bold ui-chip-pop-anim ui-readiness-morph transition-colors duration-200 ${getPairTone(week?.status || 'balanced')}`}>
                             {week?.status || 'balanced'}
                           </span>
                         </div>
-                        <p className="text-[11px] text-slate-400">Week: <span className="text-slate-200 font-semibold">{getPairLabel(week)}</span></p>
-                        <p className="text-[11px] text-slate-400">Block: <span className="text-slate-200 font-semibold">{getPairLabel(block)}</span></p>
+
+                        <div className="space-y-2 mt-2">
+                          <div>
+                            <p className="text-[10px] text-slate-500 font-semibold mb-1">WEEK</p>
+                            <div className="h-2 rounded-full overflow-hidden border border-slate-700/60 bg-slate-900/60 flex">
+                              <div className="h-full bg-cyan-400/70 ui-meter-fill-anim" style={{ width: `${weekSplit.sideAPct}%` }} />
+                              <div className="h-full bg-violet-400/70 ui-meter-fill-anim" style={{ width: `${weekSplit.sideBPct}%` }} />
+                            </div>
+                            <p className="text-[10px] text-slate-400 mt-1">
+                              {week?.sideA || 'A'} {weekSplit.sideAValue} vs {week?.sideB || 'B'} {weekSplit.sideBValue}
+                            </p>
+                          </div>
+
+                          <div>
+                            <p className="text-[10px] text-slate-500 font-semibold mb-1">BLOCK</p>
+                            <div className="h-2 rounded-full overflow-hidden border border-slate-700/60 bg-slate-900/60 flex">
+                              <div className="h-full bg-cyan-400/60 ui-meter-fill-anim" style={{ width: `${blockSplit.sideAPct}%` }} />
+                              <div className="h-full bg-violet-400/60 ui-meter-fill-anim" style={{ width: `${blockSplit.sideBPct}%` }} />
+                            </div>
+                            <p className="text-[10px] text-slate-400 mt-1">
+                              {block?.sideA || 'A'} {blockSplit.sideAValue} vs {block?.sideB || 'B'} {blockSplit.sideBValue}
+                            </p>
+                          </div>
+                        </div>
+
+                        <p className="text-[11px] text-slate-400 mt-2">
+                          Ratio: <span className="text-slate-200 font-semibold">{getPairLabel(week)}</span>
+                        </p>
                       </div>
                     );
                   })}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {selectedInsight === 'prs' && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+              <div className="bg-slate-900 border border-slate-700 rounded-lg p-6 max-w-sm w-full">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-bold text-white">This Week's Records</h2>
+                  <button
+                    onClick={() => setSelectedInsight(null)}
+                    className="p-1 hover:bg-slate-800 rounded transition"
+                  >
+                    <X size={18} className="text-slate-400" />
+                  </button>
+                </div>
+                <div className="text-center mb-6">
+                  <div className="text-5xl font-black text-amber-400 mb-2">{thisWeekPRCount}</div>
+                  <p className="text-slate-300 text-sm">
+                    {thisWeekPRCount === 0 ? 'No personal records yet this week' : thisWeekPRCount === 1 ? '1 personal record achieved' : `${thisWeekPRCount} personal records achieved`}
+                  </p>
+                </div>
+                {thisWeekPRCount > 0 && (
+                  <div className="bg-gradient-to-br from-amber-900/30 to-amber-950/30 border border-amber-700/30 rounded-lg p-4 mb-4">
+                    <p className="text-sm text-amber-200">Keep up the momentum! You're hitting new PRs this week.</p>
+                  </div>
+                )}
+                <p className="text-xs text-slate-400 text-center">
+                  PRs count all types of records: heaviest weight, most reps, and best set volume.
+                </p>
               </div>
             </div>
           )}
@@ -311,10 +571,31 @@ const getPairTone = (status) => {
   return 'text-emerald-300 bg-emerald-500/10 border-emerald-500/30';
 };
 
+const getCertaintyTone = (level) => {
+  if (level === 'high') return 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10';
+  if (level === 'medium') return 'text-sky-300 border-sky-500/30 bg-sky-500/10';
+  return 'text-slate-300 border-slate-600/50 bg-slate-700/30';
+};
+
 const getPairLabel = (pair) => {
   if (!pair) return '-';
   if (!Number.isFinite(pair.ratio)) return `${pair.sideA} heavy`;
   return `${pair.ratio.toFixed(2)}x`;
+};
+
+const getPairSplit = (pair) => {
+  const sideAValue = Number(pair?.sideAValue) || 0;
+  const sideBValue = Number(pair?.sideBValue) || 0;
+  const total = sideAValue + sideBValue;
+  if (total <= 0) {
+    return { sideAPct: 50, sideBPct: 50, sideAValue: 0, sideBValue: 0 };
+  }
+  return {
+    sideAPct: (sideAValue / total) * 100,
+    sideBPct: (sideBValue / total) * 100,
+    sideAValue,
+    sideBValue
+  };
 };
 
 export const HomeView = ({
@@ -332,6 +613,11 @@ export const HomeView = ({
   onOpenMonthlyProgress
 }) => {
   const [notesInput, setNotesInput] = useState(trainingNotes || '');
+  const [isNotesFocused, setIsNotesFocused] = useState(false);
+  const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
+  const [homeParallaxY, setHomeParallaxY] = useState(0);
+  const [goalFlash, setGoalFlash] = useState(false);
+  const prevWeekProgressRef = React.useRef(0);
 
   // Sync input when trainingNotes prop changes
   React.useEffect(() => {
@@ -342,6 +628,27 @@ export const HomeView = ({
   const safeWeeklyGoal = Math.max(Number(weeklyGoal) || 1, 1);
   const getMonthWorkoutsCount = (offset) => getMonthWorkouts(workouts, offset).length;
   const weekProgress = Math.min((weekWorkouts.length / safeWeeklyGoal) * 100, 100);
+
+  React.useEffect(() => {
+    if (prevWeekProgressRef.current !== 0 && prevWeekProgressRef.current !== weekProgress) {
+      setGoalFlash(true);
+      const t = setTimeout(() => setGoalFlash(false), 280);
+      prevWeekProgressRef.current = weekProgress;
+      return () => clearTimeout(t);
+    }
+    prevWeekProgressRef.current = weekProgress;
+    return undefined;
+  }, [weekProgress]);
+
+  React.useEffect(() => {
+    const onScroll = () => {
+      const y = typeof window !== 'undefined' ? window.scrollY || 0 : 0;
+      setHomeParallaxY(Math.min(y, 140));
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   const weekStreak = useMemo(() => {
     if (!workouts?.length) return 0;
@@ -384,17 +691,17 @@ export const HomeView = ({
   }, [workouts]);
 
   return (
-    <div className="min-h-screen bg-black text-white pb-28">
+    <div className="bg-black text-white pb-28">
       {/* Consistency Hero */}
       <div className="px-4 pt-6">
-        <div className="bg-gradient-to-br from-accent/30 via-slate-900/70 to-black border border-accent/20 rounded-2xl p-5 shadow-lg">
+        <div className="bg-gradient-to-br from-accent/30 via-slate-900/70 to-black border border-accent/20 rounded-2xl p-5 shadow-lg ui-home-parallax" style={{ transform: `translateY(${homeParallaxY * -0.05}px)` }}>
           <div className="flex items-start justify-between gap-3 mb-3">
             <div>
               <p className="text-[11px] text-slate-300 font-semibold tracking-widest">CONSISTENCY</p>
               <h1 className="text-2xl font-black text-white mt-1">Keep moving</h1>
             </div>
             <div className="flex items-center gap-2 flex-wrap justify-end">
-              <div className="px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[11px] font-bold whitespace-nowrap">
+              <div className="px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[11px] font-bold whitespace-nowrap ui-streak-countup">
                 {weekStreak} week streak
               </div>
             </div>
@@ -409,14 +716,14 @@ export const HomeView = ({
                 {weekWorkouts.length} / {safeWeeklyGoal} workouts
               </p>
             </div>
-            <div className={`min-w-12 h-12 px-2 rounded-full ${weekProgress >= 100 ? 'bg-gradient-to-br from-green-500 to-emerald-600' : 'accent-bg'} flex items-center justify-center text-white text-sm font-bold shadow-lg`}>
+            <div className={`min-w-12 h-12 px-2 rounded-full ${weekProgress >= 100 ? 'bg-gradient-to-br from-green-500 to-emerald-600' : 'accent-bg'} flex items-center justify-center text-white text-sm font-bold shadow-lg ui-goal-ring-fill ${goalFlash ? 'ui-week-goal-flash' : ''}`}>
               {Math.round(weekProgress)}%
             </div>
           </div>
 
           <div className="w-full bg-slate-800/50 rounded-full h-2 overflow-hidden border border-white/5 mt-3">
             <div
-              className={`h-full ${weekProgress >= 100 ? 'bg-gradient-to-r from-green-500 to-emerald-500' : 'bg-gradient-to-r from-blue-500 to-cyan-500'} transition-all duration-200 ease-out`}
+              className={`h-full ${weekProgress >= 100 ? 'bg-gradient-to-r from-green-500 to-emerald-500' : 'bg-gradient-to-r from-blue-500 to-cyan-500'} transition-all duration-200 ease-out ui-goal-meter-fill ${goalFlash ? 'ui-week-goal-flash' : ''}`}
               style={{ width: `${weekProgress}%` }}
             />
           </div>
@@ -436,14 +743,14 @@ export const HomeView = ({
         <div className="grid grid-cols-2 gap-3">
           <button
             onClick={onManageTemplates}
-            className="bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/50 text-white rounded-xl py-3 px-4 flex flex-col items-center justify-center gap-2 font-semibold transition-all duration-200 ease-out ui-press"
+            className="bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/50 text-white rounded-xl py-3 px-4 flex flex-col items-center justify-center gap-2 font-semibold transition-all duration-200 ease-out ui-press ui-home-quick-spring"
           >
             <Edit2 size={20} />
             <span className="text-xs">Templates</span>
           </button>
           <button
             onClick={onOpenCalendar}
-            className="bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/50 text-white rounded-xl py-3 px-4 flex flex-col items-center justify-center gap-2 font-semibold transition-all duration-200 ease-out ui-press"
+            className="bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/50 text-white rounded-xl py-3 px-4 flex flex-col items-center justify-center gap-2 font-semibold transition-all duration-200 ease-out ui-press ui-home-quick-spring"
           >
             <Calendar size={20} />
             <span className="text-xs">Calendar</span>
@@ -453,20 +760,61 @@ export const HomeView = ({
       </div>
 
       {/* Training Notes */}
-      <div className="px-4 pb-4">
-        <p className="text-slate-400 text-xs font-semibold tracking-widest mb-2">TRAINING NOTES</p>
+      <div className="px-4 pb-4 ui-notes-reveal">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-slate-400 text-xs font-semibold tracking-widest">TRAINING NOTES</p>
+          <button
+            onClick={() => setIsNotesModalOpen(true)}
+            className="text-[11px] font-bold px-2.5 py-1 rounded-md border border-slate-600/60 text-slate-300 hover:text-white hover:border-slate-500/80 transition ui-press ui-notes-expand-focus"
+          >
+            Expand
+          </button>
+        </div>
         <textarea
           value={notesInput}
+          onFocus={() => setIsNotesFocused(true)}
+          onBlur={() => setIsNotesFocused(false)}
           onChange={(e) => {
             const nextValue = e.target.value;
             setNotesInput(nextValue);
             onTrainingNotesChange(nextValue);
           }}
           placeholder="Write notes directly here..."
-          className="w-full min-h-28 bg-slate-800/40 border border-slate-700/50 text-slate-200 rounded-lg p-3 font-semibold text-sm placeholder-slate-500 focus:border-blue-500 focus:outline-none transition resize-y leading-relaxed whitespace-pre-wrap"
+          className={`w-full ${isNotesFocused || notesInput.length > 0 ? 'min-h-36' : 'min-h-24'} bg-slate-800/40 border border-slate-700/50 text-slate-200 rounded-lg p-3 font-semibold text-sm placeholder-slate-500 focus:border-blue-500 focus:outline-none transition-all duration-220 ease-out resize-y leading-relaxed whitespace-pre-wrap ui-notes-autogrow`}
         />
-      </div>
 
+        {isNotesModalOpen && (
+          <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 ui-backdrop-in" onClick={() => setIsNotesModalOpen(false)}>
+            <div className="w-full max-w-md bg-slate-900 border border-slate-700 rounded-xl p-4 ui-sheet-rise-anim ui-notes-modal-pop" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm font-black tracking-wider text-white">TRAINING NOTES</p>
+                <button
+                  onClick={() => setIsNotesModalOpen(false)}
+                  className="p-1 rounded-md border border-slate-700 text-slate-400 hover:text-white hover:border-slate-500 transition"
+                >
+                  <X size={15} />
+                </button>
+              </div>
+              <textarea
+                value={notesInput}
+                onChange={(e) => {
+                  const nextValue = e.target.value;
+                  setNotesInput(nextValue);
+                  onTrainingNotesChange(nextValue);
+                }}
+                placeholder="Plan cues, reminders, recovery notes..."
+                className="w-full min-h-[240px] bg-slate-800/50 border border-slate-700/50 text-slate-100 rounded-lg p-3 font-semibold text-sm placeholder-slate-500 focus:border-blue-500 focus:outline-none resize-y leading-relaxed whitespace-pre-wrap"
+              />
+              <button
+                onClick={() => setIsNotesModalOpen(false)}
+                className="w-full mt-3 h-10 rounded-lg bg-gradient-to-r from-accent to-accent text-white font-bold hover:opacity-90 transition ui-press ui-notes-expand-focus"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
       {/* Recent Workouts */}
       <div className="px-4 pb-4">
         <div className="flex items-center justify-between mb-4">
@@ -474,8 +822,9 @@ export const HomeView = ({
             <p className="text-slate-400 text-xs font-semibold tracking-widest">RECENT</p>
             <h2 className="text-xl font-bold mt-1">Last Sessions</h2>
           </div>
-          <button onClick={onViewHistory} className="accent-text hover:opacity-80 text-sm font-semibold transition">
-            View All
+          <button onClick={onViewHistory} className="accent-text hover:opacity-80 text-sm font-semibold transition ui-viewall-crossfade inline-flex items-center gap-1.5">
+            <span>View All</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full border border-slate-600/60 text-slate-300">{recentWorkouts.length}</span>
           </button>
         </div>
 
@@ -485,7 +834,7 @@ export const HomeView = ({
           </div>
         ) : (
           <div className="space-y-2">
-            {recentWorkouts.map((workout) => {
+            {recentWorkouts.map((workout, index) => {
               const now = new Date();
               const workoutDate = new Date(workout.date);
               const ageInDays = Math.floor((now - workoutDate) / (1000 * 60 * 60 * 24));
@@ -499,8 +848,8 @@ export const HomeView = ({
                 <div
                   key={workout.id}
                   onClick={() => onViewWorkoutDetail(workout.date)}
-                  className="bg-gradient-to-r from-slate-800/60 to-slate-900/60 hover:from-slate-700/60 hover:to-slate-800/60 border border-slate-700/30 p-4 rounded-xl cursor-pointer transition-all duration-200 ease-out group ui-card-mount-anim"
-                  style={{ opacity }}
+                  className="bg-gradient-to-r from-slate-800/60 to-slate-900/60 hover:from-slate-700/60 hover:to-slate-800/60 border border-slate-700/30 p-4 rounded-xl cursor-pointer transition-all duration-200 ease-out group ui-card-mount-anim ui-last-session-enter ui-card-tilt"
+                  style={{ opacity, animationDelay: `${Math.min(index, 4) * 55}ms` }}
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-start gap-3 flex-1 min-w-0">
@@ -530,18 +879,18 @@ export const HomeView = ({
         <div className="grid grid-cols-2 gap-3">
           <button
             onClick={() => onOpenMonthlyProgress(0)}
-            className="bg-gradient-to-br from-slate-800/60 to-slate-900/60 border border-slate-700/30 rounded-xl p-4 hover:border-slate-600/50 transition"
+            className="bg-gradient-to-br from-slate-800/60 to-slate-900/60 border border-slate-700/30 rounded-xl p-4 hover:border-slate-600/50 transition ui-stagger-enter ui-stagger-d1 ui-press"
           >
             <p className="text-slate-400 text-xs font-semibold mb-2">THIS MONTH</p>
-            <p className="text-2xl font-black text-white">{getMonthWorkoutsCount(0)}</p>
+            <p className="text-2xl font-black text-white ui-number-slide">{getMonthWorkoutsCount(0)}</p>
             <p className="text-xs text-slate-500 mt-1">workouts</p>
           </button>
           <button
             onClick={() => onOpenMonthlyProgress(-1)}
-            className="bg-gradient-to-br from-slate-800/60 to-slate-900/60 border border-slate-700/30 rounded-xl p-4 hover:border-slate-600/50 transition"
+            className="bg-gradient-to-br from-slate-800/60 to-slate-900/60 border border-slate-700/30 rounded-xl p-4 hover:border-slate-600/50 transition ui-stagger-enter ui-stagger-d2 ui-press"
           >
             <p className="text-slate-400 text-xs font-semibold mb-2">{getMonthLabel(-1).slice(0, 3).toUpperCase()}</p>
-            <p className="text-2xl font-black text-white">{getMonthWorkoutsCount(-1)}</p>
+            <p className="text-2xl font-black text-white ui-number-slide">{getMonthWorkoutsCount(-1)}</p>
             <p className="text-xs text-slate-500 mt-1">workouts</p>
           </button>
         </div>
@@ -549,4 +898,16 @@ export const HomeView = ({
     </div>
   );
 };
+
+
+
+
+
+
+
+
+
+
+
+
 

@@ -62,12 +62,30 @@ function SortableExerciseItem({
   } = useSortable({ id: exercise.exerciseId + '-' + exIndex });
 
   const [showSupersetModal, setShowSupersetModal] = useState(false);
+  const [exerciseSwapPulse, setExerciseSwapPulse] = useState(false);
+  const [noteFocusPulse, setNoteFocusPulse] = useState(false);
+  const prevExerciseNameRef = useRef(exercise.name);
 
   const style = {
-    transform: CSS.Transform.toString(transform),
+    transform: `${CSS.Transform.toString(transform)}${isDragging ? ' rotate(-1.25deg)' : ''}`,
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging ? 0.9 : 1,
+    animationDelay: `${Math.min(exIndex, 8) * 40}ms`,
   };
+
+  useEffect(() => {
+    if (prevExerciseNameRef.current !== exercise.name) {
+      const start = setTimeout(() => setExerciseSwapPulse(true), 0);
+      const timer = setTimeout(() => setExerciseSwapPulse(false), 320);
+      prevExerciseNameRef.current = exercise.name;
+      return () => {
+        clearTimeout(start);
+        clearTimeout(timer);
+      };
+    }
+    prevExerciseNameRef.current = exercise.name;
+    return undefined;
+  }, [exercise.name]);
 
   // Generate consistent color for superset ID
   const getSupersetColor = (supersetId) => {
@@ -84,6 +102,17 @@ function SortableExerciseItem({
   };
 
   const supersetColor = getSupersetColor(exercise.supersetId);
+
+  const handleEditExerciseNote = () => {
+    const exFromDB = exercisesDB?.find(e => e.id === exercise.exerciseId);
+    const currentNote = exFromDB?.note || '';
+    setNoteFocusPulse(true);
+    setTimeout(() => {
+      const newNote = prompt('Exercise note:', currentNote);
+      if (newNote !== null) onAddExerciseNote(exIndex, newNote);
+    }, 20);
+    setTimeout(() => setNoteFocusPulse(false), 320);
+  };
 
   const previousSets = getPreviousSets(exercise.exerciseId, workouts, activeWorkoutStartTime, templateLastSnapshot);
   
@@ -107,9 +136,9 @@ function SortableExerciseItem({
       ref={setNodeRef}
       style={style}
       data-exercise-index={exIndex}
-      className={`bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-4 transition-all duration-200 ease-out ${
-        isDragging ? 'ring-2 ring-blue-500 shadow-lg shadow-blue-500/20 scale-102' : ''
-      } ${supersetColor ? `border-l-4 ${supersetColor.border}` : ''}`}
+      className={`relative bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-4 transition-all duration-200 ease-out ui-exercise-card-stagger ui-list-item-lift ui-active-exercise-card ${menuOpenIndex === exIndex ? 'z-[80]' : 'z-0'} ${
+        isDragging ? 'ui-drag-active ring-2 ring-blue-500/70' : ''
+      } ${supersetColor ? `border-l-4 ${supersetColor.border}` : ''} ${exercise.supersetId ? 'ui-superset-active' : ''}` }
     >
       <div className="flex items-start justify-between mb-4 gap-3">
         <div className="flex items-start gap-3 flex-1 min-w-0">
@@ -117,7 +146,7 @@ function SortableExerciseItem({
           <button
             {...attributes}
             {...listeners}
-            className="p-1 hover:bg-white/10 rounded-lg transition cursor-grab active:cursor-grabbing touch-none flex-shrink-0 mt-0.5"
+            className="ui-drag-handle p-1 hover:bg-white/10 rounded-lg transition cursor-grab active:cursor-grabbing touch-none flex-shrink-0 mt-0.5"
             aria-label="Drag to reorder"
           >
             <GripVertical size={18} className="text-slate-500 hover:text-slate-300 transition" />
@@ -130,25 +159,20 @@ function SortableExerciseItem({
                   <Link2 size={16} className={supersetColor.accent} />
                 </div>
               )}
-              <h3 className="text-lg font-black text-white">{exercise.name}</h3>
+              <h3 className={`text-lg font-black text-white transition-all duration-200 ${exerciseSwapPulse ? 'ui-exercise-swap' : ''}`}>{exercise.name}</h3>
               <button
-                onClick={() => {
-                  const exFromDB = exercisesDB?.find(e => e.id === exercise.exerciseId);
-                  const currentNote = exFromDB?.note || '';
-                  const newNote = prompt('Exercise note:', currentNote);
-                  if (newNote !== null) onAddExerciseNote(exIndex, newNote);
-                }}
-                className="p-1 hover:bg-accent/20 rounded accent-text hover:opacity-80 transition flex-shrink-0"
+                onClick={handleEditExerciseNote}
+                className={`p-1 hover:bg-accent/20 rounded accent-text hover:opacity-80 transition flex-shrink-0 ui-note-focus-trigger ${noteFocusPulse ? 'ui-note-focus-highlight' : ''}` }
                 title="Edit exercise note"
               >
-                📝
+                <Edit2 size={13} />
               </button>
             </div>
             <p className="text-xs text-slate-400 mt-1 font-semibold">{exercise.category}</p>
             {(() => {
               const exFromDB = exercisesDB?.find(e => e.id === exercise.exerciseId);
               return exFromDB?.note && (
-                <div className="mt-2 text-xs accent-bg-light accent-border-light accent-text px-2 py-1 rounded">
+                <div className={`mt-2 text-xs accent-bg-light accent-border-light accent-text px-2 py-1 rounded ${noteFocusPulse ? 'ui-note-focus-highlight' : ''}`}>
                   {exFromDB.note}
                 </div>
               );
@@ -168,7 +192,7 @@ function SortableExerciseItem({
           </button>
 
           {menuOpenIndex === exIndex && (
-            <div className="absolute right-0 mt-2 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-40 w-56 overflow-hidden">
+            <div className="absolute right-0 mt-2 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-[95] w-56 overflow-hidden ui-menu-pop pointer-events-auto">
               {/* Exercise Actions Section */}
               <div className="p-2">
                 <div className="text-xs font-bold text-slate-500 uppercase tracking-widest px-3 py-2">Exercise</div>
@@ -308,7 +332,7 @@ function SortableExerciseItem({
 
       {/* Delete mode - Toggle delete buttons on individual sets */}
       {deleteModeIndex === exIndex && (
-        <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg flex items-center justify-between gap-3">
+        <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg flex items-center justify-between gap-3 ui-delete-mode-attn">
           <div>
             <p className="text-sm font-bold text-red-400">🗑️ Delete mode active</p>
             <p className="text-xs text-red-300 mt-1">Tap trash button or swipe left to delete sets</p>
@@ -322,9 +346,15 @@ function SortableExerciseItem({
         </div>
       )}
 
-      {/* Set type mode - cycle set type on individual sets */}
-      {warmupModeIndex === exIndex && (
-        <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg flex items-center justify-between gap-3">
+      {/* Set type mode - slide/fade in-out panel */}
+      <div
+        className={`mb-4 overflow-hidden transition-all duration-200 ease-out ${
+          warmupModeIndex === exIndex
+            ? 'max-h-28 opacity-100 translate-y-0 ui-set-type-mode-in'
+            : 'max-h-0 opacity-0 -translate-y-2 mb-0 pointer-events-none'
+        }`}
+      >
+        <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg flex items-center justify-between gap-3">
           <div>
             <p className="text-sm font-bold text-amber-400">Set type edit mode</p>
             <p className="text-xs text-amber-300 mt-1">Choose type directly per set from the selector</p>
@@ -336,7 +366,7 @@ function SortableExerciseItem({
             Done
           </button>
         </div>
-      )}
+      </div>
 
       {/* Exercise Card */}
       <ActiveWorkoutExerciseCard
@@ -433,7 +463,7 @@ export function SortableExerciseList({
         items={exercises.map((ex, idx) => ex.exerciseId + '-' + idx)}
         strategy={verticalListSortingStrategy}
       >
-        <div className="space-y-3">
+        <div className="space-y-3 ui-exercises-list-enter">
           {exercises.map((exercise, exIndex) => (
             <SortableExerciseItem
               key={exercise.exerciseId + '-' + exIndex}
@@ -471,4 +501,7 @@ export function SortableExerciseList({
     </DndContext>
   );
 }
+
+
+
 

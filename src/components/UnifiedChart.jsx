@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { aggregateDaily, aggregateWeekly, aggregateMonthly, getNiceInterval } from '../domain/chartAggregation';
 import { alignSeriesToCurrent, getClosestPointIndexFromX, getDateRangeForPeriod, getPreviousRange } from '../analytics/chartCompare';
 
@@ -26,7 +26,29 @@ export const UnifiedChart = ({
   const [annotations, setAnnotations] = useState({});
   const [noteDraft, setNoteDraft] = useState('');
   const [isEditingNote, setIsEditingNote] = useState(false);
+  const [isRangeAnimating, setIsRangeAnimating] = useState(false);
+  const [compareRevealPulse, setCompareRevealPulse] = useState(false);
+  const [noteSavedPulse, setNoteSavedPulse] = useState(false);
   const svgRef = useRef(null);
+
+  useEffect(() => {
+    const start = setTimeout(() => setIsRangeAnimating(true), 0);
+    const timer = setTimeout(() => setIsRangeAnimating(false), 260);
+    return () => {
+      clearTimeout(start);
+      clearTimeout(timer);
+    };
+  }, [timePeriod, metric, exerciseId, comparePrevious]);
+
+  useEffect(() => {
+    if (!comparePrevious) return undefined;
+    const start = setTimeout(() => setCompareRevealPulse(true), 0);
+    const timer = setTimeout(() => setCompareRevealPulse(false), 280);
+    return () => {
+      clearTimeout(start);
+      clearTimeout(timer);
+    };
+  }, [comparePrevious]);
 
   const width = 350;
   const height = 240;
@@ -156,6 +178,7 @@ export const UnifiedChart = ({
   const activeCurrent = activePointIndex !== null ? chartData[activePointIndex] : null;
   const activePrevious = activePointIndex !== null ? previousSeries[activePointIndex] : null;
   const activeSeriesLabel = resolvedActiveSeries === 'previous' ? 'Previous' : 'Current';
+  const activePreviousDateLabel = activePrevious?.sourceLabel || formatTooltipDate(activePrevious?.sourceDate) || null;
   const activeNoteKey = activeCurrent?.date || null;
   const activeNote = activeNoteKey ? annotations[activeNoteKey] : '';
 
@@ -193,6 +216,8 @@ export const UnifiedChart = ({
       return { ...prev, [activeNoteKey]: trimmed };
     });
     setIsEditingNote(false);
+    setNoteSavedPulse(true);
+    setTimeout(() => setNoteSavedPulse(false), 800);
   };
 
   const handleCurrentPointToggle = (index) => {
@@ -208,7 +233,7 @@ export const UnifiedChart = ({
   };
 
   return (
-    <div className="w-full overflow-hidden">
+    <div className="w-full overflow-hidden ui-chart-enter">
       {enableAdvancedInteractions && (
         <div className="flex items-center justify-between mb-2 px-1">
           <p className="text-[11px] text-slate-500 font-semibold tracking-wider">
@@ -216,7 +241,7 @@ export const UnifiedChart = ({
           </p>
           <button
             onClick={() => setComparePrevious(prev => !prev)}
-            className={`text-[11px] px-2 py-1 rounded-md border transition ${
+            className={`text-[11px] px-2 py-1 rounded-md border transition ui-press ${compareRevealPulse ? 'ui-compare-toggle-on' : ''} ${
               comparePrevious
                 ? 'bg-blue-500/15 border-blue-500/30 text-blue-300'
                 : 'bg-slate-800/40 border-slate-700/50 text-slate-400'
@@ -230,7 +255,7 @@ export const UnifiedChart = ({
       <svg
         ref={svgRef}
         viewBox={`0 0 ${width} ${height}`}
-        className="w-full h-auto touch-none"
+        className={`w-full h-auto touch-none ${isRangeAnimating ? 'ui-chart-range-fade' : ''}` }
       >
         {/* Horizontal grid lines at Y ticks */}
         {yTicks.map((tick, i) => {
@@ -246,6 +271,7 @@ export const UnifiedChart = ({
               strokeWidth="0.5"
               opacity="0.12"
               strokeDasharray="2,2"
+              className={isRangeAnimating ? 'ui-chart-axes-fade' : ''}
             />
           );
         })}
@@ -269,7 +295,7 @@ export const UnifiedChart = ({
         })}
 
         {/* Y-axis */}
-        <line x1={leftPadding} y1={topPadding} x2={leftPadding} y2={height - bottomPadding} stroke="#475569" strokeWidth="0.5" opacity="0.5" />
+        <line x1={leftPadding} y1={topPadding} x2={leftPadding} y2={height - bottomPadding} stroke="#475569" strokeWidth="0.5" opacity="0.5" className={isRangeAnimating ? 'ui-chart-axes-fade' : ''} />
 
         {/* Previous period overlay */}
         {comparePrevious && previousPoints && (
@@ -282,6 +308,7 @@ export const UnifiedChart = ({
             strokeLinejoin="round"
             strokeDasharray="5,4"
             opacity="0.8"
+            className={`ui-chart-compare-line ${compareRevealPulse ? 'ui-compare-reveal' : ''}` }
           />
         )}
 
@@ -293,6 +320,7 @@ export const UnifiedChart = ({
           points={points}
           strokeLinecap="round"
           strokeLinejoin="round"
+          className="ui-chart-line-draw"
         />
 
         {/* Scrub overlay */}
@@ -323,6 +351,7 @@ export const UnifiedChart = ({
                 fill="#0b0b0c"
                 stroke="#94a3b8"
                 strokeWidth="1.5"
+                className={isActive ? 'ui-chart-point-halo' : ''}
                 style={{ cursor: 'pointer' }}
                 onMouseEnter={() => {
                   setHoverIndex(i);
@@ -355,6 +384,7 @@ export const UnifiedChart = ({
                 fill="#0b0b0c"
                 stroke={color}
                 strokeWidth="2"
+                className={isActive ? 'ui-chart-point-halo' : ''}
                 style={{ cursor: 'pointer' }}
                 onMouseEnter={() => {
                   setHoverIndex(i);
@@ -386,18 +416,19 @@ export const UnifiedChart = ({
             strokeWidth="1"
             strokeDasharray="3,3"
             opacity="0.35"
+            className="ui-chart-marker-line"
           />
         )}
 
         {/* Tooltip */}
         {activePoint && activeCurrent && (() => {
-          const tooltipWidth = comparePrevious ? 176 : 138;
-          const tooltipHeight = comparePrevious ? 56 : 30;
+          const tooltipWidth = comparePrevious ? 188 : 138;
+          const tooltipHeight = comparePrevious ? 68 : 30;
           const tx = Math.min(Math.max(activePoint.x + 8, leftPadding), width - rightPadding - tooltipWidth);
           const ty = activePoint.y - (tooltipHeight + 6) < topPadding ? activePoint.y + 8 : activePoint.y - (tooltipHeight + 6);
 
           return (
-            <g>
+            <g className="ui-chart-tooltip ui-tooltip-magnetic">
               <rect x={tx} y={ty} width={tooltipWidth} height={tooltipHeight} rx={6} fill="#0f1720" stroke="#374151" />
               <text x={tx + 8} y={ty + 11} fontSize="10" fill="#cbd5e1" fontWeight="700">
                 {activeCurrent.label} - {activeSeriesLabel}
@@ -406,9 +437,14 @@ export const UnifiedChart = ({
                 Current: {Math.round(activeCurrent.value)} {unit}
               </text>
               {comparePrevious && (
-                <text x={tx + 8} y={ty + 39} fontSize="11" fill="#94a3b8" fontWeight="600">
-                  Previous: {activePrevious?.hasValue ? `${Math.round(activePrevious.value)} ${unit}` : 'no data'}
-                </text>
+                <>
+                  <text x={tx + 8} y={ty + 39} fontSize="11" fill="#94a3b8" fontWeight="600">
+                    Previous: {activePrevious?.hasValue ? `${Math.round(activePrevious.value)} ${unit}` : 'no data'}
+                  </text>
+                  <text x={tx + 8} y={ty + 52} fontSize="10" fill="#94a3b8" fontWeight="500" className="ui-tooltip-date-fade">
+                    Prev date: {activePrevious?.hasValue ? (activePreviousDateLabel || '-') : '-'}
+                  </text>
+                </>
               )}
             </g>
           );
@@ -423,7 +459,7 @@ export const UnifiedChart = ({
 
       {/* In-memory annotations */}
       {enableAdvancedInteractions && activeCurrent && (
-        <div className="mt-3 p-2 rounded-lg bg-slate-800/35 border border-slate-700/40">
+        <div className={`mt-3 p-2 rounded-lg bg-slate-800/35 border border-slate-700/40 ${isEditingNote ? 'ui-annotation-reveal' : ''}` }>
           <div className="flex items-center justify-between gap-2">
             <p className="text-[11px] text-slate-400 font-semibold tracking-wider">Annotation ({activeCurrent.label})</p>
             {!isEditingNote && (
@@ -450,9 +486,9 @@ export const UnifiedChart = ({
               />
               <button
                 onClick={saveNote}
-                className="h-9 px-3 rounded-md bg-slate-700/70 hover:bg-slate-600/70 text-xs font-bold text-white transition"
+                className={`h-9 px-3 rounded-md bg-slate-700/70 hover:bg-slate-600/70 text-xs font-bold text-white transition ${noteSavedPulse ? 'ui-annotation-saved' : ''}`}
               >
-                Save
+                {noteSavedPulse ? 'Saved' : 'Save'}
               </button>
               <button
                 onClick={() => setIsEditingNote(false)}
@@ -473,3 +509,16 @@ function formatYAxisLabel(value) {
   if (Number.isInteger(value)) return value.toString();
   return value.toFixed(1);
 }
+
+function formatTooltipDate(dateValue) {
+  if (!dateValue) return '';
+  const parsed = new Date(`${dateValue}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return '';
+  return parsed.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+
+
+
+
+

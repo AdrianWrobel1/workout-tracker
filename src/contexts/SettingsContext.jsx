@@ -12,6 +12,7 @@ export const SettingsProvider = ({ children }) => {
   // Performance & UI Settings
   const [enablePerformanceAlerts, setEnablePerformanceAlerts] = useState(true);
   const [enableHapticFeedback, setEnableHapticFeedback] = useState(true);
+  const [reduceAnimations, setReduceAnimations] = useState(false);
 
   // PR & Notifications
   const [activePRBanner, setActivePRBanner] = useState(null);
@@ -45,6 +46,10 @@ export const SettingsProvider = ({ children }) => {
 
   const handleToggleHapticFeedback = useCallback(() => {
     setEnableHapticFeedback(prev => !prev);
+  }, []);
+
+  const handleToggleReduceAnimations = useCallback(() => {
+    setReduceAnimations(prev => !prev);
   }, []);
 
   // --- HANDLERS: PR NOTIFICATIONS ---
@@ -88,6 +93,9 @@ export const SettingsProvider = ({ children }) => {
     enableHapticFeedback,
     setEnableHapticFeedback,
     handleToggleHapticFeedback,
+    reduceAnimations,
+    setReduceAnimations,
+    handleToggleReduceAnimations,
 
     // PR & Notifications
     activePRBanner,
@@ -112,3 +120,4 @@ export const useSettings = () => {
   }
   return context;
 };
+

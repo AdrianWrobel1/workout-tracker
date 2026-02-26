@@ -71,7 +71,7 @@ export const ProfileCalendarView = ({
   };
 
   return (
-    <div className="min-h-screen bg-black text-white pb-24">
+    <div className="bg-black text-white pb-24">
       {/* Header */}
       <div className="bg-gradient-to-b from-black to-black/80 border-b border-white/10 p-4 sticky top-0 z-20 shadow-2xl">
         <div className="flex items-center justify-between mb-4">
@@ -166,3 +166,6 @@ export const ProfileCalendarView = ({
     </div>
   );
 };
+
+
+

@@ -2,8 +2,6 @@ import React, { useState, useMemo } from 'react';
 import { ChevronLeft } from 'lucide-react';
 import { RadarChart } from '../components/RadarChart';
 import { UnifiedChart } from '../components/UnifiedChart';
-import { calculateTotalVolume } from '../domain/calculations';
-import { getChartData } from '../domain/profileCharts';
 
 export const ProfileStatisticsView = ({ workouts = [], exercisesDB = [], userWeight, onBack }) => {
   const [timePeriod, setTimePeriod] = useState('3months'); // '7days' | '30days' | '3months' | '1year'
@@ -129,7 +127,7 @@ export const ProfileStatisticsView = ({ workouts = [], exercisesDB = [], userWei
   }, [workouts, exercisesDB, userWeight, timePeriod]);
 
   return (
-    <div className="min-h-screen bg-black text-white pb-40">
+    <div className="bg-black text-white pb-40">
       {/* Header */}
       <div className="bg-gradient-to-b from-black to-black/80 border-b border-white/10 p-4 sticky top-0 z-20 shadow-2xl">
         <div className="flex items-center gap-4 mb-2">
@@ -195,39 +193,39 @@ export const ProfileStatisticsView = ({ workouts = [], exercisesDB = [], userWei
 
         {/* Key Statistics Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
-          <div className="bg-gradient-to-br from-blue-600/20 to-blue-700/10 border border-blue-500/30 rounded-xl p-3 sm:p-4">
+          <div className="bg-gradient-to-br from-blue-600/20 to-blue-700/10 border border-blue-500/30 rounded-xl p-3 sm:p-4 ui-stat-card-pop">
             <p className="text-xs text-slate-400 font-semibold tracking-widest mb-2">TOTAL VOLUME</p>
-            <p className="text-2xl sm:text-3xl font-black text-blue-400">{(stats.totalVolume / 1000).toFixed(1)}k</p>
+            <p className="text-2xl sm:text-3xl font-black text-blue-400 ui-number-countup">{(stats.totalVolume / 1000).toFixed(1)}k</p>
             <p className="text-xs text-slate-500 mt-1">kg</p>
           </div>
 
           <div className="bg-gradient-to-br from-emerald-600/20 to-emerald-700/10 border border-emerald-500/30 rounded-xl p-3 sm:p-4 flex flex-col items-center justify-center text-center">
             <p className="text-xs text-slate-400 font-semibold tracking-widest mb-2 whitespace-nowrap">WORKOUTS</p>
-            <p className="text-2xl sm:text-3xl font-black text-emerald-400">{stats.totalSessions}</p>
+            <p className="text-2xl sm:text-3xl font-black text-emerald-400 ui-number-countup">{stats.totalSessions}</p>
             <p className="text-xs text-slate-500 mt-1">sessions</p>
           </div>
 
-          <div className="bg-gradient-to-br from-purple-600/20 to-purple-700/10 border border-purple-500/30 rounded-xl p-3 sm:p-4">
+          <div className="bg-gradient-to-br from-purple-600/20 to-purple-700/10 border border-purple-500/30 rounded-xl p-3 sm:p-4 ui-stat-card-pop">
             <p className="text-xs text-slate-400 font-semibold tracking-widest mb-2">TOTAL REPS</p>
-            <p className="text-2xl sm:text-3xl font-black text-purple-400">{stats.totalReps.toLocaleString()}</p>
+            <p className="text-2xl sm:text-3xl font-black text-purple-400 ui-number-countup">{stats.totalReps.toLocaleString()}</p>
             <p className="text-xs text-slate-500 mt-1">reps</p>
           </div>
 
-          <div className="bg-gradient-to-br from-amber-600/20 to-amber-700/10 border border-amber-500/30 rounded-xl p-3 sm:p-4">
+          <div className="bg-gradient-to-br from-amber-600/20 to-amber-700/10 border border-amber-500/30 rounded-xl p-3 sm:p-4 ui-stat-card-pop">
             <p className="text-xs text-slate-400 font-semibold tracking-widest mb-2">DURATION</p>
-            <p className="text-2xl sm:text-3xl font-black text-amber-400">{stats.totalDuration}</p>
+            <p className="text-2xl sm:text-3xl font-black text-amber-400 ui-number-countup">{stats.totalDuration}</p>
             <p className="text-xs text-slate-500 mt-1">min</p>
           </div>
 
-          <div className="bg-gradient-to-br from-cyan-600/20 to-cyan-700/10 border border-cyan-500/30 rounded-xl p-3 sm:p-4">
+          <div className="bg-gradient-to-br from-cyan-600/20 to-cyan-700/10 border border-cyan-500/30 rounded-xl p-3 sm:p-4 ui-stat-card-pop">
             <p className="text-xs text-slate-400 font-semibold tracking-widest mb-2">AVG VOLUME</p>
-            <p className="text-2xl sm:text-3xl font-black text-cyan-400">{(stats.avgSessionVolume / 1000).toFixed(1)}k</p>
+            <p className="text-2xl sm:text-3xl font-black text-cyan-400 ui-number-countup">{(stats.avgSessionVolume / 1000).toFixed(1)}k</p>
             <p className="text-xs text-slate-500 mt-1">kg</p>
           </div>
         </div>
 
         {/* Overall 1RM Trend Chart */}
-        <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-4">
+        <div key={`overall-chart-${timePeriod}`} className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-4 ui-chart-range-fade ui-chart-card-enter">
           <h2 className="text-sm font-black text-slate-300 uppercase tracking-widest mb-4">Overall 1RM Trend</h2>
           <UnifiedChart
             workouts={workouts}
@@ -238,6 +236,7 @@ export const ProfileStatisticsView = ({ workouts = [], exercisesDB = [], userWei
             unit="kg"
             userWeight={userWeight}
             exercisesDB={exercisesDB}
+            enableAdvancedInteractions={true}
           />
         </div>
 
@@ -258,8 +257,8 @@ export const ProfileStatisticsView = ({ workouts = [], exercisesDB = [], userWei
                     </div>
                     <div className="w-full h-2 bg-slate-800/50 rounded-full overflow-hidden border border-slate-700/50">
                       <div
-                        className="h-full bg-gradient-to-r from-blue-500 to-blue-400 transition-all duration-500"
-                        style={{ width: `${percentage}%` }}
+                        className="h-full bg-gradient-to-r from-blue-500 to-blue-400 transition-all duration-500 ui-hist-bar-stagger" style={{ width: `${percentage}%`, animationDelay: `${Math.min(Object.keys(stats.muscleBreakdown || {}).indexOf(muscle), 8) * 45}ms` }}
+                        
                       />
                     </div>
                   </div>
@@ -285,3 +284,8 @@ function normalizeMuscleName(muscle) {
   if (s.includes('core') || s.includes('abs')) return 'Core';
   return muscle;
 }
+
+
+
+
+

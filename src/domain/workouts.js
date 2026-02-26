@@ -1,7 +1,7 @@
 /**
  * Workout-related domain logic
  */
-import { isWorkSet } from './workoutExtensions';
+import { isWorkSet, resolveSetType } from './workoutExtensions';
 
 /**
  * Get previous sets from template's last workout snapshot (for prev/suggestions per template).
@@ -153,9 +153,9 @@ export const compareWorkoutToPrevious = (currentWorkout, allWorkouts) => {
   const currentVol = getVolume(currentWorkout);
   const prevVol = getVolume(prevWorkout);
   
-  let trend = '→';
-  if (currentVol > prevVol * 1.05) trend = '↑';
-  else if (currentVol < prevVol * 0.95) trend = '↓';
+  let trend = 'flat';
+  if (currentVol > prevVol * 1.05) trend = 'up';
+  else if (currentVol < prevVol * 0.95) trend = 'down';
   
   return { trend, prevVolume: prevVol, currentVolume: currentVol };
 };
@@ -164,37 +164,37 @@ export const compareWorkoutToPrevious = (currentWorkout, allWorkouts) => {
 export const generateSessionFeedback = (volume, sets, trend) => {
   const volumeLevel = volume > 10000 ? 'crushing' : volume > 5000 ? 'solid' : volume > 2000 ? 'decent' : 'light';
   const setsLevel = sets > 20 ? 'epic' : sets > 12 ? 'good' : sets > 6 ? 'balanced' : 'quick';
-  
+
   const texts = {
     crushing: {
-      epic: '💪 Beast mode activated',
-      good: '🔥 Solid work ethic',
-      balanced: '⚡ Quality volume',
-      quick: '🎯 Intense focus'
+      epic: '\u{1F4AA} Beast mode activated',
+      good: '\u{1F525} Solid work ethic',
+      balanced: '\u26A1 Quality volume',
+      quick: '\u{1F3AF} Intense focus'
     },
     solid: {
-      epic: '🏋️ Great grind',
-      good: '✅ Solid session',
-      balanced: '💯 Perfect balance',
-      quick: '⚙️ Efficient'
+      epic: '\u{1F3CB} Great grind',
+      good: '\u2705 Solid session',
+      balanced: '\u{1F4AF} Perfect balance',
+      quick: '\u2699 Efficient'
     },
     decent: {
-      epic: '👍 Nice effort',
-      good: '🎯 On point',
-      balanced: '✨ Consistent',
-      quick: '🚀 Quick one'
+      epic: '\u{1F44D} Nice effort',
+      good: '\u{1F3AF} On point',
+      balanced: '\u2728 Consistent',
+      quick: '\u{1F680} Quick one'
     },
     light: {
-      epic: '🌱 Building',
-      good: '📈 Getting going',
-      balanced: '🌟 Getting warmed',
-      quick: '💫 Starter session'
+      epic: '\u{1F331} Building',
+      good: '\u{1F4C8} Getting going',
+      balanced: '\u{1F31F} Getting warmed',
+      quick: '\u{1F4AB} Starter session'
     }
   };
-  
-  const text = texts[volumeLevel]?.[setsLevel] || '💪 Keep moving';
-  const trendIcon = trend === '↑' ? ' 🚀' : trend === '↓' ? ' ⚠️' : '';
-  
+
+  const text = texts[volumeLevel]?.[setsLevel] || '\u{1F4AA} Keep moving';
+  const trendIcon = trend === 'up' ? ' \u{1F680}' : trend === 'down' ? ' \u26A0\uFE0F' : '';
+
   return text + trendIcon;
 };
 
@@ -247,6 +247,42 @@ const getExerciseWorkVolume = (exercise) => {
     return sum + (Number(set.kg) || 0) * (Number(set.reps) || 0);
   }, 0);
 };
+const getPlannedWorkSets = (workout) => {
+  let count = 0;
+  (workout?.exercises || []).forEach((exercise) => {
+    (exercise?.sets || []).forEach((set) => {
+      if (resolveSetType(set) !== 'warmup') count += 1;
+    });
+  });
+  return count;
+};
+
+const getCompletedWorkSetsCount = (workout) => {
+  let count = 0;
+  (workout?.exercises || []).forEach((exercise) => {
+    (exercise?.sets || []).forEach((set) => {
+      if (isWorkSet(set)) count += 1;
+    });
+  });
+  return count;
+};
+
+const getTopVolumeExercise = (workout) => {
+  let winner = null;
+  (workout?.exercises || []).forEach((exercise) => {
+    const volume = getExerciseWorkVolume(exercise);
+    if (volume <= 0) return;
+    if (!winner || volume > winner.volume) {
+      winner = {
+        exerciseName: exercise?.name || 'Exercise',
+        volume
+      };
+    }
+  });
+  return winner;
+};
+
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
 const findMostRegressedExercise = (currentWorkout, previousWorkout) => {
   if (!currentWorkout?.exercises?.length || !previousWorkout?.exercises?.length) return null;
@@ -281,6 +317,187 @@ const findMostRegressedExercise = (currentWorkout, previousWorkout) => {
   });
 
   return regressed;
+};
+
+const calculateActionCertainty = (currentWorkout, allWorkouts = []) => {
+  const exerciseMap = new Map();
+  (currentWorkout?.exercises || []).forEach((exercise, index) => {
+    const exerciseId = exercise?.exerciseId;
+    if (!exerciseId || exerciseMap.has(exerciseId)) return;
+    exerciseMap.set(exerciseId, exercise?.name || `Exercise ${index + 1}`);
+  });
+
+  const exerciseIds = [...exerciseMap.keys()];
+
+  if (exerciseIds.length === 0) {
+    return {
+      level: 'low',
+      score: 22,
+      label: 'Low evidence',
+      reason: 'No tracked exercise history available for this session.',
+      exposures: {
+        trackedExercises: 0,
+        average: 0,
+        min: 0,
+        max: 0,
+        total: 0
+      },
+      decay: {
+        staleExercises: 0,
+        averageMultiplier: 1
+      },
+      perExercise: []
+    };
+  }
+
+  const parseWorkoutDate = (workout) => {
+    const dateString = workout?.date
+      || (workout?.startTime ? new Date(workout.startTime).toISOString().split('T')[0] : null);
+    if (!dateString) return null;
+    const parsed = new Date(`${dateString}T00:00:00`);
+    if (Number.isNaN(parsed.getTime())) return null;
+    return parsed;
+  };
+
+  const getDecayMultiplier = (daysSinceLastExposure) => {
+    if (!Number.isFinite(daysSinceLastExposure)) return 0.74;
+    if (daysSinceLastExposure <= 10) return 1;
+    if (daysSinceLastExposure <= 21) return 0.94;
+    if (daysSinceLastExposure <= 35) return 0.87;
+    if (daysSinceLastExposure <= 56) return 0.8;
+    return 0.72;
+  };
+
+  const resolveLevel = (score) => {
+    if (score >= 74) return 'high';
+    if (score >= 46) return 'medium';
+    return 'low';
+  };
+
+  const target = new Set(exerciseIds);
+  const counts = new Map(exerciseIds.map(id => [id, 0]));
+  const lastExposureById = new Map(exerciseIds.map(id => [id, null]));
+  const currentDate = parseWorkoutDate(currentWorkout) || new Date();
+
+  (allWorkouts || []).forEach((workout) => {
+    if (!workout?.exercises?.length) return;
+    if (currentWorkout?.id && workout.id === currentWorkout.id) return;
+    if (currentWorkout?.startTime && workout.startTime && workout.startTime === currentWorkout.startTime) return;
+
+    const workoutDate = parseWorkoutDate(workout);
+    if (!workoutDate || workoutDate >= currentDate) return;
+
+    const seenInWorkout = new Set();
+    (workout.exercises || []).forEach((exercise) => {
+      const exId = exercise?.exerciseId;
+      if (!exId || !target.has(exId) || seenInWorkout.has(exId)) return;
+      if ((exercise?.sets || []).some(set => isWorkSet(set))) {
+        counts.set(exId, (counts.get(exId) || 0) + 1);
+        seenInWorkout.add(exId);
+
+        const previousDate = lastExposureById.get(exId);
+        if (!previousDate || workoutDate > previousDate) {
+          lastExposureById.set(exId, workoutDate);
+        }
+      }
+    });
+  });
+
+  const perExercise = exerciseIds.map((exerciseId) => {
+    const exposures = counts.get(exerciseId) || 0;
+    const lastExposureDate = lastExposureById.get(exerciseId);
+    const daysSinceLastExposure = lastExposureDate
+      ? Math.max(0, Math.floor((currentDate.getTime() - lastExposureDate.getTime()) / 86400000))
+      : null;
+    const decayMultiplier = getDecayMultiplier(daysSinceLastExposure);
+
+    const baseScore = clamp(
+      Math.round(24 + (Math.min(exposures, 12) * 6.5) + (exposures >= 6 ? 6 : 0)),
+      20,
+      96
+    );
+    const score = clamp(Math.round(baseScore * decayMultiplier), 15, 96);
+    const level = resolveLevel(score);
+
+    let reason = 'Reliable enough to drive progression decisions.';
+    if (exposures === 0) {
+      reason = 'No prior exposure. Confidence is low.';
+    } else if (!Number.isFinite(daysSinceLastExposure)) {
+      reason = 'History found, but recency could not be resolved.';
+    } else if (daysSinceLastExposure > 35) {
+      reason = `Stale exposure (${daysSinceLastExposure}d gap) lowers confidence.`;
+    } else if (daysSinceLastExposure > 21) {
+      reason = `Moderate decay applied (${daysSinceLastExposure}d since last exposure).`;
+    }
+
+    return {
+      exerciseId,
+      exerciseName: exerciseMap.get(exerciseId) || 'Exercise',
+      exposures,
+      lastExposureDays: daysSinceLastExposure,
+      decayMultiplier: Math.round(decayMultiplier * 100) / 100,
+      score,
+      level,
+      reason
+    };
+  });
+
+  const exposureValues = perExercise.map(item => item.exposures);
+  const total = exposureValues.reduce((sum, value) => sum + value, 0);
+  const average = exposureValues.length > 0 ? total / exposureValues.length : 0;
+  const min = exposureValues.length > 0 ? Math.min(...exposureValues) : 0;
+  const max = exposureValues.length > 0 ? Math.max(...exposureValues) : 0;
+
+  const staleExercises = perExercise.filter(item => Number.isFinite(item.lastExposureDays) && item.lastExposureDays > 21).length;
+  const averageMultiplier = perExercise.length > 0
+    ? perExercise.reduce((sum, item) => sum + (item.decayMultiplier || 1), 0) / perExercise.length
+    : 1;
+  const avgPerExerciseScore = perExercise.length > 0
+    ? perExercise.reduce((sum, item) => sum + item.score, 0) / perExercise.length
+    : 22;
+
+  let score = Math.round(
+    (avgPerExerciseScore * 0.78)
+    + (average * 5)
+    + (Math.min(min, 4) * 2)
+    + (staleExercises === 0 ? 6 : 0)
+    - (staleExercises * 3)
+  );
+  if (min === 0) score -= 8;
+  score = clamp(score, 18, 96);
+
+  const level = resolveLevel(score);
+  const label = level === 'high' ? 'High evidence' : level === 'medium' ? 'Medium evidence' : 'Low evidence';
+
+  let reason = 'Recommendations are based on limited exposure history.';
+  if (level === 'high') {
+    reason = staleExercises > 0
+      ? `Strong data coverage, with light decay on ${staleExercises} exercise${staleExercises === 1 ? '' : 's'}.`
+      : 'Recommendations are backed by deep and recent exposure history.';
+  } else if (level === 'medium') {
+    reason = staleExercises > 0
+      ? `Directionally reliable, but confidence decays on ${staleExercises} stale exposure${staleExercises === 1 ? '' : 's'}.`
+      : 'Recommendations are directionally reliable with moderate history.';
+  }
+
+  return {
+    level,
+    score,
+    label,
+    reason,
+    exposures: {
+      trackedExercises: exposureValues.length,
+      average: Math.round(average * 10) / 10,
+      min,
+      max,
+      total
+    },
+    decay: {
+      staleExercises,
+      averageMultiplier: Math.round(averageMultiplier * 100) / 100
+    },
+    perExercise
+  };
 };
 
 /**
@@ -348,7 +565,8 @@ export const generatePostWorkoutInsights = (
 
 /**
  * Coach Lens card (offline, deterministic).
- * Returns one practical keep/improve/focus suggestion.
+ * Expanded structure with actionable next-session planning while keeping
+ * keep/improve/focus compatibility for existing UI.
  */
 export const generateCoachLens = (
   currentWorkout,
@@ -358,43 +576,177 @@ export const generateCoachLens = (
 ) => {
   if (!currentWorkout) {
     return {
+      headline: 'Not enough data yet.',
+      status: 'build',
+      confidence: 'low',
+      scores: {
+        progression: 0,
+        execution: 0,
+        fatigueRisk: 0
+      },
+      scoreLegend: {
+        progression: 'Output trend vs your previous exposure and PR momentum.',
+        execution: 'How much planned work was completed with usable density.',
+        fatigueRisk: 'Probability of next-session drop from load, duration, and slowdown signals.'
+      },
+      snapshot: {
+        volume: 0,
+        volumeDeltaPct: 0,
+        completedWorkSets: 0,
+        plannedWorkSets: 0,
+        completionPct: 0,
+        density: 0,
+        prCount: 0
+      },
+      highlights: ['No workout data yet.'],
+      risks: ['No slowdown pattern detected.'],
+      nextSessionPlan: ['Complete one full session to unlock Coach Lens.'],
       keep: 'No workout data yet.',
       improve: 'No slowdown pattern detected.',
-      focus: 'Complete one full session to unlock Coach Lens.'
+      focus: 'Complete one full session to unlock Coach Lens.',
+      actionCertainty: {
+        level: 'low',
+        score: 22,
+        label: 'Low evidence',
+        reason: 'No tracked exercise history available for this session.',
+        exposures: { trackedExercises: 0, average: 0, min: 0, max: 0, total: 0 },
+        decay: { staleExercises: 0, averageMultiplier: 1 },
+        perExercise: []
+      }
     };
   }
 
   const effectiveComparison = comparison || compareWorkoutToPrevious(currentWorkout, allWorkouts);
   const previousWorkout = getPreviousWorkout(currentWorkout, allWorkouts);
   const regressedExercise = findMostRegressedExercise(currentWorkout, previousWorkout);
-  const prCount = Object.keys(prStatus || {}).length;
   const topSet = getBestSetByEstimated1RM(currentWorkout);
+  const topVolumeExercise = getTopVolumeExercise(currentWorkout);
+
   const currentVolume = getCompletedVolume(currentWorkout);
   const prevVolume = Number(effectiveComparison?.prevVolume) || 0;
   const deltaPct = prevVolume > 0 ? Math.round(((currentVolume - prevVolume) / prevVolume) * 100) : 0;
 
-  let keep = 'Keep your main lift setup and tempo consistent next session.';
-  if (prCount > 0 && topSet?.exerciseName) {
-    keep = `Keep ${topSet.exerciseName} as your opener; today's top set quality was high.`;
-  } else if (deltaPct >= 5) {
-    keep = `Keep this session density; total volume is up ${Math.abs(deltaPct)}% vs previous session.`;
+  const plannedWorkSets = getPlannedWorkSets(currentWorkout);
+  const completedWorkSets = getCompletedWorkSetsCount(currentWorkout);
+  const completionPct = plannedWorkSets > 0 ? Math.round((completedWorkSets / plannedWorkSets) * 100) : 100;
+
+  const durationMin = Math.max(1, Number(currentWorkout?.duration) || 0);
+  const density = Math.round(currentVolume / durationMin);
+  const prCount = Object.keys(prStatus || {}).length;
+
+  const progressionScore = clamp(
+    50 + (deltaPct >= 0 ? Math.min(deltaPct, 18) : Math.max(deltaPct, -18)) + prCount * 10 - (regressedExercise ? 8 : 0),
+    0,
+    100
+  );
+  const executionScore = clamp(
+    Math.round((completionPct * 0.78) + Math.min(22, density / 25)),
+    0,
+    100
+  );
+  const fatigueRiskScore = clamp(
+    15 + (deltaPct > 18 ? 22 : 0) + (completionPct < 70 ? 14 : 0) + (durationMin > 95 ? 10 : 0) + (regressedExercise ? 8 : 0) - (prCount > 0 ? 6 : 0),
+    0,
+    100
+  );
+
+  let status = 'steady';
+  if (fatigueRiskScore >= 62) {
+    status = 'recover';
+  } else if (progressionScore >= 72 && fatigueRiskScore <= 42) {
+    status = 'push';
   }
 
-  let improve = 'No clear weak point this session.';
-  if (deltaPct <= -5) {
-    improve = `Volume dropped ${Math.abs(deltaPct)}% vs previous session.`;
-  } else if (regressedExercise?.exerciseName) {
-    improve = `${regressedExercise.exerciseName} underperformed versus your last exposure.`;
-  }
+  let confidence = 'low';
+  if (allWorkouts.length >= 10) confidence = 'high';
+  else if (allWorkouts.length >= 4) confidence = 'medium';
+  const actionCertainty = calculateActionCertainty(currentWorkout, allWorkouts);
 
-  let focus = 'Next session focus: add +1 rep on the first work set of one priority lift.';
+  const highlights = [];
+  if (prCount > 0) highlights.push(`Hit ${prCount} new ${prCount === 1 ? 'PR' : 'PRs'} this session.`);
+  if (deltaPct >= 6) highlights.push(`Total work volume is up ${Math.abs(deltaPct)}% vs previous session.`);
+  if (completionPct >= 90) highlights.push(`Execution quality: ${completedWorkSets}/${plannedWorkSets} planned work sets completed.`);
+  if (topSet?.exerciseName) highlights.push(`Top set quality: ${topSet.exerciseName} at ${topSet.kg} kg x ${topSet.reps} reps.`);
+  if (topVolumeExercise?.exerciseName) highlights.push(`Most productive lift: ${topVolumeExercise.exerciseName} (${topVolumeExercise.volume.toLocaleString()} volume).`);
+  if (highlights.length === 0) highlights.push('Session completed with stable baseline output.');
+
+  const risks = [];
+  if (deltaPct <= -6) risks.push(`Volume dropped ${Math.abs(deltaPct)}% vs previous session.`);
+  if (completionPct < 75) risks.push(`Only ${completedWorkSets}/${plannedWorkSets} work sets were completed.`);
   if (regressedExercise?.exerciseName) {
-    focus = `Next session focus: recover ${regressedExercise.exerciseName} first set quality before adding load.`;
-  } else if (topSet?.exerciseName) {
-    focus = `Next session focus: repeat ${topSet.exerciseName} top set, then add +2.5 kg only if reps stay clean.`;
+    risks.push(`${regressedExercise.exerciseName} underperformed versus your last exposure.`);
+  }
+  if (durationMin > 95 && completionPct < 85) {
+    risks.push('Session ran long with reduced completion quality.');
+  }
+  if (risks.length === 0) risks.push('No critical slowdown signals detected.');
+
+  const nextSessionPlan = [];
+  if (status === 'push') {
+    nextSessionPlan.push('Progress only one top set by +2.5 kg, keep all other loads unchanged.');
+  } else if (status === 'recover') {
+    nextSessionPlan.push('Keep compound loads stable and target cleaner reps before adding weight.');
+  } else {
+    nextSessionPlan.push('Repeat current loads and add +1 rep on the first two work sets.');
   }
 
-  return { keep, improve, focus };
+  if (deltaPct > 15) {
+    nextSessionPlan.push('Trim one accessory work set to protect quality and recovery.');
+  } else if (deltaPct <= -6) {
+    nextSessionPlan.push('Rebuild previous session volume first (within +/-5%).');
+  } else {
+    nextSessionPlan.push('Keep total work-set count in the same range as this session.');
+  }
+
+  if (regressedExercise?.exerciseName) {
+    nextSessionPlan.push(`Open next session with ${regressedExercise.exerciseName} and match first-set output.`);
+  } else if (topSet?.exerciseName) {
+    nextSessionPlan.push(`Anchor progression on ${topSet.exerciseName}; only progress if reps stay clean.`);
+  } else {
+    nextSessionPlan.push('Pick one priority exercise and lock in its first work set quality.');
+  }
+
+  const headline = status === 'push'
+    ? 'High momentum session. Push selectively next workout.'
+    : status === 'recover'
+    ? 'Fatigue signal detected. Stabilize quality next workout.'
+    : 'Steady session quality. Build with controlled progression.';
+
+  const keep = highlights[0] || 'Keep main lift setup consistent.';
+  const improve = risks[0] || 'No clear weak point this session.';
+  const focus = nextSessionPlan[0] || 'Add +1 rep on one priority lift next session.';
+
+  return {
+    headline,
+    status,
+    confidence,
+    scores: {
+      progression: progressionScore,
+      execution: executionScore,
+      fatigueRisk: fatigueRiskScore
+    },
+    scoreLegend: {
+      progression: 'Output trend vs your previous exposure and PR momentum.',
+      execution: 'How much planned work was completed with usable density.',
+      fatigueRisk: 'Probability of next-session drop from load, duration, and slowdown signals.'
+    },
+    snapshot: {
+      volume: currentVolume,
+      volumeDeltaPct: deltaPct,
+      completedWorkSets,
+      plannedWorkSets,
+      completionPct,
+      density,
+      prCount
+    },
+    highlights,
+    risks,
+    nextSessionPlan,
+    keep,
+    improve,
+    focus,
+    actionCertainty
+  };
 };
 
 // Map category names to actual muscle groups
@@ -557,3 +909,10 @@ export const detectPRsInWorkout = (completedWorkout, previousWorkouts, calculate
 
   return prDetected;
 };
+
+
+
+
+
+
+

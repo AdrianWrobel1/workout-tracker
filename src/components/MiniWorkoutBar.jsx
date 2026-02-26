@@ -1,35 +1,56 @@
-import React from 'react';
-import { ChevronUp, Clock } from 'lucide-react';
+import { ChevronUp, Clock, X } from 'lucide-react';
 
-export const MiniWorkoutBar = ({ workoutName, timer, onMaximize }) => {
-  
+export const MiniWorkoutBar = ({ workoutName, timer, onMaximize, onHide }) => {
   const formatTime = (seconds) => {
-    if (!seconds && seconds !== 0) return "--:--";
+    if (!seconds && seconds !== 0) return '--:--';
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   return (
-    <div 
+    <div
       onClick={onMaximize}
-      className="fixed bottom-[72px] left-3 right-3 z-30 bg-gradient-accent hover:opacity-90 border border-accent/50 rounded-lg p-4 shadow-2xl flex justify-between items-center cursor-pointer animate-in slide-in-from-bottom-4 fade-in duration-200 transition-all ease-out group"
-      style={{ boxShadow: `0 25px 50px -12px var(--accent)` }}
+      className="active-workout-bar bg-gradient-accent hover:opacity-90 border border-accent/50 p-3.5 flex justify-between items-center cursor-pointer ui-miniworkout-enter ui-mini-bar-spring ui-mini-bar-shimmer transition-all ease-out group backdrop-blur-sm"
     >
-      <div className="flex flex-col">
+      <div className="flex flex-col min-w-0">
         <span className="text-xs text-white/90 font-black uppercase tracking-widest">Active Workout</span>
-        <span className="text-white font-black text-sm truncate max-w-[200px]">{workoutName || "Workout"}</span>
+        <span className="text-white font-black text-sm truncate max-w-[160px]">{workoutName || 'Workout'}</span>
       </div>
 
-        <div className="flex items-center gap-2">
-        <div className="flex items-center gap-1.5 bg-white/20 px-4 py-2 rounded-lg border border-white/30">
-          <Clock size={14} className="text-white animate-pulse" />
+      <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 bg-white/20 px-3 py-1.5 rounded-lg border border-white/30">
+          <Clock size={13} className="text-white animate-pulse" />
           <span className="font-mono text-sm font-bold text-white">{formatTime(timer)}</span>
         </div>
-        <button className="p-2 bg-white/20 hover:bg-white/30 rounded-lg text-white transition">
-          <ChevronUp size={18} />
-        </button>
+
+        <div className="flex items-center gap-1">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onHide?.();
+            }}
+            className="p-2 bg-white/20 hover:bg-white/30 rounded-lg text-white transition ui-mini-expand-spring"
+            title="Hide active workout bar"
+            aria-label="Hide active workout bar"
+          >
+            <X size={14} />
+          </button>
+
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onMaximize?.();
+            }}
+            className="p-2 bg-white/20 hover:bg-white/30 rounded-lg text-white transition ui-mini-expand-spring"
+            title="Open active workout"
+            aria-label="Open active workout"
+          >
+            <ChevronUp size={16} />
+          </button>
+        </div>
       </div>
     </div>
   );
 };
+
