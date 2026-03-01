@@ -70,10 +70,18 @@ export const buildLastWorkoutSnapshot = (completedWorkout) => {
 
 export const getWeekWorkouts = (workouts) => {
   const now = new Date();
+  // calculate start of current ISO week (Monday) in local time
   const weekStart = new Date(now);
-  weekStart.setDate(now.getDate() - now.getDay() + 1);
+  const day = (now.getDay() + 6) % 7; // Monday=0, Sunday=6
+  weekStart.setDate(now.getDate() - day);
   weekStart.setHours(0, 0, 0, 0);
-  return workouts.filter(w => new Date(w.date) >= weekStart);
+
+  return workouts.filter(w => {
+    // prefer date string but fall back to startTime
+    const d = w.date ? new Date(w.date) : (w.startTime ? new Date(w.startTime) : null);
+    if (!d) return false;
+    return d >= weekStart;
+  });
 };
 
 export const getMonthWorkouts = (workouts, monthOffset = 0) => {

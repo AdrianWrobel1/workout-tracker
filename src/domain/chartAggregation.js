@@ -30,23 +30,26 @@ export const aggregateDaily = (workouts, metric, exerciseId, userWeight, exercis
       
       const completed = (ex.sets || []).filter(s => isWorkSet(s));
       
-      completed.forEach(set => {
-        const kg = Number(set.kg) || 0;
-        const reps = Number(set.reps) || 0;
-        
-        if (kg === 0) return;
-        
-        const exDef = exercisesDB.find(e => e.id === ex.exerciseId) || {};
-        const totalKg = kg + ((exDef.usesBodyweight && userWeight) ? Number(userWeight) : 0);
-        
-        if (metric === 'weight') {
-          days[key].values.push(Math.round(totalKg * (1 + reps / 30))); // 1RM estimate
-        } else if (metric === 'volume') {
-          days[key].values.push(totalKg * reps);
-        } else if (metric === 'reps') {
-          days[key].values.push(reps);
-        }
-      });
+      // For sets metric, count the completed sets
+      if (metric === 'sets') {
+        days[key].values.push(completed.length);
+      } else {
+        completed.forEach(set => {
+          const kg = Number(set.kg) || 0;
+          const reps = Number(set.reps) || 0;
+          
+          if (kg === 0) return;
+          
+          const exDef = exercisesDB.find(e => e.id === ex.exerciseId) || {};
+          const totalKg = kg + ((exDef.usesBodyweight && userWeight) ? Number(userWeight) : 0);
+          
+          if (metric === 'weight') {
+            days[key].values.push(Math.round(totalKg * (1 + reps / 30))); // 1RM estimate
+          } else if (metric === 'volume') {
+            days[key].values.push(totalKg * reps);
+          }
+        });
+      }
     });
   });
   
@@ -59,7 +62,7 @@ export const aggregateDaily = (workouts, metric, exerciseId, userWeight, exercis
       } else if (metric === 'workouts') {
         value = data.workoutCount; // Count of workouts
       } else {
-        value = data.values.length > 0 ? Math.max(...data.values) : 0; // For weight, take max; for volume, could sum
+        value = data.values.length > 0 ? (metric === 'sets' ? data.values.reduce((a, b) => a + b, 0) : Math.max(...data.values)) : 0; // Sum for sets, max for weight
       }
       return {
         label: formatDateShort(date),
@@ -95,23 +98,26 @@ export const aggregateWeekly = (workouts, metric, exerciseId, userWeight, exerci
       
       const completed = (ex.sets || []).filter(s => isWorkSet(s));
       
-      completed.forEach(set => {
-        const kg = Number(set.kg) || 0;
-        const reps = Number(set.reps) || 0;
-        
-        if (kg === 0) return;
-        
-        const exDef = exercisesDB.find(e => e.id === ex.exerciseId) || {};
-        const totalKg = kg + ((exDef.usesBodyweight && userWeight) ? Number(userWeight) : 0);
-        
-        if (metric === 'weight') {
-          weeks[key].values.push(Math.round(totalKg * (1 + reps / 30)));
-        } else if (metric === 'volume') {
-          weeks[key].values.push(totalKg * reps);
-        } else if (metric === 'reps') {
-          weeks[key].values.push(reps);
-        }
-      });
+      // For sets metric, count the completed sets
+      if (metric === 'sets') {
+        weeks[key].values.push(completed.length);
+      } else {
+        completed.forEach(set => {
+          const kg = Number(set.kg) || 0;
+          const reps = Number(set.reps) || 0;
+          
+          if (kg === 0) return;
+          
+          const exDef = exercisesDB.find(e => e.id === ex.exerciseId) || {};
+          const totalKg = kg + ((exDef.usesBodyweight && userWeight) ? Number(userWeight) : 0);
+          
+          if (metric === 'weight') {
+            weeks[key].values.push(Math.round(totalKg * (1 + reps / 30)));
+          } else if (metric === 'volume') {
+            weeks[key].values.push(totalKg * reps);
+          }
+        });
+      }
     });
   });
   
@@ -124,8 +130,8 @@ export const aggregateWeekly = (workouts, metric, exerciseId, userWeight, exerci
         value = data.workoutCount; // Count of workouts
       } else {
         value = data.values.length > 0 
-          ? (metric === 'volume' 
-            ? Math.round(data.values.reduce((a, b) => a + b, 0)) // Sum for volume
+          ? (metric === 'volume' || metric === 'sets'
+            ? Math.round(data.values.reduce((a, b) => a + b, 0)) // Sum for volume and sets
             : Math.max(...data.values)) // Max for weight
           : 0;
       }
@@ -162,23 +168,26 @@ export const aggregateMonthly = (workouts, metric, exerciseId, userWeight, exerc
       
       const completed = (ex.sets || []).filter(s => isWorkSet(s));
       
-      completed.forEach(set => {
-        const kg = Number(set.kg) || 0;
-        const reps = Number(set.reps) || 0;
-        
-        if (kg === 0) return;
-        
-        const exDef = exercisesDB.find(e => e.id === ex.exerciseId) || {};
-        const totalKg = kg + ((exDef.usesBodyweight && userWeight) ? Number(userWeight) : 0);
-        
-        if (metric === 'weight') {
-          months[key].values.push(Math.round(totalKg * (1 + reps / 30)));
-        } else if (metric === 'volume') {
-          months[key].values.push(totalKg * reps);
-        } else if (metric === 'reps') {
-          months[key].values.push(reps);
-        }
-      });
+      // For sets metric, count the completed sets
+      if (metric === 'sets') {
+        months[key].values.push(completed.length);
+      } else {
+        completed.forEach(set => {
+          const kg = Number(set.kg) || 0;
+          const reps = Number(set.reps) || 0;
+          
+          if (kg === 0) return;
+          
+          const exDef = exercisesDB.find(e => e.id === ex.exerciseId) || {};
+          const totalKg = kg + ((exDef.usesBodyweight && userWeight) ? Number(userWeight) : 0);
+          
+          if (metric === 'weight') {
+            months[key].values.push(Math.round(totalKg * (1 + reps / 30)));
+          } else if (metric === 'volume') {
+            months[key].values.push(totalKg * reps);
+          }
+        });
+      }
     });
   });
   
@@ -191,7 +200,7 @@ export const aggregateMonthly = (workouts, metric, exerciseId, userWeight, exerc
         value = data.workoutCount; // Count of workouts
       } else {
         value = data.values.length > 0
-          ? (metric === 'volume'
+          ? (metric === 'volume' || metric === 'sets'
             ? Math.round(data.values.reduce((a, b) => a + b, 0))
             : Math.max(...data.values))
           : 0;

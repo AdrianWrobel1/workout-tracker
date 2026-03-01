@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
-export const CalendarModal = ({ workouts, onClose, onSelectDate }) => {
+export const CalendarModal = ({ workouts = [], onClose, onSelectDate }) => {
   const [currentMonth] = useState(new Date());
   const pad = (n) => String(n).padStart(2, '0');
-  const isoLocal = (d) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  const isoLocal = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   const today = isoLocal(new Date());
   const months = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -24,7 +25,6 @@ export const CalendarModal = ({ workouts, onClose, onSelectDate }) => {
 
   const renderMonth = (offset = 0) => {
     const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + offset, 1);
-
     return (
       <div className="mb-8" key={offset}>
         <h3 className="text-lg font-black mb-4">
@@ -64,9 +64,17 @@ export const CalendarModal = ({ workouts, onClose, onSelectDate }) => {
     );
   };
 
-  return (
-    <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-      <div className="bg-gradient-to-br from-slate-900/95 to-black/95 border border-slate-700/50 rounded-2xl p-6 max-w-md w-full max-h-[85dvh] overflow-y-auto shadow-2xl ui-modal-scale ui-fade-scale-anim">
+  const portalContent = (
+    <div
+      className="fixed inset-x-0 z-50 bg-black/80 flex items-center justify-center p-4"
+      style={{
+        top: 'env(safe-area-inset-top, 0)',
+        bottom: 'calc(env(safe-area-inset-bottom, 0) + 4rem)'
+      }}
+    >
+      <div
+        className="bg-gradient-to-br from-slate-900/95 to-black/95 border border-slate-700/50 rounded-2xl p-6 max-w-md w-full max-h-[85dvh] overflow-y-auto shadow-2xl ui-modal-scale ui-fade-scale-anim ui-calendar-pop"
+      >
         <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-700/50">
           <h2 className="text-2xl font-black">SELECT DATE</h2>
           <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg transition text-slate-400">
@@ -78,4 +86,9 @@ export const CalendarModal = ({ workouts, onClose, onSelectDate }) => {
       </div>
     </div>
   );
+
+  if (typeof document !== 'undefined') return createPortal(portalContent, document.body);
+  return portalContent;
 };
+
+export default CalendarModal;

@@ -166,7 +166,7 @@ export const TemplatesView = ({
   }
 
   return (
-    <div className="bg-black text-white pb-24">
+    <div className="bg-black text-white pb-16">
       <div className="bg-gradient-to-b from-black to-black/80 border-b border-white/10 p-4 sticky top-0 z-20 shadow-2xl">
         <div className="flex justify-between items-center gap-4">
           <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg transition">

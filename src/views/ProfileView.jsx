@@ -12,10 +12,11 @@ export const ProfileView = ({
   onViewExercises,
   onViewCalendar,
   onWorkoutClick,
-  onOpenSettings
+  onOpenSettings,
+  defaultStatsRange = '3months'
 }) => {
-  const [chartMetric, setChartMetric] = useState('duration'); // 'duration' | 'volume' | 'reps'
-  const [dateRange, setDateRange] = useState('3months'); // '1week' | '1month' | '3months'
+  const [chartMetric, setChartMetric] = useState('duration'); // 'duration' | 'volume' | 'sets'
+  const [dateRange, setDateRange] = useState(defaultStatsRange); // '1week' | '1month' | '3months'
   const [isEditingName, setIsEditingName] = useState(false);
   const [userName, setUserName] = useState('Athlete');
   const [isViewingMeasures, setIsViewingMeasures] = useState(false);
@@ -41,10 +42,9 @@ export const ProfileView = ({
     }
   };
 
-  // Calculate summary text based on metric
+  // Calculate summary text based on metric (period label hidden)
   const summaryText = useMemo(() => {
-    const period = dateRange === '1week' ? 'this week' : dateRange === '1month' ? 'this month' : dateRange === '3months' ? 'last 3 months' : 'this year';
-    
+    // period value no longer included; dropdown handles labels
     const now = new Date();
     let startDate;
     switch (dateRange) {
@@ -58,21 +58,18 @@ export const ProfileView = ({
     const filteredWorkouts = (workouts || []).filter(w => new Date(w.date) >= startDate);
     
     if (chartMetric === 'duration') {
-      // Calculate total duration from workouts in range
       const total = filteredWorkouts.reduce((sum, w) => sum + (w.duration || 0), 0);
       const hours = Math.round(total / 60);
-      return `${hours} hours ${period}`;
+      return `${hours} hours`;
     }
     
     if (chartMetric === 'workouts') {
-      // Count workouts in range
       const count = filteredWorkouts.length;
-      return `${count} workout${count !== 1 ? 's' : ''} ${period}`;
+      return `${count} workout${count !== 1 ? 's' : ''}`;
     }
     
-    // Count workouts in range for other metrics
     const sessions = filteredWorkouts.length;
-    return `${sessions} sessions ${period}`;
+    return `${sessions} sessions`;
   }, [workouts, dateRange, chartMetric]);
 
   // Get last 5 workouts with pre-computed metrics (OPTIMIZED: memoized to avoid recalculation)
@@ -90,7 +87,7 @@ export const ProfileView = ({
   const workoutCount = workouts.length;
 
   return (
-    <div className="bg-black text-white pb-40">
+    <div className="bg-black text-white pb-16">
       {/* Header with Edit Button */}
       <div className="bg-gradient-to-b from-black to-black/80 border-b border-white/10 p-4 sticky top-0 z-20 shadow-2xl">
         <div className="flex items-center justify-between">
@@ -163,10 +160,10 @@ export const ProfileView = ({
               onChange={(e) => setDateRange(e.target.value)}
               className="text-xs font-bold bg-slate-700/50 border border-slate-600/50 text-slate-300 rounded-lg px-3 py-1.5 focus:border-blue-500 focus:outline-none"
             >
-              <option value="1week">Last 7 days</option>
-              <option value="1month">Last 30 days</option>
-              <option value="3months">Last 3 months</option>
-              <option value="1year">Last year</option>
+              <option value="1week">This week</option>
+              <option value="1month">This month</option>
+              <option value="3months">3 months</option>
+              <option value="1year">This year</option>
             </select>
           </div>
 
@@ -180,7 +177,7 @@ export const ProfileView = ({
               exercisesDB={exercisesDB}
               enableAdvancedInteractions={true}
               color={chartMetric === 'duration' ? '#06b6d4' : chartMetric === 'workouts' ? '#10b981' : chartMetric === 'volume' ? '#f59e0b' : '#8b5cf6'}
-              unit={chartMetric === 'duration' ? 'h' : chartMetric === 'workouts' ? 'workouts' : chartMetric === 'volume' ? 'k' : 'reps'}
+              unit={chartMetric === 'duration' ? 'h' : chartMetric === 'workouts' ? 'workouts' : chartMetric === 'volume' ? 'k' : 'sets'}
             />
           </div>
 
@@ -191,7 +188,7 @@ export const ProfileView = ({
                 { key: 'duration', label: 'Duration', mobileLabel: 'Time' },
                 { key: 'workouts', label: 'Workouts', mobileLabel: 'Sessions' },
                 { key: 'volume', label: 'Volume' },
-                { key: 'reps', label: 'Reps' }
+                { key: 'sets', label: 'Sets' }
               ].map(metric => (
                 <button
                   key={metric.key}

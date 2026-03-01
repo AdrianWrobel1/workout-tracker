@@ -1,13 +1,19 @@
 @import "tailwindcss";
 
-html, body, #root {
-  height: 100dvh;
-  max-height: 100dvh;
-}
-
 html, body {
+  height: 100%;
+  width: 100%;
   overflow: hidden;
   overscroll-behavior: none;
+  margin: 0;
+  padding: 0;
+}
+
+#root {
+  width: 100%;
+  height: 100dvh;
+  display: flex;
+  overflow: hidden;
 }
 
 body {
@@ -16,6 +22,7 @@ body {
   inset: 0;
   width: 100%;
   overflow: hidden;
+  height:  100dvh;
 }
 /* Zapobiega automatycznemu przybliżeniu przy focus na input na telefonie (iOS/Android zoom gdy font < 16px) */
 @media (max-width: 768px) {
@@ -256,6 +263,8 @@ body {
 .ui-stagger-d2 { animation-delay: 75ms; }
 .ui-stagger-d3 { animation-delay: 120ms; }
 .ui-stagger-d4 { animation-delay: 165ms; }
+.ui-stagger-d5 { animation-delay: 210ms; }
+.ui-stagger-d6 { animation-delay: 255ms; }
 
 /* ACWR marker spring on modal open */
 @keyframes ui-marker-spring {
@@ -353,6 +362,7 @@ body {
 
 /* Premium motion pack */
 @keyframes ui-miniworkout-in {
+  /* animate vertical entrance only; keep horizontal centering from layout transform */
   from { transform: translateY(10px); opacity: 0; filter: blur(3px); }
   to { transform: translateY(0); opacity: 1; filter: blur(0); }
 }
@@ -383,6 +393,98 @@ body {
 }
 .ui-exercise-swap {
   animation: ui-exercise-swap 260ms var(--anim-ease);
+}
+
+/* Micro-interactions: 6 professional touches */
+
+/* 1. Badge restore tap scale - satisfying feedback */
+/* Entrance animation: center pop-in without rightward slide */
+@keyframes ui-badge-center-mount {
+  0% { opacity: 0; transform: scale(0.88); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.ui-badge-center-mount {
+  animation: ui-badge-center-mount 200ms var(--anim-ease) both;
+}
+
+@keyframes ui-badge-restore-tap {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.06); filter: brightness(1.15); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+.ui-badge-restore-trigger {
+  transition: transform 140ms var(--anim-ease), filter 140ms var(--anim-ease);
+}
+.ui-badge-restore-trigger:active {
+  animation: ui-badge-restore-tap 180ms var(--anim-ease);
+}
+
+/* 2. Keypad input focus immersion - scale + glow */
+@keyframes ui-keypad-focus-scale {
+  0% { transform: scale(0.98); box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.2); }
+  70% { box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(79, 70, 229, 0); }
+}
+.ui-keypad-input:focus {
+  animation: ui-keypad-focus-scale 160ms var(--anim-ease);
+}
+.ui-keypad-input {
+  transition: border-color 120ms var(--anim-ease), background-color 120ms var(--anim-ease);
+}
+
+/* 3. List entry stagger - premium entrance */
+@keyframes ui-list-enter-stagger {
+  from { opacity: 0; transform: translateY(12px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.ui-list-item-stagger {
+  animation: ui-list-enter-stagger 280ms var(--anim-ease) both;
+}
+.ui-list-item-stagger:nth-child(1) { animation-delay: 0ms; }
+.ui-list-item-stagger:nth-child(2) { animation-delay: 40ms; }
+.ui-list-item-stagger:nth-child(3) { animation-delay: 80ms; }
+.ui-list-item-stagger:nth-child(4) { animation-delay: 120ms; }
+.ui-list-item-stagger:nth-child(5) { animation-delay: 160ms; }
+.ui-list-item-stagger:nth-child(n+6) { animation-delay: calc((n - 5) * 40ms); }
+
+/* 4. Set delete undo inline - reveal + undo accessibility */
+@keyframes ui-set-delete-reveal {
+  0% { opacity: 1; transform: translateX(0); max-height: 200px; }
+  80% { opacity: 0.8; }
+  100% { opacity: 0; transform: translateX(100%); max-height: 0; }
+}
+.ui-set-delete-slide {
+  animation: ui-set-delete-reveal 240ms ease-out forwards;
+  overflow: hidden;
+}
+
+@keyframes ui-undo-link-pop {
+  0% { opacity: 0; transform: scale(0.85) translateX(-8px); }
+  100% { opacity: 1; transform: scale(1) translateX(0); }
+}
+.ui-set-undo-button {
+  animation: ui-undo-link-pop 200ms var(--anim-ease);
+  display: inline-block;
+}
+
+/* 5. Heatmap cell glow on interaction - clarity + feedback */
+@keyframes ui-heatmap-cell-select {
+  0% { box-shadow: inset 0 0 0 1px var(--accent); }
+  50% { box-shadow: inset 0 0 0 2px var(--accent), 0 0 12px rgba(79, 70, 229, 0.4); }
+  100% { box-shadow: inset 0 0 0 1px var(--accent); }
+}
+.ui-heatmap-cell-active {
+  animation: ui-heatmap-cell-select 300ms var(--anim-ease);
+}
+
+/* 6. Calendar modal pop - confident entry */
+@keyframes ui-calendar-pop-in {
+  0% { opacity: 0; transform: scale(0.92) translateY(-12px); }
+  60% { transform: scale(1.02); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+.ui-calendar-pop {
+  animation: ui-calendar-pop-in 240ms var(--anim-ease) !important;
 }
 
 @keyframes ui-set-insert {
@@ -481,13 +583,9 @@ body {
   from { width: 100%; opacity: 0.65; }
   to { width: 0%; opacity: 0.2; }
 }
+/* progress bar removed per UX request */
 .ui-undo-sweep {
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  height: 3px;
-  background: linear-gradient(to right, var(--accent), rgba(255,255,255,0.2));
-  animation: ui-undo-sweep 10s linear forwards;
+  display: none !important;
 }
 
 /* Accent transition pulse */
@@ -691,7 +789,13 @@ body {
   0% { transform: scale(0.92); }
   100% { transform: scale(1); }
 }
-.ui-goal-ring-fill { animation: ui-goal-ring-fill 260ms var(--anim-ease); }
+.ui-goal-ring-fill { animation: ui-goal-ring-fill 260ms var(--anim-ease) both; }
+
+@keyframes ui-goal-ring-pulse {
+  0%, 100% { filter: drop-shadow(0 0 0 rgba(79, 70, 229, 0.3)); }
+  50% { filter: drop-shadow(0 0 8px rgba(79, 70, 229, 0.6)); }
+}
+.ui-goal-ring-pulse { animation: ui-goal-ring-pulse 2s ease-in-out infinite; }
 .ui-goal-meter-fill { transform-origin: left center; }
 
 @keyframes ui-week-goal-flash {
@@ -921,43 +1025,68 @@ body {
   position: fixed;
   bottom: 0;
   left: 0;
+  right: 0;
   width: 100%;
   height: 64px;
   z-index: 1000;
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 .app-wrapper,
 .main-container {
-  height: 100dvh;
-  max-height: 100dvh;
   display: flex;
   flex-direction: column;
+  flex: 1;
+  /* ensure the wrapper fills available space but doesn’t rely on dynamic viewport units
+     (100dvh can overshoot when address bars hide/show, leading to phantom scroll gaps) */
+  height: 100%;
+  /* let children control height; avoid hard cap which may mismatch with inner content
+     and cause extra scroll space. */
+  max-height: 100%;
+  min-height: 0; /* allow flex children to shrink correctly */
   overflow: hidden;
 }
 
 .app-content {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
+  max-height: 100%;
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
-  padding-bottom: 0;
+  -webkit-overflow-scrolling: touch;
+  /* base bottom padding for safe-area on devices with notches
+     extra nav height will be added dynamically when the bottom nav is visible */
+  padding-bottom: env(safe-area-inset-bottom);
   position: relative;
 }
 
-.app-content::-webkit-scrollbar {
-  width: 6px;
+/* Prevent child flex/height styles from forcing artificial content height */
+.app-content > * {
+  flex: none !important;
+  min-height: auto !important;
 }
 
-.app-content::-webkit-scrollbar-track {
+/* Hide scrollbars by default */
+.app-content::-webkit-scrollbar {
+  display: none;
+}
+
+/* Show scrollbar only for history view */
+.app-content.history-view::-webkit-scrollbar {
+  width: 6px;
+  display: block;
+}
+
+.app-content.history-view::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.app-content::-webkit-scrollbar-thumb {
+.app-content.history-view::-webkit-scrollbar-thumb {
   background: rgba(120, 113, 108, 0.5);
   border-radius: 3px;
 }
 
-.app-content::-webkit-scrollbar-thumb:hover {
+.app-content.history-view::-webkit-scrollbar-thumb:hover {
   background: rgba(120, 113, 108, 0.8);
 }
 
@@ -977,7 +1106,8 @@ body {
 
 
 .scroll-spacer {
-  height: calc(200px + env(safe-area-inset-bottom));
+  /* removed spacer height to prevent phantom scroll gap */
+  height: 0;
   flex-shrink: 0;
 }
 

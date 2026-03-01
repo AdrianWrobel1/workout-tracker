@@ -28,7 +28,8 @@ export const SettingsView = ({
   enableHapticFeedback = false,
   onEnableHapticFeedbackChange,
   reduceAnimations = false,
-  onReduceAnimationsChange
+  onReduceAnimationsChange,
+  // display prefs
 }) => {
   const applyAccentColor = (hex) => {
     const root = document.documentElement;
@@ -39,7 +40,7 @@ export const SettingsView = ({
   };
 
   return (
-    <div className="bg-black text-white pb-24">
+    <div className="bg-black text-white pb-16">
       {/* Header */}
       <div className="bg-gradient-to-b from-black to-black/80 border-b border-white/10 p-4 sticky top-0 z-20 shadow-2xl">
         <h1 className="text-4xl font-black">SETTINGS</h1>
@@ -145,6 +146,8 @@ export const SettingsView = ({
           </div>
           <p className="text-xs text-slate-400 mt-3">Personal record detection only applies from your second workout per exercise</p>
         </div>
+
+
 
         {/* Data Management Card */}
         <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-6">

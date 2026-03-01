@@ -15,7 +15,7 @@ export const SelectTemplateView = ({ templates, onClose, onSelectTemplate, onEdi
         </div>
       </div>
 
-      <div className="p-4 space-y-3 pb-24">
+      <div className="p-4 space-y-3 pb-16">
         {/* Empty Workout Option */}
         <button
           onClick={() => onSelectTemplate({ id: 'empty', name: 'Empty Workout', exercises: [] })}

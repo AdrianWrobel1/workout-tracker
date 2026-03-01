@@ -30,7 +30,7 @@ export const ExportDataView = ({ onBack, onExport }) => {
   }, [format]);
 
   return (
-    <div className="bg-black text-white pb-24">
+    <div className="bg-black text-white pb-16">
       <div className="sticky top-0 z-20 bg-gradient-to-b from-black to-black/80 border-b border-white/10 px-4 py-4 shadow-2xl">
         <div className="flex items-center gap-3">
           <button onClick={onBack} className="p-2 rounded-lg hover:bg-white/10 transition">

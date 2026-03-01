@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Edit2, Calendar, Check, Zap, ChevronDown, X } from 'lucide-react';
-import { getWeekWorkouts, getMonthWorkouts, getMonthLabel } from '../domain/workouts';
+import { getWeekWorkouts, getMonthWorkouts, getMonthLabel, compareWorkoutToPrevious, generateCoachLens } from '../domain/workouts';
 import { WeekHeatmap } from '../components/WeekHeatmap';
 import { ProgressRing } from '../components/ProgressRing';
 import { MiniSparkline } from '../components/MiniSparkline';
@@ -74,6 +74,16 @@ const QuickInsightsSection = ({ workouts, readiness, muscleBalance }) => {
       }
     });
     return prCount;
+  }, [workouts]);
+
+  // Calculate Coach Lens for latest workout
+  const coachLensQuick = useMemo(() => {
+    const latest = (workouts || [])
+      .filter((workout) => workout && workout.id !== 'activeWorkout' && workout.date)
+      .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+    if (!latest) return null;
+    const comparison = compareWorkoutToPrevious(latest, workouts || []);
+    return generateCoachLens(latest, workouts || [], comparison, latest.prStatus || {});
   }, [workouts]);
 
   return (
@@ -164,6 +174,37 @@ const QuickInsightsSection = ({ workouts, readiness, muscleBalance }) => {
               <div className="text-4xl opacity-20">🏆</div>
             </div>
           </button>
+
+          {coachLensQuick && (
+            <button
+              onClick={() => setSelectedInsight('coach')}
+              className="w-full text-left mt-3 bg-gradient-to-br from-green-900/25 to-green-950/25 border border-green-700/30 hover:border-green-600/50 rounded-xl p-3.5 transition ui-stagger-enter ui-stagger-d6 ui-card-magnet"
+            >
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] text-green-400 font-semibold tracking-widest">COACH INSIGHT</p>
+                  <p className="text-sm text-green-50 font-semibold mt-1 line-clamp-2">{coachLensQuick.headline || 'Session analysis ready'}</p>
+                </div>
+                <span className={`text-[10px] px-2 py-1 rounded-full border font-bold flex-shrink-0 whitespace-nowrap ${
+                  coachLensQuick.status === 'push'
+                    ? 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10'
+                    : coachLensQuick.status === 'recover'
+                    ? 'text-amber-300 border-amber-500/30 bg-amber-500/10'
+                    : 'text-sky-300 border-sky-500/30 bg-sky-500/10'
+                }`}>
+                  {coachLensQuick.status}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="rounded border border-green-700/40 bg-green-900/20 px-2 py-1.5">
+                  <p className="text-green-300 font-semibold">Keep: <span className="text-green-100">{coachLensQuick.keep?.slice(0, 20)}...</span></p>
+                </div>
+                <div className="rounded border border-green-700/40 bg-green-900/20 px-2 py-1.5">
+                  <p className="text-amber-300 font-semibold">Improve: <span className="text-amber-100">{coachLensQuick.improve?.slice(0, 15)}...</span></p>
+                </div>
+              </div>
+            </button>
+          )}
 
 
 
@@ -559,9 +600,77 @@ const QuickInsightsSection = ({ workouts, readiness, muscleBalance }) => {
               </div>
             </div>
           )}
+
+          {selectedInsight === 'coach' && coachLensQuick && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+              <div className="bg-slate-900 border border-slate-700 rounded-lg p-6 max-w-sm w-full max-h-[90dvh] overflow-y-auto">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-bold text-white">Coach Insight</h2>
+                  <button
+                    onClick={() => setSelectedInsight(null)}
+                    className="p-1 hover:bg-slate-800 rounded transition"
+                  >
+                    <X size={18} className="text-slate-400" />
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  <div className="rounded-lg border border-green-700/40 bg-green-900/20 p-3">
+                    <p className="text-[10px] text-green-400 font-semibold tracking-widest mb-1">HEADLINE</p>
+                    <p className="text-lg font-bold text-green-50">{coachLensQuick.headline}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-[10px] px-3 py-1 rounded-full border font-bold ${
+                      coachLensQuick.status === 'push'
+                        ? 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10'
+                        : coachLensQuick.status === 'recover'
+                        ? 'text-amber-300 border-amber-500/30 bg-amber-500/10'
+                        : 'text-sky-300 border-sky-500/30 bg-sky-500/10'
+                    }`}>
+                      Status: {coachLensQuick.status}
+                    </span>
+                    <span className={`text-[10px] px-3 py-1 rounded-full border font-bold ${
+                      coachLensQuick.confidence === 'high'
+                        ? 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10'
+                        : coachLensQuick.confidence === 'medium'
+                        ? 'text-sky-300 border-sky-500/30 bg-sky-500/10'
+                        : 'text-slate-300 border-slate-600/50 bg-slate-700/30'
+                    }`}>
+                      {coachLensQuick.confidence} confidence
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="rounded-lg border border-slate-700/50 bg-slate-900/40 p-2 text-center">
+                      <p className="text-[10px] text-slate-500 mb-1">PROGRESSION</p>
+                      <p className="text-sm font-bold text-white">{coachLensQuick.scores?.progression ?? 0}</p>
+                    </div>
+                    <div className="rounded-lg border border-slate-700/50 bg-slate-900/40 p-2 text-center">
+                      <p className="text-[10px] text-slate-500 mb-1">EXECUTION</p>
+                      <p className="text-sm font-bold text-white">{coachLensQuick.scores?.execution ?? 0}</p>
+                    </div>
+                    <div className="rounded-lg border border-slate-700/50 bg-slate-900/40 p-2 text-center">
+                      <p className="text-[10px] text-slate-500 mb-1">FATIGUE RISK</p>
+                      <p className="text-sm font-bold text-white">{coachLensQuick.scores?.fatigueRisk ?? 0}</p>
+                    </div>
+                  </div>
+                  <div className="rounded-lg border border-emerald-700/40 bg-emerald-900/20 p-3">
+                    <p className="text-[10px] text-emerald-400 font-semibold mb-1">KEEP</p>
+                    <p className="text-sm text-emerald-50">{coachLensQuick.keep}</p>
+                  </div>
+                  <div className="rounded-lg border border-amber-700/40 bg-amber-900/20 p-3">
+                    <p className="text-[10px] text-amber-400 font-semibold mb-1">IMPROVE</p>
+                    <p className="text-sm text-amber-50">{coachLensQuick.improve}</p>
+                  </div>
+                  <div className="rounded-lg border border-blue-700/40 bg-blue-900/20 p-3">
+                    <p className="text-[10px] text-blue-400 font-semibold mb-1">NEXT FOCUS</p>
+                    <p className="text-sm text-blue-50">{coachLensQuick.focus}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
-    </div>
+      </div>
   );
 };
 
@@ -691,7 +800,7 @@ export const HomeView = ({
   }, [workouts]);
 
   return (
-    <div className="bg-black text-white pb-28">
+    <div className="bg-black text-white pb-16">
       {/* Consistency Hero */}
       <div className="px-4 pt-6">
         <div className="bg-gradient-to-br from-accent/30 via-slate-900/70 to-black border border-accent/20 rounded-2xl p-5 shadow-lg ui-home-parallax" style={{ transform: `translateY(${homeParallaxY * -0.05}px)` }}>

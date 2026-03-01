@@ -85,7 +85,7 @@ export const WorkoutDetailView = ({ selectedDate, workouts, onBack, exercisesDB 
   const dateWorkouts = workouts.filter(w => w.date === selectedDate);
 
   return (
-    <div className="bg-black text-white pb-24">
+    <div className="bg-black text-white pb-16 flex flex-col min-h-0">
       {/* Header */}
       <div className="bg-gradient-to-b from-black to-black/80 border-b border-white/10 p-4 flex items-center justify-between gap-4 sticky top-0 z-20 shadow-2xl">
         <div className="flex items-center gap-4">
@@ -106,7 +106,7 @@ export const WorkoutDetailView = ({ selectedDate, workouts, onBack, exercisesDB 
         </button>
       </div>
 
-      <div className={`transition-all duration-250 ease-out ${isCompact ? 'p-2 space-y-1.5' : 'p-4 space-y-4'}`}>
+      <div className={`flex-1 overflow-y-auto transition-all duration-250 ease-out ${isCompact ? 'p-2 space-y-1.5' : 'p-4 space-y-4'}`}>
         {dateWorkouts.map(workout => {
           // Calculate workout stats
           let totalVolume = 0;

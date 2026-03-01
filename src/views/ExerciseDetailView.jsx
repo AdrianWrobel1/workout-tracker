@@ -185,7 +185,7 @@ const ExerciseDetailViewInner = ({ exerciseId, workouts, exercisesDB, onBack, on
       )}
 
       {/* Content */}
-      <div className={isCompact ? 'p-2 grow overflow-y-auto pb-24' : 'p-4 grow overflow-y-auto pb-24'}>
+      <div className={isCompact ? 'p-2 grow overflow-y-auto pb-16' : 'p-4 grow overflow-y-auto pb-16'}>
         {activeTab === 'history' && (
           <div className={isCompact ? 'space-y-2' : 'space-y-5'}>
             {history.length === 0 ? (

@@ -206,7 +206,7 @@ const HistoryViewInner = ({
       </div>
       <div className="space-y-3">
         {groups[key].map(workout => (
-          <div key={workout.id} data-workout-id={workout.id} data-workout-date={workout.date} className={`bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-4 transition-all ui-card-mount-anim hover:border-slate-600/70 hover:from-slate-800/60 hover:to-slate-900/60 ${activeRecordFlashId === workout.id ? 'ui-record-click' : ''}` }>
+      <div className={`bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-4 transition-all ui-card-mount-anim hover:border-slate-600/70 hover:from-slate-800/60 hover:to-slate-900/60 ${activeRecordFlashId === workout.id ? 'ui-record-click' : ''} ui-list-item-stagger` }>
             <WorkoutCard
               workout={workout}
               onViewDetail={() => handleOpenWorkoutFromHistory(workout)}
@@ -225,7 +225,7 @@ const HistoryViewInner = ({
   const current = editData;
 
   return (
-    <div className="bg-black text-white pb-24">
+    <div className="bg-black text-white pb-16">
       <div className="bg-gradient-to-b from-black to-black/80 border-b border-white/10 p-4 sticky top-0 z-20">
         <h1 className="text-4xl font-black">HISTORY</h1>
         <p className="text-xs text-slate-400 mt-2 font-semibold tracking-widest">YOUR WORKOUT LOG</p>
@@ -273,14 +273,14 @@ const HistoryViewInner = ({
       </div>
 
       {editingId && current && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm">
+        <div className="fixed inset-x-0 top-0 z-50 bg-black/85 backdrop-blur-sm" style={{ height: 'calc(100vh - 4rem)' }}>
           <div className="h-full w-full sm:max-w-3xl sm:mx-auto sm:my-4 sm:h-[calc(100%-2rem)] bg-gradient-to-br from-slate-900/98 to-black border border-slate-700/60 sm:rounded-2xl flex flex-col shadow-2xl">
             <div className="p-4 border-b border-slate-700/50 bg-slate-950/90">
               <p className="text-[11px] text-slate-400 font-semibold tracking-widest uppercase">Edit Workout</p>
               <h2 className="text-lg font-black text-white mt-1 truncate">{current.name || 'Workout'}</h2>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-24">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <input type="text" value={current.name} onChange={(e) => setEditData({ ...current, name: e.target.value })} className="touch-input w-full bg-slate-800/60 border border-slate-600/50 text-white rounded-xl font-semibold" placeholder="Workout name" />
                 <input type="date" value={current.date || ''} onChange={(e) => setEditData({ ...current, date: e.target.value })} className="touch-input w-full bg-slate-800/60 border border-slate-600/50 text-white rounded-xl font-semibold" />
@@ -298,13 +298,13 @@ const HistoryViewInner = ({
                       <p className="text-xs text-slate-500 mt-1">{ex.category || 'Other'}</p>
                     </div>
                     <div className="flex gap-2">
-                      <button onClick={() => updateEdit(updated => { updated.exercises[exIdx].sets.push({ kg: 0, reps: 0, completed: false }); })} className="p-2 accent-bg-light accent-border-light rounded-lg transition accent-text"><Plus size={14} /></button>
-                      <button onClick={() => updateEdit(updated => { updated.exercises = updated.exercises.filter((_, i) => i !== exIdx); })} className="p-2 bg-red-600/20 border border-red-500/30 rounded-lg transition text-red-400"><Trash2 size={14} /></button>
+                      <button onClick={() => updateEdit(updated => { updated.exercises[exIdx].sets.push({ kg: 0, reps: 0, completed: false }); })} className="p-2.5 sm:p-2 accent-bg-light accent-border-light rounded-lg transition accent-text active:scale-95" title="Add set"><Plus size={16} className="sm:hidden" /> <Plus size={14} className="hidden sm:block" /></button>
+                      <button onClick={() => updateEdit(updated => { updated.exercises = updated.exercises.filter((_, i) => i !== exIdx); })} className="p-2.5 sm:p-2 bg-red-600/20 border border-red-500/30 rounded-lg transition text-red-400 active:scale-95" title="Delete exercise"><Trash2 size={16} className="sm:hidden" /> <Trash2 size={14} className="hidden sm:block" /></button>
                     </div>
                   </div>
 
                   {(ex.sets || []).map((set, setIdx) => (
-                    <div key={setIdx} className="bg-slate-900/70 border border-slate-700/50 rounded-lg p-3">
+                    <div key={setIdx} className="bg-slate-900/70 border border-slate-700/50 rounded-lg p-3 group relative">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-xs text-slate-400 font-bold">SET #{setIdx + 1}</span>
                         <div className="flex items-center gap-2">
@@ -312,12 +312,14 @@ const HistoryViewInner = ({
                             <input type="checkbox" checked={!!set.completed} onChange={() => updateEdit(updated => { updated.exercises[exIdx].sets[setIdx].completed = !updated.exercises[exIdx].sets[setIdx].completed; })} className="w-4 h-4 cursor-pointer rounded border-slate-600/50 accent-emerald-600 ui-checkbox" />
                             Done
                           </label>
-                          <button onClick={() => updateEdit(updated => { updated.exercises[exIdx].sets = updated.exercises[exIdx].sets.filter((_, i) => i !== setIdx); })} className="p-1 text-red-400 hover:text-red-300 transition"><X size={14} /></button>
+                          <button onClick={() => {
+                            updateEdit(updated => { updated.exercises[exIdx].sets = updated.exercises[exIdx].sets.filter((_, i) => i !== setIdx); });
+                          }} className="p-1 text-red-400 hover:text-red-300 transition ui-set-undo-button"><X size={14} /></button>
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-2">
-                        <input type="number" inputMode="decimal" value={set.kg} onChange={(e) => updateEdit(updated => { updated.exercises[exIdx].sets[setIdx].kg = Number(e.target.value) || 0; })} className="touch-input w-full bg-slate-800/60 border border-slate-600/50 text-white rounded-lg font-bold" placeholder="kg" />
-                        <input type="number" inputMode="decimal" value={set.reps} onChange={(e) => updateEdit(updated => { updated.exercises[exIdx].sets[setIdx].reps = Number(e.target.value) || 0; })} className="touch-input w-full bg-slate-800/60 border border-slate-600/50 text-white rounded-lg font-bold" placeholder="reps" />
+                        <input type="number" inputMode="decimal" value={set.kg} onChange={(e) => updateEdit(updated => { updated.exercises[exIdx].sets[setIdx].kg = Number(e.target.value) || 0; })} className="touch-input w-full bg-slate-800/60 border border-slate-600/50 text-white rounded-lg font-bold ui-keypad-input" placeholder="kg" />
+                        <input type="number" inputMode="decimal" value={set.reps} onChange={(e) => updateEdit(updated => { updated.exercises[exIdx].sets[setIdx].reps = Number(e.target.value) || 0; })} className="touch-input w-full bg-slate-800/60 border border-slate-600/50 text-white rounded-lg font-bold ui-keypad-input" placeholder="reps" />
                       </div>
                     </div>
                   ))}
@@ -357,11 +359,10 @@ const HistoryViewInner = ({
               </div>
             </div>
 
-            <div className="p-4 border-t border-slate-700/50 bg-slate-950/90">
-              <div className="flex gap-2">
-                <button onClick={handleEditCancel} className="flex-1 px-4 py-3 rounded-lg bg-slate-800/60 border border-slate-600/50 text-white text-sm hover:bg-slate-700/50 transition font-semibold">Cancel</button>
-                <button onClick={handleEditSave} className="flex-1 px-4 py-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm transition font-bold shadow-lg shadow-emerald-600/30">Save</button>
-              </div>
+            <div className="p-4 border-t border-slate-700/50 bg-slate-950/90 sticky bottom-0 z-20 flex gap-2">
+                <button onClick={handleEditCancel} className="flex-1 px-4 py-3 rounded-lg bg-slate-800/60 border border-slate-600/50 text-white text-sm hover:bg-slate-700/50 transition font-semibold ui-press">Cancel</button>
+                <button onClick={handleEditSave} className="flex-1 px-4 py-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm transition font-bold shadow-lg shadow-emerald-600/30 ui-press">Save</button>
+
             </div>
           </div>
         </div>

@@ -3,8 +3,19 @@ import { ChevronLeft } from 'lucide-react';
 import { RadarChart } from '../components/RadarChart';
 import { UnifiedChart } from '../components/UnifiedChart';
 
-export const ProfileStatisticsView = ({ workouts = [], exercisesDB = [], userWeight, onBack }) => {
-  const [timePeriod, setTimePeriod] = useState('3months'); // '7days' | '30days' | '3months' | '1year'
+export const ProfileStatisticsView = ({ workouts = [], exercisesDB = [], userWeight, onBack, defaultStatsRange = '3months' }) => {
+  // Map from ProfileView format ('1week', '1month', '3months', '1year') to UnifiedChart format ('7days', '30days', '3months', '1year')
+  const mapToUnifiedFormat = (range) => {
+    switch(range) {
+      case '1week': return '7days';
+      case '1month': return '30days';
+      case '3months': return '3months';
+      case '1year': return '1year';
+      default: return '3months';
+    }
+  };
+  
+  const [timePeriod, setTimePeriod] = useState(mapToUnifiedFormat(defaultStatsRange)); // '7days' | '30days' | '3months' | '1year'
 
   // Helper to get start date from time period
   const getStartDate = (period) => {

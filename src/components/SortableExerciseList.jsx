@@ -59,6 +59,7 @@ function SortableExerciseItem({
     transform,
     transition,
     isDragging,
+    isOver,
   } = useSortable({ id: exercise.exerciseId + '-' + exIndex });
 
   const [showSupersetModal, setShowSupersetModal] = useState(false);
@@ -67,10 +68,11 @@ function SortableExerciseItem({
   const prevExerciseNameRef = useRef(exercise.name);
 
   const style = {
-    transform: `${CSS.Transform.toString(transform)}${isDragging ? ' rotate(-1.25deg)' : ''}`,
+    transform: `${CSS.Transform.toString(transform)}${isDragging ? ' rotate(-1.25deg) scale(1.02)' : ''}`,
     transition,
     opacity: isDragging ? 0.9 : 1,
-    animationDelay: `${Math.min(exIndex, 8) * 40}ms`,
+    zIndex: isDragging ? 100 : 'auto',
+    boxShadow: isDragging ? '0 12px 26px rgba(37, 99, 235, 0.36)' : undefined,
   };
 
   useEffect(() => {
@@ -138,7 +140,7 @@ function SortableExerciseItem({
       data-exercise-index={exIndex}
       className={`relative bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-4 transition-all duration-200 ease-out ui-exercise-card-stagger ui-list-item-lift ui-active-exercise-card ${menuOpenIndex === exIndex ? 'z-[80]' : 'z-0'} ${
         isDragging ? 'ui-drag-active ring-2 ring-blue-500/70' : ''
-      } ${supersetColor ? `border-l-4 ${supersetColor.border}` : ''} ${exercise.supersetId ? 'ui-superset-active' : ''}` }
+      } ${isOver ? 'bg-blue-500/15 border-blue-500/50 ring-2 ring-blue-500/30 scale-[1.01]' : ''} ${supersetColor ? `border-l-4 ${supersetColor.border}` : ''} ${exercise.supersetId ? 'ui-superset-active' : ''}` }
     >
       <div className="flex items-start justify-between mb-4 gap-3">
         <div className="flex items-start gap-3 flex-1 min-w-0">

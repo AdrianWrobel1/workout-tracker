@@ -1,6 +1,9 @@
 import { ChevronUp, Clock, X } from 'lucide-react';
+import React, { useState } from 'react';
 
 export const MiniWorkoutBar = ({ workoutName, timer, onMaximize, onHide }) => {
+  const [isHiding, setIsHiding] = useState(false);
+
   const formatTime = (seconds) => {
     if (!seconds && seconds !== 0) return '--:--';
     const mins = Math.floor(seconds / 60);
@@ -8,14 +11,26 @@ export const MiniWorkoutBar = ({ workoutName, timer, onMaximize, onHide }) => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const handleHide = (e) => {
+    e.stopPropagation();
+    // apply a slightly longer delay so CSS/animation can settle and avoid transient horizontal shifts
+    setIsHiding(true);
+    setTimeout(() => {
+      onHide?.();
+      setIsHiding(false);
+    }, 380);
+  };
+
   return (
     <div
       onClick={onMaximize}
-      className="active-workout-bar bg-gradient-accent hover:opacity-90 border border-accent/50 p-3.5 flex justify-between items-center cursor-pointer ui-miniworkout-enter ui-mini-bar-spring ui-mini-bar-shimmer transition-all ease-out group backdrop-blur-sm"
+      className={`active-workout-bar bg-gradient-accent hover:opacity-90 border border-accent/50 p-3.5 flex justify-between items-center cursor-pointer ui-miniworkout-enter ui-mini-bar-spring ui-mini-bar-shimmer transition-opacity transition-transform ease-out group backdrop-blur-sm ${isHiding ? 'opacity-80' : ''}`}
+      role="button"
+      aria-label="Mini active workout bar"
     >
       <div className="flex flex-col min-w-0">
         <span className="text-xs text-white/90 font-black uppercase tracking-widest">Active Workout</span>
-        <span className="text-white font-black text-sm truncate max-w-[160px]">{workoutName || 'Workout'}</span>
+        <span className="text-white font-black text-sm truncate max-w-[200px]">{workoutName || 'Workout'}</span>
       </div>
 
       <div className="flex items-center gap-2">
@@ -26,10 +41,7 @@ export const MiniWorkoutBar = ({ workoutName, timer, onMaximize, onHide }) => {
 
         <div className="flex items-center gap-1">
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onHide?.();
-            }}
+            onClick={handleHide}
             className="p-2 bg-white/20 hover:bg-white/30 rounded-lg text-white transition ui-mini-expand-spring"
             title="Hide active workout bar"
             aria-label="Hide active workout bar"
@@ -38,10 +50,7 @@ export const MiniWorkoutBar = ({ workoutName, timer, onMaximize, onHide }) => {
           </button>
 
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onMaximize?.();
-            }}
+            onClick={(e) => { e.stopPropagation(); onMaximize?.(); }}
             className="p-2 bg-white/20 hover:bg-white/30 rounded-lg text-white transition ui-mini-expand-spring"
             title="Open active workout"
             aria-label="Open active workout"

@@ -3,7 +3,7 @@ import { ChevronLeft, Save, X, Plus } from 'lucide-react';
 
 export const CreateExerciseView = ({ exercise, onSave, onCancel, onChange }) => {
   return (
-    <div className="bg-black text-white pb-24">
+    <div className="bg-black text-white pb-16">
       {/* Header */}
       <div className="bg-gradient-to-b from-black to-black/80 border-b border-white/10 p-4 flex items-center justify-between sticky top-0 z-20 shadow-2xl">
         <button onClick={onCancel} className="p-2 hover:bg-white/10 rounded-lg transition">

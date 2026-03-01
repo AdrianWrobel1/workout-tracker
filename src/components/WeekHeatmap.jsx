@@ -6,6 +6,7 @@ import { calculateTotalVolume } from '../domain/calculations';
 export const WeekHeatmap = ({ workouts = [] }) => {
   const [showMonthModal, setShowMonthModal] = useState(false);
   const [monthOffset, setMonthOffset] = useState(0);
+  const [selectedCell, setSelectedCell] = useState(null);
 
   const days = useMemo(() => {
     const today = new Date();
@@ -103,11 +104,16 @@ export const WeekHeatmap = ({ workouts = [] }) => {
         <div className="flex items-center gap-2 justify-center cursor-pointer" onClick={() => setShowMonthModal(true)}>
           {volumes.map((v, i) => {
             const isToday = i === volumes.length - 1;
+            const isSelected = selectedCell === i;
             return (
               <div
                 key={i}
-                className={`w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full ${getColor(v)} transition-all duration-200 ease-out hover:scale-110 ${isToday ? 'heatmap-today ui-heatmap-today-pulse' : ''}`}
+                className={`w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full ${getColor(v)} transition-all duration-200 ease-out hover:scale-110 ${isToday ? 'heatmap-today ui-heatmap-today-pulse' : ''} ${isSelected ? 'ui-heatmap-cell-active' : ''}`}
                 title={`${days[i].toDateString()}: ${v > 0 ? v + ' volume' : 'rest day'}`}
+                onMouseDown={() => setSelectedCell(i)}
+                onMouseUp={() => setTimeout(() => setSelectedCell(null), 300)}
+                onTouchStart={() => setSelectedCell(i)}
+                onTouchEnd={() => setTimeout(() => setSelectedCell(null), 300)}
               />
             );
           })}

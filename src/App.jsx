@@ -19,6 +19,8 @@ import { storage, STORES } from './services/storageService';
 
 // COMPONENTS
 import { MiniWorkoutBar } from './components/MiniWorkoutBar';
+import { UndoToast } from './components/UndoToast';
+import { HiddenWorkoutBadge } from './components/HiddenWorkoutBadge';
 import { BottomNav } from './components/BottomNav';
 import { CalendarModal } from './components/CalendarModal';
 import { ExerciseSelectorModal } from './components/ExerciseSelectorModal';
@@ -137,6 +139,7 @@ export default function App() {
   const [scrollToWorkoutDate, setScrollToWorkoutDate] = useState(null);
   const [autosaveStatus, setAutosaveStatus] = useState({ state: 'idle', savedAt: null }); // idle | saving | saved | error
   const [tabTransitionClass, setTabTransitionClass] = useState('ui-tab-slide-in-right');
+  const [hiddenWorkout, setHiddenWorkout] = useState(null);
   
   // Undo deleted workout
   const undoTimeoutRef = useRef(null);
@@ -197,15 +200,15 @@ export default function App() {
 
         // Load settings
         const goal = await storage.getSetting('weeklyGoal', 4);
-        const statsRange = await storage.getSetting('defaultStatsRange', '12m');
+        const statsRange = await storage.getSetting('defaultStatsRange', '3months');
         const weight = await storage.getSetting('userWeight', null);
         const enableAlerts = await storage.getSetting('enablePerformanceAlerts', true);
         const enableHaptic = await storage.getSetting('enableHapticFeedback', false);
         const notes = await storage.getSetting('trainingNotes', '');
         const reduceMotion = await storage.getSetting('reduceAnimations', false);
-
+        // display prefs
         setWeeklyGoal(parseInt(goal) || 4);
-        setDefaultStatsRange(statsRange || '12m');
+        setDefaultStatsRange(statsRange || '3months');
         setUserWeight(Number(weight) || null);
         setEnablePerformanceAlerts(enableAlerts !== null ? enableAlerts : true);
         setEnableHapticFeedback(enableHaptic !== null ? enableHaptic : false);
@@ -245,7 +248,7 @@ export default function App() {
   useIndexedDBSetting('enablePerformanceAlerts', enablePerformanceAlerts, 500);
   useIndexedDBSetting('enableHapticFeedback', enableHapticFeedback, 500);
   useIndexedDBSetting('reduceAnimations', reduceAnimations, 500);
-  
+
   // activeWorkout requires immediate async save (no debounce for critical data)
   const { saveAsync } = useIndexedDBDirect();
   useEffect(() => {
@@ -297,9 +300,12 @@ export default function App() {
   // Timer
   useEffect(() => {
     let interval;
-    if (activeWorkout) {
+    if (activeWorkout && activeWorkout.startTime) {
       interval = setInterval(() => {
-        setWorkoutTimer(Math.floor((new Date() - new Date(activeWorkout.startTime)) / 1000));
+        const elapsed = Math.floor((new Date() - new Date(activeWorkout.startTime)) / 1000);
+        if (!Number.isNaN(elapsed)) {
+          setWorkoutTimer(Math.max(0, elapsed));
+        }
       }, 1000);
     }
     return () => clearInterval(interval);
@@ -401,6 +407,19 @@ export default function App() {
 
   const handleStartWorkout = useCallback((template) => {
     if (!template) return;
+
+    // If there is already an active workout, ask user whether to go to it or start a new one
+    if (activeWorkout) {
+      const goToExisting = confirm('You already have an active workout. Press OK to go to it, Cancel to start a new workout and replace the current one.');
+      if (goToExisting) {
+        setView('activeWorkout');
+        return;
+      } else {
+        const ok = confirm('Starting a new workout will replace your current active workout. Continue?');
+        if (!ok) return;
+        // proceed to replace
+      }
+    }
 
     const now = new Date();
     const timeLimit = Number(template?.optimizerRules?.defaultTimeLimitMin) || 0;
@@ -527,10 +546,12 @@ export default function App() {
   const handleFinishWorkout = useCallback(() => {
     if (!activeWorkout) return;
     // Deep clone so detectPRsInWorkout does not mutate activeWorkout state
+    const now = new Date();
     const completedWorkout = JSON.parse(JSON.stringify({
       ...activeWorkout,
       id: Date.now(),
-      date: new Date().toISOString().split('T')[0],
+      // use full ISO timestamp to avoid timezone parsing issues
+      date: now.toISOString(),
       tags: []
     }));
     const template = templates.find(t => t.id === activeWorkout.templateId);
@@ -569,9 +590,33 @@ export default function App() {
   }, [activeWorkout, templates, workouts, exercisesDB, getExerciseRecords]);
   const handleMinimizeWorkout = useCallback(() => {
     setIsWorkoutMinimized(true);
-    setView('home');
-    setActiveTab('home');
-  }, []);
+    // when workout is minimised, return user to previous active tab/view
+    const target = activeTabRef.current || 'home';
+    setView(target);
+    // ensure we see the top of the new view
+    requestAnimationFrame(() => {
+      const main = document.querySelector('.app-content');
+      if (main) main.scrollTo({ top: 0, behavior: 'instant' });
+    });
+  }, [setIsWorkoutMinimized, setView]);
+
+  const handleDismissWorkout = useCallback(() => {
+    if (!activeWorkout) return;
+    // Keep a copy in local state so user can restore it via badge
+    setHiddenWorkout(activeWorkout);
+    setActiveWorkout(null);
+    setIsWorkoutMinimized(false);
+    // return user to previous tab/view
+    const target = activeTabRef.current || 'home';
+    setView(target);
+  }, [activeWorkout, setActiveWorkout, setIsWorkoutMinimized, setView]);
+
+  const handleRestoreHiddenWorkout = useCallback(() => {
+    if (!hiddenWorkout) return;
+    setActiveWorkout(hiddenWorkout);
+    setHiddenWorkout(null);
+    setView('activeWorkout');
+  }, [hiddenWorkout, setActiveWorkout, setView]);
 
   const handleMaximizeWorkout = useCallback(() => {
     if (!activeWorkout) return;
@@ -1429,15 +1474,23 @@ export default function App() {
     }
   }, [view]);
 
-  const showBottomNav = view !== 'activeWorkout' && !(view === 'templates' && editingTemplate);
-  const miniWorkoutBarVisible = Boolean(activeWorkout) && view !== 'activeWorkout';
+  const showBottomNav = (view !== 'activeWorkout' || isWorkoutMinimized) && !(view === 'templates' && editingTemplate);
+  const miniWorkoutBarVisible = Boolean(activeWorkout) && (view !== 'activeWorkout' || isWorkoutMinimized);
   const showMiniWorkoutBar = miniWorkoutBarVisible;
+
+  // debug helper: log scroll container metrics whenever content changes
+  useEffect(() => {
+    const container = document.querySelector('.app-content');
+    if (!container) return;
+    const { scrollHeight, clientHeight, offsetHeight } = container;
+    console.log('SCROLL DEBUG', { scrollHeight, clientHeight, offsetHeight });
+  }, [view, workouts, isWorkoutMinimized]);
 
   // --- RENDER ---
   return (
     <>
       <div className="app-wrapper bg-zinc-900">
-        <div className="app-content w-full max-w-md mx-auto bg-zinc-900 shadow-2xl">
+        <div className={`app-content w-full max-w-md mx-auto bg-zinc-900 shadow-2xl ${view === 'history' ? 'history-view' : ''} ${showBottomNav ? 'pb-[calc(64px+env(safe-area-inset-bottom))]' : 'pb-safe'}`}>
 
           {/* VIEW ROUTING */}
           {view === 'home' && (
@@ -1684,6 +1737,7 @@ export default function App() {
               onViewCalendar={() => setView('calendar')}
               onWorkoutClick={(date) => { setSelectedDate(date); setView('workoutDetail'); }}
               onOpenSettings={() => setView('settings')}
+              defaultStatsRange={defaultStatsRange}
             />
           )}
 
@@ -1693,6 +1747,7 @@ export default function App() {
               exercisesDB={exercisesDB}
               userWeight={userWeight}
               onBack={() => setProfileSubview('main')}
+              defaultStatsRange={defaultStatsRange}
             />
           )}
 
@@ -1925,7 +1980,32 @@ export default function App() {
               onWeeklyGoalChange={setWeeklyGoal}
               onExport={handleExport}
               onImport={handleImport}
-              onReset={() => { if (confirm('Reset all data?')) { localStorage.clear(); location.reload(); } }}
+              onReset={async () => {
+                if (!confirm('Reset all data?')) return;
+                try {
+                  await storage.clear(STORES.WORKOUTS);
+                  await storage.clear(STORES.EXERCISES);
+                  await storage.clear(STORES.TEMPLATES);
+                  await storage.clear(STORES.SETTINGS);
+                } catch (err) {
+                  console.error('Error clearing IndexedDB stores during reset:', err);
+                }
+                // also clear localStorage and any service-worker/caches
+                try {
+                  localStorage.clear();
+                  if (window.caches) {
+                    const keys = await caches.keys();
+                    await Promise.all(keys.map(k => caches.delete(k)));
+                  }
+                  if (navigator.serviceWorker) {
+                    const regs = await navigator.serviceWorker.getRegistrations();
+                    await Promise.all(regs.map(r => r.unregister()));
+                  }
+                } catch (err) {
+                  console.error('Error clearing caches during reset:', err);
+                }
+                location.reload();
+              }}
               showExportModal={showExportModal}
               setShowExportModal={closeExportModal}
               exportType={exportType}
@@ -1948,6 +2028,8 @@ export default function App() {
               onEnableHapticFeedbackChange={setEnableHapticFeedback}
               reduceAnimations={reduceAnimations}
               onReduceAnimationsChange={setReduceAnimations}
+
+
             />
           )}
 
@@ -1973,7 +2055,6 @@ export default function App() {
             />
           )}
 
-          <div className="scroll-spacer" aria-hidden="true" />
         </div>
       </div>
 
@@ -1988,7 +2069,12 @@ export default function App() {
           workoutName={activeWorkout?.name}
           timer={workoutTimer}
           onMaximize={handleMaximizeWorkout}
+          onHide={handleDismissWorkout}
         />
+      )}
+
+      {hiddenWorkout && (
+        <HiddenWorkoutBadge workoutName={hiddenWorkout.name} onRestore={handleRestoreHiddenWorkout} />
       )}
 
       {showCalendar && (
@@ -2522,36 +2608,23 @@ export default function App() {
       )}
 
       {/* Undo Deleted Workout Toast */}
-      {deletedWorkout && (
-        <div key={deletedWorkout.id || 'deleted'} className="fixed bottom-24 left-4 right-4 bg-slate-800 border-2 border-slate-700 text-white px-6 py-4 rounded-xl shadow-xl flex items-center justify-between z-40 relative overflow-hidden ui-undo-toast-enter">
-          <div>
-            <p className="text-base font-bold">Workout deleted</p>
-            <p className="text-xs text-slate-400 mt-1">Undo within 10 seconds</p>
-          </div>
-          <button
-            onClick={async () => {
-              const restoredWorkouts = [deletedWorkout, ...workouts];
-              
-              // Restore to storage using set (restores specific workout by ID)
-              try {
-                await storage.set(STORES.WORKOUTS, deletedWorkout);
-              } catch (err) {
-                console.error('Error persisting workout restoration:', err);
-                return;
-              }
-              
-              // Update state
-              setWorkouts(restoredWorkouts);
-              setDeletedWorkout(null);
-              if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
-            }}
-            className="ml-4 px-5 py-2 accent-bg hover:opacity-90 rounded-lg font-bold text-sm transition-colors text-white flex-shrink-0"
-          >
-            Undo
-          </button>
-                  <span className="ui-undo-sweep" />
-        </div>
-      )}
+      <UndoToast
+        deletedWorkout={deletedWorkout}
+        onUndo={async () => {
+          if (!deletedWorkout) return;
+          const restoredWorkouts = [deletedWorkout, ...workouts];
+          try {
+            await storage.set(STORES.WORKOUTS, deletedWorkout);
+          } catch (err) {
+            console.error('Error persisting workout restoration:', err);
+            return;
+          }
+          setWorkouts(restoredWorkouts);
+          setDeletedWorkout(null);
+          if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
+        }}
+        onDismiss={() => setDeletedWorkout(null)}
+      />
       
       {/* Custom Number Keypad */}
       {activeInput && (

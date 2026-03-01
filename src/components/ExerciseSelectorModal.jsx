@@ -76,36 +76,35 @@ export const ExerciseSelectorModal = ({
               className="w-full bg-slate-800/50 border border-slate-600/50 rounded-lg pl-12 pr-4 py-2 text-white font-semibold focus:border-blue-500 focus:outline-none transition placeholder:text-slate-600"
             />
           </div>
-          {mode === 'template' && (
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <button
-                onClick={() => setSortBy('name')}
-                className={`px-3 py-2 rounded-lg text-xs font-bold transition ${
-                  sortBy === 'name'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-slate-800/50 border border-slate-700/50 text-slate-300 hover:text-white'
-                }`}
-              >
-                Sort: A-Z
-              </button>
-              <button
-                onClick={() => setSortBy('muscle')}
-                className={`px-3 py-2 rounded-lg text-xs font-bold transition ${
-                  sortBy === 'muscle'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-slate-800/50 border border-slate-700/50 text-slate-300 hover:text-white'
-                }`}
-              >
-                Sort: Muscle
-              </button>
-            </div>
-          )}
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <button
+              onClick={() => setSortBy('name')}
+              className={`px-3 py-2 rounded-lg text-xs font-bold transition ${
+                sortBy === 'name'
+                  ? 'accent-bg text-white'
+                  : 'bg-slate-800/50 border border-slate-700/50 text-slate-300 hover:text-white'
+              }`}
+            >
+              Sort: A-Z
+            </button>
+            <button
+              onClick={() => setSortBy('muscle')}
+              className={`px-3 py-2 rounded-lg text-xs font-bold transition ${
+                sortBy === 'muscle'
+                  ? 'accent-bg text-white'
+                  : 'bg-slate-800/50 border border-slate-700/50 text-slate-300 hover:text-white'
+              }`}
+            >
+              Sort: Muscle
+            </button>
+          </div>
         </div>
 
         <div className="p-4 overflow-y-auto grow space-y-3">
           <button
             onClick={onCreateNew}
-            className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white rounded-lg p-4 font-bold flex items-center justify-center gap-2 shadow-lg shadow-blue-600/50 transition ui-press"
+            className="w-full accent-bg hover:opacity-90 text-white rounded-lg p-4 font-bold flex items-center justify-center gap-2 shadow-lg transition ui-press"
+            style={{ boxShadow: 'var(--accent) 0 0 20px -5px' }}
           >
             <Plus size={18} /> Create New
           </button>

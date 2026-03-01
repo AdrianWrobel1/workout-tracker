@@ -97,6 +97,7 @@ export const SettingsProvider = ({ children }) => {
     setReduceAnimations,
     handleToggleReduceAnimations,
 
+
     // PR & Notifications
     activePRBanner,
     setActivePRBanner,
