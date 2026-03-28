@@ -280,7 +280,11 @@ export const generateEliteCoaching = (workouts, readiness, masteryData, anomalyD
   // Anomaly-based adjustments
   let anomalyWarning = null;
   if (anomalyDetection?.severity === 'high') {
-    anomalyWarning = `⚠️ Unusual pattern: ${anomalyDetection.anomalies?.[0]?.split('(')[0] || 'Check form'}`;
+    const firstAnomaly = anomalyDetection.anomalies?.[0];
+    const anomalyMessage = typeof firstAnomaly === 'string'
+      ? firstAnomaly
+      : firstAnomaly?.message;
+    anomalyWarning = `⚠️ Unusual pattern: ${(anomalyMessage || 'Check form').split('(')[0].trim()}`;
   }
 
   // Injury risk analysis
