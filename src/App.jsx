@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 // DOMAIN
 import { calculate1RM } from './domain/calculations';
 import { getExerciseRecords, getLastCompletedSets, suggestNextWeight, checkSetRecords } from './domain/exercises';
-import { prepareCleanWorkoutData, compareWorkoutToPrevious, generateSessionFeedback, calculateMuscleDistribution, detectPRsInWorkout, buildLastWorkoutSnapshot, generateCoachLens } from './domain/workouts';
+import { prepareCleanWorkoutData, compareWorkoutToPrevious, generateSessionFeedback, calculateMuscleDistribution, detectPRsInWorkout, buildLastWorkoutSnapshot, generateCoachLens, calculateMasteryLevel, calculateMomentum, detectAnomalies } from './domain/workouts';
 import { normalizeSetForStorage, normalizeWorkoutExerciseForStorage, isWarmupSet, resolveSetType } from './domain/workoutExtensions';
 import { calculateReadiness, calculateBlockProgress, optimizeSession, calculateMuscleBalance } from './analytics';
 
@@ -13,6 +13,8 @@ import { useIndexedDBStore, useIndexedDBSetting, useIndexedDBDirect } from './ho
 import { useRecordsIndex } from './hooks/useRecordsIndex';
 import { useModals } from './contexts/ModalContext';
 import { useWorkouts, useUI, useSettings } from './contexts/index.js';
+import { SmartPlanProvider } from './contexts/SmartPlanContext.jsx';
+import { TemplatesProvider } from './contexts/TemplatesContext.jsx';
 
 // SERVICES
 import { storage, STORES } from './services/storageService';
@@ -136,6 +138,7 @@ export default function App() {
   const [returnTo, setReturnTo] = useState(null);
   const [selectedExerciseIndex, setSelectedExerciseIndex] = useState(null);
   const [historyScrollPosition, setHistoryScrollPosition] = useState(null);
+  const [hasHydratedPersistence, setHasHydratedPersistence] = useState(false);
   const [scrollToWorkoutDate, setScrollToWorkoutDate] = useState(null);
   const [autosaveStatus, setAutosaveStatus] = useState({ state: 'idle', savedAt: null }); // idle | saving | saved | error
   const [tabTransitionClass, setTabTransitionClass] = useState('ui-tab-slide-in-right');
@@ -227,6 +230,8 @@ export default function App() {
         console.log('[ok] Data loaded from IndexedDB');
       } catch (error) {
         console.error('Error initializing storage:', error);
+      } finally {
+        setHasHydratedPersistence(true);
       }
     })();
   }, []);
@@ -238,16 +243,16 @@ export default function App() {
   }, []);
 
   // Save Data (debounced). Workouts use incremental put/delete in handlers, not full setMany.
-  useIndexedDBStore(STORES.EXERCISES, exercisesDB, 200);
-  useIndexedDBStore(STORES.TEMPLATES, templates, 200);
+  useIndexedDBStore(STORES.EXERCISES, exercisesDB, 200, { skipSave: !hasHydratedPersistence });
+  useIndexedDBStore(STORES.TEMPLATES, templates, 200, { skipSave: !hasHydratedPersistence });
   
   // Persist settings (smaller payloads, can use settings API)
-  useIndexedDBSetting('userWeight', userWeight, 300);
-  useIndexedDBSetting('defaultStatsRange', defaultStatsRange, 300);
-  useIndexedDBSetting('trainingNotes', trainingNotes, 500);
-  useIndexedDBSetting('enablePerformanceAlerts', enablePerformanceAlerts, 500);
-  useIndexedDBSetting('enableHapticFeedback', enableHapticFeedback, 500);
-  useIndexedDBSetting('reduceAnimations', reduceAnimations, 500);
+  useIndexedDBSetting('userWeight', userWeight, 300, { skipSave: !hasHydratedPersistence });
+  useIndexedDBSetting('defaultStatsRange', defaultStatsRange, 300, { skipSave: !hasHydratedPersistence });
+  useIndexedDBSetting('trainingNotes', trainingNotes, 500, { skipSave: !hasHydratedPersistence });
+  useIndexedDBSetting('enablePerformanceAlerts', enablePerformanceAlerts, 500, { skipSave: !hasHydratedPersistence });
+  useIndexedDBSetting('enableHapticFeedback', enableHapticFeedback, 500, { skipSave: !hasHydratedPersistence });
+  useIndexedDBSetting('reduceAnimations', reduceAnimations, 500, { skipSave: !hasHydratedPersistence });
 
   // activeWorkout requires immediate async save (no debounce for critical data)
   const { saveAsync } = useIndexedDBDirect();
@@ -317,6 +322,37 @@ export default function App() {
   const muscleBalance = useMemo(() => (
     calculateMuscleBalance(workouts, exercisesDB)
   ), [workouts, exercisesDB]);
+
+  // Smart Plan Engine data
+  const masteryData = useMemo(() => calculateMasteryLevel(workouts || []), [workouts]);
+  const momentumData = useMemo(() => calculateMomentum(workouts || []), [workouts]);
+  const anomalyDetection = useMemo(() => detectAnomalies(activeWorkout, workouts || []), [activeWorkout, workouts]);
+  const consistencyData = useMemo(() => {
+    const now = new Date();
+    const weeksData = new Map();
+    (workouts || []).forEach(w => {
+      const wDate = new Date(w.date);
+      const normalized = new Date(wDate);
+      const day = (normalized.getDay() + 6) % 7;
+      normalized.setDate(normalized.getDate() - day);
+      normalized.setHours(0, 0, 0, 0);
+      const weekKey = normalized.toISOString().split('T')[0];
+      weeksData.set(weekKey, true);
+    });
+    let count = 0;
+    for (let i = 0; i < 12; i++) {
+      const weekEnd = new Date(now);
+      weekEnd.setDate(now.getDate() - (i * 7));
+      weekEnd.setHours(0, 0, 0, 0);
+      const normalized = new Date(weekEnd);
+      const day = (normalized.getDay() + 6) % 7;
+      normalized.setDate(normalized.getDate() - day);
+      normalized.setHours(0, 0, 0, 0);
+      const weekKey = normalized.toISOString().split('T')[0];
+      if (weeksData.has(weekKey)) count += 1;
+    }
+    return { activeWeeks: count, totalWeeks: 12, consistency: Math.round((count / 12) * 100) };
+  }, [workouts]);
 
   const activeTemplateForProgress = useMemo(() => {
     if (!activeWorkout?.templateId) return null;
@@ -1489,7 +1525,17 @@ export default function App() {
   // --- RENDER ---
   return (
     <>
-      <div className="app-wrapper bg-zinc-900">
+      <TemplatesProvider templates={templates} setTemplates={setTemplates}>
+        <SmartPlanProvider
+        workouts={workouts}
+        readiness={readiness}
+        muscleBalance={muscleBalance}
+        masteryData={masteryData}
+        consistencyData={consistencyData}
+        currentSession={activeWorkout}
+        anomalyDetection={anomalyDetection}
+      >
+        <div className="app-wrapper bg-zinc-900">
         <div className={`app-content w-full max-w-md mx-auto bg-zinc-900 shadow-2xl ${view === 'history' ? 'history-view' : ''} ${showBottomNav ? 'pb-[calc(64px+env(safe-area-inset-bottom))]' : 'pb-safe'}`}>
 
           {/* VIEW ROUTING */}
@@ -1514,6 +1560,8 @@ export default function App() {
                 weeklyGoal={weeklyGoal}
                 readiness={readiness}
                 muscleBalance={muscleBalance}
+                masteryData={masteryData}
+                anomalyDetection={anomalyDetection}
                 trainingNotes={trainingNotes}
                 onTrainingNotesChange={setTrainingNotes}
                 onStartWorkout={() => setView('selectTemplate')}
@@ -1669,7 +1717,6 @@ export default function App() {
             <div data-ui-anim className={`transition-opacity duration-200 ease-out ${pendingSummary ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
               <ActiveWorkoutView
                 activeWorkout={activeWorkout}
-                templates={templates}
                 workouts={workouts}
               workoutTimer={workoutTimer}
               readiness={readiness}
@@ -2065,12 +2112,14 @@ export default function App() {
       )}
 
       {showMiniWorkoutBar && (
-        <MiniWorkoutBar
-          workoutName={activeWorkout?.name}
-          timer={workoutTimer}
-          onMaximize={handleMaximizeWorkout}
-          onHide={handleDismissWorkout}
-        />
+        <div className="mini-workout-shell">
+          <MiniWorkoutBar
+            workoutName={activeWorkout?.name}
+            timer={workoutTimer}
+            onMaximize={handleMaximizeWorkout}
+            onHide={handleDismissWorkout}
+          />
+        </div>
       )}
 
       {hiddenWorkout && (
@@ -2599,6 +2648,8 @@ export default function App() {
           </div>
         </div>
       )}
+      </SmartPlanProvider>
+      </TemplatesProvider>
       
       {/* Toast Message */}
       {toast && (

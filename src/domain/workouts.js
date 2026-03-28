@@ -918,6 +918,370 @@ export const detectPRsInWorkout = (completedWorkout, previousWorkouts, calculate
   return prDetected;
 };
 
+/**
+ * Anomaly Detection
+ * Detects unusual patterns in current workout vs historical baseline
+ * Returns: { anomalies: [...], severity: 'none'|'low'|'medium'|'high', flags: [...] }
+ */
+export const detectAnomalies = (currentWorkout, allWorkouts = []) => {
+  const anomalies = [];
+  const flags = [];
+
+  if (!currentWorkout) {
+    return { anomalies: [], severity: 'none', flags: [] };
+  }
+
+  if (allWorkouts.length < 3) {
+    return { anomalies: [], severity: 'none', flags: ['Insufficient history for anomaly detection.'] };
+  }
+
+  // Get baseline stats from last 8 workouts
+  const recentWorkouts = allWorkouts.slice(-8);
+  
+  const getVolume = (w) => {
+    let vol = 0;
+    (w.exercises || []).forEach(ex => {
+      (ex.sets || []).forEach(s => {
+        if (isWorkSet(s)) vol += (Number(s.kg) || 0) * (Number(s.reps) || 0);
+      });
+    });
+    return vol;
+  };
+
+  const getDuration = (w) => Number(w.duration) || 0;
+  const getSetCount = (w) => {
+    let count = 0;
+    (w.exercises || []).forEach(ex => {
+      (ex.sets || []).forEach(s => {
+        if (isWorkSet(s)) count += 1;
+      });
+    });
+    return count;
+  };
+
+  const recentVolumes = recentWorkouts.map(getVolume);
+  const recentDurations = recentWorkouts.map(getDuration);
+  const recentSetCounts = recentWorkouts.map(getSetCount);
+
+  const avgVolume = recentVolumes.reduce((a, b) => a + b, 0) / recentVolumes.length;
+  const avgDuration = recentDurations.reduce((a, b) => a + b, 0) / recentDurations.length;
+  const avgSetCount = recentSetCounts.reduce((a, b) => a + b, 0) / recentSetCounts.length;
+
+  const stdDevVolume = Math.sqrt(recentVolumes.reduce((sum, v) => sum + Math.pow(v - avgVolume, 2), 0) / recentVolumes.length);
+  const stdDevDuration = Math.sqrt(recentDurations.reduce((sum, d) => sum + Math.pow(d - avgDuration, 2), 0) / recentDurations.length);
+  
+  const currentVolume = getVolume(currentWorkout);
+  const currentDuration = getDuration(currentWorkout);
+  const currentSetCount = getSetCount(currentWorkout);
+
+  // Detect volume anomalies (>2 std dev)
+  if (stdDevVolume > 0) {
+    const volumeZScore = Math.abs((currentVolume - avgVolume) / stdDevVolume);
+    if (volumeZScore > 2) {
+      anomalies.push({
+        type: 'volume',
+        current: currentVolume,
+        expected: Math.round(avgVolume),
+        severity: volumeZScore > 3 ? 'high' : 'medium',
+        message: currentVolume > avgVolume 
+          ? `Volume spike: ${Math.round((currentVolume - avgVolume) / avgVolume * 100)}% above baseline`
+          : `Volume drop: ${Math.round((avgVolume - currentVolume) / avgVolume * 100)}% below baseline`
+      });
+    }
+  }
+
+  // Detect duration anomalies
+  if (stdDevDuration > 0) {
+    const durationZScore = Math.abs((currentDuration - avgDuration) / stdDevDuration);
+    if (durationZScore > 2.2) {
+      anomalies.push({
+        type: 'duration',
+        current: currentDuration,
+        expected: Math.round(avgDuration),
+        severity: durationZScore > 3 ? 'high' : 'medium',
+        message: currentDuration > avgDuration
+          ? `Session ran ${Math.round(currentDuration - avgDuration)} min longer than usual`
+          : `Session ended ${Math.round(avgDuration - currentDuration)} min early`
+      });
+    }
+  }
+
+  // Detect incomplete sessions (< 50% planned sets)
+  const plannedSets = getPlannedWorkSets(currentWorkout);
+  if (plannedSets > 0 && currentSetCount < plannedSets * 0.5) {
+    anomalies.push({
+      type: 'incomplete',
+      current: currentSetCount,
+      expected: plannedSets,
+      severity: 'medium',
+      message: `Only ${currentSetCount}/${plannedSets} planned work sets completed`
+    });
+  }
+
+  // Calculate overall severity
+  const highCount = anomalies.filter(a => a.severity === 'high').length;
+  const mediumCount = anomalies.filter(a => a.severity === 'medium').length;
+
+  let severity = 'none';
+  if (highCount > 0) severity = 'high';
+  else if (mediumCount > 1) severity = 'medium';
+  else if (mediumCount > 0) severity = 'low';
+
+  // Generate flags
+  if (severity === 'high') {
+    flags.push('⚠️ Session shows significant deviation from your baseline.');
+  } else if (severity === 'medium') {
+    flags.push('📊 Some metrics are outside typical range.');
+  }
+
+  if (currentSetCount === 0) {
+    flags.push('⚡ No completed sets recorded.');
+  }
+
+  return { anomalies, severity, flags };
+};
+
+/**
+ * Extract key performance metrics from current + historical workouts
+ * Returns: { progressMetrics, densityTrend, tempoAnalysis, volumeProgression }
+ */
+export const extractKeyMetrics = (currentWorkout, allWorkouts = [], exercisesDB = []) => {
+  const getVolume = (w) => {
+    let vol = 0;
+    (w.exercises || []).forEach(ex => {
+      (ex.sets || []).forEach(s => {
+        if (isWorkSet(s)) vol += (Number(s.kg) || 0) * (Number(s.reps) || 0);
+      });
+    });
+    return vol;
+  };
+
+  // RM Progress: compare top 1RM from this session vs previous
+  let progressMetrics = {
+    topEstimated1RM: 0,
+    previousMax1RM: 0,
+    rmGain: 0,
+    rmTrend: 'flat'
+  };
+
+  if (currentWorkout) {
+    let max1RM = 0;
+    (currentWorkout.exercises || []).forEach(ex => {
+      (ex.sets || []).forEach(s => {
+        if (isWorkSet(s)) {
+          const kg = Number(s.kg) || 0;
+          const reps = Number(s.reps) || 0;
+          const est1RM = Math.round(kg * (1 + reps / 30));
+          if (est1RM > max1RM) max1RM = est1RM;
+        }
+      });
+    });
+    progressMetrics.topEstimated1RM = max1RM;
+
+    // Compare to previous
+    if (allWorkouts.length > 0) {
+      let prevMax1RM = 0;
+      const prevWorkout = allWorkouts
+        .filter(w => new Date(w.date) < new Date(currentWorkout.date))
+        .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+      
+      if (prevWorkout) {
+        (prevWorkout.exercises || []).forEach(ex => {
+          (ex.sets || []).forEach(s => {
+            if (isWorkSet(s)) {
+              const kg = Number(s.kg) || 0;
+              const reps = Number(s.reps) || 0;
+              const est1RM = Math.round(kg * (1 + reps / 30));
+              if (est1RM > prevMax1RM) prevMax1RM = est1RM;
+            }
+          });
+        });
+        progressMetrics.previousMax1RM = prevMax1RM;
+        progressMetrics.rmGain = max1RM - prevMax1RM;
+        progressMetrics.rmTrend = max1RM > prevMax1RM * 1.01 ? 'up' : max1RM < prevMax1RM * 0.99 ? 'down' : 'flat';
+      }
+    }
+  }
+
+  // Density Trend: volume per minute over last 4 sessions
+  const densityTrend = { current: 0, trend: 'stable', last4: [] };
+  if (currentWorkout) {
+    const currentDensity = currentWorkout.duration > 0 
+      ? getVolume(currentWorkout) / currentWorkout.duration 
+      : 0;
+    densityTrend.current = Math.round(currentDensity);
+
+    const last4 = [currentWorkout, ...allWorkouts.slice(-3)];
+    const densities = last4.map(w => w.duration > 0 ? getVolume(w) / w.duration : 0);
+    densityTrend.last4 = densities.map(d => Math.round(d));
+
+    if (densities.length > 1) {
+      const trend = densities[0] > densities[densities.length - 1] * 1.05 ? 'improving' : 
+                    densities[0] < densities[densities.length - 1] * 0.95 ? 'declining' : 'stable';
+      densityTrend.trend = trend;
+    }
+  }
+
+  // Volume Progression: trend over last 6 sessions
+  const volumeProgression = { current: 0, trend: 'steady', last6: [] };
+  if (currentWorkout) {
+    volumeProgression.current = getVolume(currentWorkout);
+    const last6 = [currentWorkout, ...allWorkouts.slice(-5)];
+    volumeProgression.last6 = last6.map(w => getVolume(w));
+
+    if (last6.length > 1) {
+      const startVol = last6[last6.length - 1];
+      const endVol = last6[0];
+      if (startVol > 0) {
+        const change = (endVol - startVol) / startVol;
+        volumeProgression.trend = change > 0.08 ? 'climbing' : change < -0.08 ? 'declining' : 'steady';
+      }
+    }
+  }
+
+  // Tempo Analysis: avg reps per completed set as proxy for tempo
+  const tempoAnalysis = { avgRepsPerSet: 0, distribution: { low: 0, mid: 0, high: 0 } };
+  if (currentWorkout && currentWorkout.exercises) {
+    let totalReps = 0;
+    let setCount = 0;
+    const repsList = [];
+
+    currentWorkout.exercises.forEach(ex => {
+      (ex.sets || []).forEach(s => {
+        if (isWorkSet(s)) {
+          const reps = Number(s.reps) || 0;
+          if (reps > 0) {
+            totalReps += reps;
+            setCount += 1;
+            repsList.push(reps);
+          }
+        }
+      });
+    });
+
+    if (setCount > 0) {
+      tempoAnalysis.avgRepsPerSet = Math.round(totalReps / setCount);
+      // Distribution: low (1-5), mid (6-12), high (13+)
+      repsList.forEach(r => {
+        if (r <= 5) tempoAnalysis.distribution.low += 1;
+        else if (r <= 12) tempoAnalysis.distribution.mid += 1;
+        else tempoAnalysis.distribution.high += 1;
+      });
+    }
+  }
+
+  return { progressMetrics, densityTrend, tempoAnalysis, volumeProgression };
+};
+
+/**
+ * Mastery Hierarchy: assigns user to level based on aggregate stats
+ * Returns: { level: 1-5, title, description, nextMilestone, progress }
+ */
+export const calculateMasteryLevel = (allWorkouts = [], totalWorkoutTime = 0) => {
+  const levels = [
+    { level: 1, title: 'Awakening', description: 'Building baseline consistency', threshold: 0 },
+    { level: 2, title: 'Developing', description: 'Establishing movement patterns', threshold: 5 },
+    { level: 3, title: 'Proficient', description: 'Demonstrating progressive strength', threshold: 20 },
+    { level: 4, title: 'Advanced', description: 'Strategic programming mastery', threshold: 50 },
+    { level: 5, title: 'Elite', description: 'Championship-caliber execution', threshold: 100 }
+  ];
+
+  let points = 0;
+  
+  // Points for workout count
+  points += Math.min(allWorkouts.length, 100);
+  
+  // Points for consistency (workouts in last 30 days)
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const recentWorkouts = allWorkouts.filter(w => new Date(w.date) >= thirtyDaysAgo);
+  points += Math.min(recentWorkouts.length * 5, 30);
+
+  // Points for total volume lifetime
+  let totalVolume = 0;
+  allWorkouts.forEach(w => {
+    (w.exercises || []).forEach(ex => {
+      (ex.sets || []).forEach(s => {
+        if (isWorkSet(s)) totalVolume += (Number(s.kg) || 0) * (Number(s.reps) || 0);
+      });
+    });
+  });
+  points += Math.min(Math.floor(totalVolume / 50000), 40);
+
+  // Determine current level
+  let currentLevel = levels[0];
+  for (const levelDef of levels) {
+    if (points >= levelDef.threshold) {
+      currentLevel = levelDef;
+    } else {
+      break;
+    }
+  }
+
+  // Calculate progress to next level
+  const nextLevel = levels.find(l => l.level === currentLevel.level + 1) || currentLevel;
+  const progressToNext = ((points - currentLevel.threshold) / (nextLevel.threshold - currentLevel.threshold)) * 100;
+
+  return {
+    level: currentLevel.level,
+    title: currentLevel.title,
+    description: currentLevel.description,
+    points: Math.round(points),
+    nextMilestone: `${nextLevel.title} (${nextLevel.threshold} pts)`,
+    progress: Math.round(Math.min(progressToNext, 100))
+  };
+};
+
+/**
+ * Momentum Calculator: rolling streak + engagement metric
+ * Returns: { currentStreak, streakDays, momentumScore, motivationTier }
+ */
+export const calculateMomentum = (allWorkouts = []) => {
+  let currentStreak = 0;
+  let streakDays = 0;
+
+  if (allWorkouts.length === 0) {
+    return { currentStreak: 0, streakDays: 0, momentumScore: 0, motivationTier: 'starting' };
+  }
+
+  const sortedByDate = [...allWorkouts].sort((a, b) => new Date(b.date) - new Date(a.date));
+  let lastDate = null;
+
+  for (const w of sortedByDate) {
+    const workoutDate = new Date(w.date);
+    workoutDate.setHours(0, 0, 0, 0);
+
+    if (!lastDate) {
+      lastDate = new Date(workoutDate);
+      currentStreak = 1;
+      streakDays = 0;
+    } else {
+      const daysDiff = Math.floor((lastDate - workoutDate) / (1000 * 60 * 60 * 24));
+      if (daysDiff === 1) {
+        currentStreak += 1;
+        streakDays = daysDiff;
+        lastDate = new Date(workoutDate);
+      } else if (daysDiff === 0) {
+        // Same day, skip
+        continue;
+      } else {
+        break;
+      }
+    }
+  }
+
+  // Momentum score: streak exponential + recent activity
+  const momentumScore = Math.round(Math.min(currentStreak * (1 + currentStreak / 10), 100));
+  
+  let motivationTier = 'starting';
+  if (currentStreak >= 3) motivationTier = 'building';
+  if (currentStreak >= 7) motivationTier = 'rolling';
+  if (currentStreak >= 14) motivationTier = 'unstoppable';
+  if (currentStreak >= 30) motivationTier = 'legendary';
+
+  return { currentStreak, streakDays, momentumScore, motivationTier };
+};
+
 
 
 

@@ -1,4 +1,5 @@
 import React from 'react';
+import { storage, STORES } from '../services/storageService';
 
 /**
  * P3 FIX: Error boundary to catch app crashes and prevent silent data loss
@@ -14,7 +15,7 @@ export class ErrorBoundary extends React.Component {
     };
   }
 
-  static getDerivedStateFromError(error) {
+  static getDerivedStateFromError() {
     return { hasError: true };
   }
 
@@ -30,20 +31,45 @@ export class ErrorBoundary extends React.Component {
     window.location.reload();
   };
 
-  handleClearData = () => {
+  handleClearData = async () => {
     if (confirm('Clear all app data and reload? This cannot be undone.')) {
+      try {
+        await storage.init();
+        await Promise.all([
+          storage.clear(STORES.WORKOUTS),
+          storage.clear(STORES.EXERCISES),
+          storage.clear(STORES.TEMPLATES),
+          storage.clear(STORES.SETTINGS),
+          storage.clear(STORES.RECORDS_INDEX),
+          storage.clear(STORES.REVERSE_INDEXES)
+        ]);
+      } catch (error) {
+        console.error('Failed to clear IndexedDB during recovery:', error);
+      }
       localStorage.clear();
       window.location.reload();
     }
   };
 
-  handleBackupRestore = () => {
+  handleBackupRestore = async () => {
+    try {
+      await storage.init();
+      const workouts = await storage.getAllFromStore(STORES.WORKOUTS);
+      const persistedWorkouts = (workouts || []).filter(workout => workout?.id !== 'activeWorkout');
+      if (persistedWorkouts.length > 0) {
+        alert(`Backup found in IndexedDB: ${persistedWorkouts.length} workouts. Try reloading.`);
+        return;
+      }
+    } catch (error) {
+      console.error('Failed to inspect IndexedDB backup state:', error);
+    }
+
     const backup = localStorage.getItem('workouts');
     if (backup) {
       try {
         const parsed = JSON.parse(backup);
         alert(`Backup found: ${parsed.length || 0} workouts. Try reloading.`);
-      } catch (e) {
+      } catch {
         alert('Backup data seems corrupted.');
       }
     } else {

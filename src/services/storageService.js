@@ -162,6 +162,29 @@ class StorageService {
   }
 
   /**
+   * Replace all items in a store atomically.
+   * Useful for small entity lists where deletions must persist as well.
+   * @param {string} storeName
+   * @param {Array} items
+   * @returns {Promise<void>}
+   */
+  async replaceAll(storeName, items = []) {
+    await this.init();
+    return new Promise((resolve, reject) => {
+      const transaction = this.db.transaction(storeName, 'readwrite');
+      const store = transaction.objectStore(storeName);
+
+      store.clear();
+      items.forEach(item => {
+        store.put(item);
+      });
+
+      transaction.onerror = () => reject(transaction.error);
+      transaction.oncomplete = () => resolve();
+    });
+  }
+
+  /**
    * Delete an item by ID
    * @param {string} storeName - Name of object store
    * @param {*} id - Item ID to delete

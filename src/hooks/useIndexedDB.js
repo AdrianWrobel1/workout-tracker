@@ -24,7 +24,7 @@ import { storage, STORES } from '../services/storageService';
  */
 export const useIndexedDBStore = (storeName, value, debounceMs = 200, options = {}) => {
   const timeoutRef = useRef(null);
-  const { skipSave = false } = options;
+  const { skipSave = false, replaceArrays = true } = options;
 
   useEffect(() => {
     if (skipSave || !value) return;
@@ -38,8 +38,11 @@ export const useIndexedDBStore = (storeName, value, debounceMs = 200, options = 
     timeoutRef.current = setTimeout(async () => {
       try {
         if (Array.isArray(value)) {
-          // For arrays (workouts, exercises, templates), save all items
-          await storage.setMany(storeName, value);
+          if (replaceArrays) {
+            await storage.replaceAll(storeName, value);
+          } else {
+            await storage.setMany(storeName, value);
+          }
         } else if (typeof value === 'object' && value !== null) {
           // For single objects, save with appropriate key
           await storage.set(storeName, value);
@@ -55,7 +58,7 @@ export const useIndexedDBStore = (storeName, value, debounceMs = 200, options = 
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [storeName, value, debounceMs, skipSave]);
+  }, [storeName, value, debounceMs, skipSave, replaceArrays]);
 };
 
 /**
@@ -67,11 +70,12 @@ export const useIndexedDBStore = (storeName, value, debounceMs = 200, options = 
  * @param {number} debounceMs - Debounce delay (default: 300ms)
  * @returns {void}
  */
-export const useIndexedDBSetting = (key, value, debounceMs = 300) => {
+export const useIndexedDBSetting = (key, value, debounceMs = 300, options = {}) => {
   const timeoutRef = useRef(null);
+  const { skipSave = false } = options;
 
   useEffect(() => {
-    if (typeof key !== 'string' || key === '') return;
+    if (skipSave || typeof key !== 'string' || key === '') return;
 
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
@@ -90,7 +94,7 @@ export const useIndexedDBSetting = (key, value, debounceMs = 300) => {
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [key, value, debounceMs]);
+  }, [key, value, debounceMs, skipSave]);
 };
 
 /**

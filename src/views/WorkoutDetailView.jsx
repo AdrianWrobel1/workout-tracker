@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { ChevronLeft, Clock, FileText, Medal, LayoutGrid, List } from 'lucide-react';
 import { formatDate, calculate1RM } from '../domain/calculations';
 import { resolveSetType } from '../domain/workoutExtensions';
+import SessionDebrief from '../components/SessionDebrief';
+import TechniqueDetector from '../components/TechniqueDetector';
 
 const SET_TYPE_META = {
   warmup: {
@@ -337,6 +339,18 @@ export const WorkoutDetailView = ({ selectedDate, workouts, onBack, exercisesDB 
                   );
                 })}
               </div>
+
+              {/* Coaching Section - Technique Detector + Session Debrief */}
+              {!isCompact && (
+                <>
+                  <div className="mt-6 pt-4 border-t border-slate-700/50">
+                    <TechniqueDetector workout={workout} allWorkouts={workouts} />
+                  </div>
+                  <div className="mt-6 pt-4 border-t border-slate-700/50">
+                    <SessionDebrief workout={workout} allWorkouts={workouts} exercisesDB={exercisesDB} />
+                  </div>
+                </>
+              )}
             </div>
           );
         })}
@@ -344,11 +358,4 @@ export const WorkoutDetailView = ({ selectedDate, workouts, onBack, exercisesDB 
     </div>
   );
 };
-
-
-
-
-
-
-
 

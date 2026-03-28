@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import { ErrorBoundary } from './components/ErrorBoundary.jsx'
 import { ModalProvider } from './contexts/ModalContext.jsx'
-import { WorkoutProvider, UIProvider, SettingsProvider } from './contexts/index.js'
+import { WorkoutProvider, UIProvider, SettingsProvider, DebriefsProvider, MotivationProvider, SmartPlanProvider } from './contexts/index.js'
 import './index.css' // Ważne!
 
 ReactDOM.createRoot(document.getElementById('root')).render(
@@ -13,7 +13,11 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <WorkoutProvider>
           <UIProvider>
             <SettingsProvider>
-              <App />
+              <DebriefsProvider>
+                <MotivationProvider>
+                  <App />
+                </MotivationProvider>
+              </DebriefsProvider>
             </SettingsProvider>
           </UIProvider>
         </WorkoutProvider>

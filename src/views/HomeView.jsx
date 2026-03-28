@@ -1,17 +1,21 @@
 import React, { useState, useMemo } from 'react';
 import { Edit2, Calendar, Check, Zap, ChevronDown, X } from 'lucide-react';
-import { getWeekWorkouts, getMonthWorkouts, getMonthLabel, compareWorkoutToPrevious, generateCoachLens } from '../domain/workouts';
+import { getWeekWorkouts, getMonthWorkouts, getMonthLabel, calculateMasteryLevel, calculateMomentum } from '../domain/workouts';
 import { WeekHeatmap } from '../components/WeekHeatmap';
 import { ProgressRing } from '../components/ProgressRing';
 import { MiniSparkline } from '../components/MiniSparkline';
 import { SimpleLineChart } from '../components/SimpleLineChart';
+import { EliteCoachingCard } from '../components/EliteCoachingCard';
 import { calculateTotalVolume, formatDate } from '../domain/calculations';
+import { generateEliteCoaching } from '../domain/eliteCoachingEngine';
 
-const QuickInsightsSection = ({ workouts, readiness, muscleBalance }) => {
+const QuickInsightsSection = ({ workouts, readiness, muscleBalance, masteryData, anomalyDetection }) => {
   const [open, setOpen] = useState(false);
   const [selectedInsight, setSelectedInsight] = useState(null);
   const [showDetailedChart, setShowDetailedChart] = useState(false);
-  const [detailModal, setDetailModal] = useState(null); // 'readiness' | 'balance' | null
+  const [detailModal, setDetailModal] = useState(null); // 'readiness' | 'balance' | 'mastery' | 'consistency' | 'readynext' | 'coaching' | null
+
+  const coaching = useMemo(() => generateEliteCoaching(workouts, readiness, masteryData, anomalyDetection), [workouts, readiness, masteryData, anomalyDetection]);
 
   // Calculate weekly volume data for last 12 weeks
   const weeklyChartData = useMemo(() => {
@@ -55,36 +59,72 @@ const QuickInsightsSection = ({ workouts, readiness, muscleBalance }) => {
   const readinessRatioMarker = Math.max(0, Math.min(100, (readinessRatio / 1.8) * 100));
   const readinessLoadMax = Math.max(1, Number(readiness?.acuteLoad) || 0, Number(readiness?.chronicLoad) || 0);
   
-  // Calculate PRs this week
-  const thisWeekPRCount = useMemo(() => {
+  // Calculate PRs this week with exercise info
+  const thisWeekPRs = useMemo(() => {
     const now = new Date();
     const weekStart = new Date(now);
     weekStart.setDate(now.getDate() - now.getDay());
     weekStart.setHours(0, 0, 0, 0);
     
-    let prCount = 0;
+    const prs = [];
     (workouts || []).forEach(w => {
       const wDate = new Date(w.date);
       if (wDate >= weekStart) {
-        Object.values(w.prStatus || {}).forEach(status => {
-          if (Array.isArray(status.recordsPerSet)) {
-            prCount += status.recordsPerSet.filter(records => records && records.length > 0).length;
+        Object.entries(w.prStatus || {}).forEach(([, status]) => {
+          // recordsPerSet is an object with setIndex as key and array of record types as value
+          if (status.recordsPerSet && typeof status.recordsPerSet === 'object') {
+            Object.entries(status.recordsPerSet).forEach(([setIdx, records]) => {
+              if (Array.isArray(records) && records.length > 0) {
+                prs.push({ exerciseName: status.exerciseName, recordTypes: records, setIndex: setIdx });
+              }
+            });
           }
         });
       }
     });
-    return prCount;
+    return prs;
+  }, [workouts]);
+  
+  const thisWeekPRCount = thisWeekPRs.length;
+  
+  // Calculate mastery and momentum
+  const resolvedMasteryData = useMemo(() => {
+    return masteryData ?? calculateMasteryLevel(workouts || []);
+  }, [masteryData, workouts]);
+  const momentumData = useMemo(() => calculateMomentum(workouts || []), [workouts]);
+  
+  // Calculate consistency (% of weeks with at least 1 workout in last 12 weeks)
+  const consistencyData = useMemo(() => {
+    const now = new Date();
+    const weeksData = new Map();
+    
+    (workouts || []).forEach(w => {
+      const wDate = new Date(w.date);
+      const normalized = new Date(wDate);
+      const day = (normalized.getDay() + 6) % 7; // Monday = 0
+      normalized.setDate(normalized.getDate() - day);
+      normalized.setHours(0, 0, 0, 0);
+      const weekKey = normalized.toISOString().split('T')[0];
+      weeksData.set(weekKey, true);
+    });
+    
+    let count = 0;
+    for (let i = 0; i < 12; i++) {
+      const weekEnd = new Date(now);
+      weekEnd.setDate(now.getDate() - (i * 7));
+      weekEnd.setHours(0, 0, 0, 0);
+      const normalized = new Date(weekEnd);
+      const day = (normalized.getDay() + 6) % 7;
+      normalized.setDate(normalized.getDate() - day);
+      normalized.setHours(0, 0, 0, 0);
+      const weekKey = normalized.toISOString().split('T')[0];
+      if (weeksData.has(weekKey)) count += 1;
+    }
+    
+    return { activeWeeks: count, totalWeeks: 12, consistency: Math.round((count / 12) * 100) };
   }, [workouts]);
 
-  // Calculate Coach Lens for latest workout
-  const coachLensQuick = useMemo(() => {
-    const latest = (workouts || [])
-      .filter((workout) => workout && workout.id !== 'activeWorkout' && workout.date)
-      .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
-    if (!latest) return null;
-    const comparison = compareWorkoutToPrevious(latest, workouts || []);
-    return generateCoachLens(latest, workouts || [], comparison, latest.prStatus || {});
-  }, [workouts]);
+
 
   return (
     <div>
@@ -161,50 +201,45 @@ const QuickInsightsSection = ({ workouts, readiness, muscleBalance }) => {
             </button>
           </div>
 
-          <button
-            onClick={() => setSelectedInsight('prs')}
-            className="w-full text-left mt-3 bg-gradient-to-br from-amber-900/30 to-amber-950/30 border border-amber-700/30 hover:border-amber-600/50 rounded-xl p-4 transition ui-stagger-enter ui-stagger-d5 ui-card-magnet"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] text-amber-400 font-semibold tracking-widest">THIS WEEK RECORDS</p>
-                <p className="text-2xl font-black text-white mt-2">{thisWeekPRCount}</p>
-                <p className="text-xs text-amber-200 mt-1">{thisWeekPRCount === 1 ? 'Personal Record' : 'Personal Records'}</p>
-              </div>
-              <div className="text-4xl opacity-20">🏆</div>
-            </div>
-          </button>
-
-          {coachLensQuick && (
+          <div className="grid grid-cols-2 gap-3 mt-3">
             <button
-              onClick={() => setSelectedInsight('coach')}
-              className="w-full text-left mt-3 bg-gradient-to-br from-green-900/25 to-green-950/25 border border-green-700/30 hover:border-green-600/50 rounded-xl p-3.5 transition ui-stagger-enter ui-stagger-d6 ui-card-magnet"
+              onClick={() => setSelectedInsight('prs')}
+              className="text-left bg-gradient-to-br from-amber-900/30 to-amber-950/30 border border-amber-700/30 rounded-xl p-3 transition hover:border-amber-600/50 ui-press ui-stagger-enter ui-stagger-d5 ui-card-magnet"
             >
-              <div className="flex items-start justify-between gap-2 mb-2">
-                <div className="flex-1 min-w-0">
-                  <p className="text-[10px] text-green-400 font-semibold tracking-widest">COACH INSIGHT</p>
-                  <p className="text-sm text-green-50 font-semibold mt-1 line-clamp-2">{coachLensQuick.headline || 'Session analysis ready'}</p>
-                </div>
-                <span className={`text-[10px] px-2 py-1 rounded-full border font-bold flex-shrink-0 whitespace-nowrap ${
-                  coachLensQuick.status === 'push'
-                    ? 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10'
-                    : coachLensQuick.status === 'recover'
-                    ? 'text-amber-300 border-amber-500/30 bg-amber-500/10'
-                    : 'text-sky-300 border-sky-500/30 bg-sky-500/10'
-                }`}>
-                  {coachLensQuick.status}
-                </span>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="rounded border border-green-700/40 bg-green-900/20 px-2 py-1.5">
-                  <p className="text-green-300 font-semibold">Keep: <span className="text-green-100">{coachLensQuick.keep?.slice(0, 20)}...</span></p>
-                </div>
-                <div className="rounded border border-green-700/40 bg-green-900/20 px-2 py-1.5">
-                  <p className="text-amber-300 font-semibold">Improve: <span className="text-amber-100">{coachLensQuick.improve?.slice(0, 15)}...</span></p>
-                </div>
-              </div>
+              <p className="text-[10px] text-amber-400 font-semibold tracking-widest">THIS WEEK RECORDS</p>
+              <p className="text-2xl font-black text-white mt-2">{thisWeekPRCount}</p>
+              <p className="text-xs text-amber-200 mt-1">{thisWeekPRCount === 1 ? 'Record' : 'Records'}</p>
             </button>
-          )}
+            
+            <button
+              onClick={() => setDetailModal('mastery')}
+              className="text-left bg-gradient-to-br from-purple-900/30 to-purple-950/30 border border-purple-700/30 rounded-xl p-3 transition hover:border-purple-600/50 ui-press ui-stagger-enter ui-stagger-d6 ui-card-magnet"
+            >
+              <p className="text-[10px] text-purple-400 font-semibold tracking-widest">MASTERY LEVEL</p>
+              <p className="text-2xl font-black text-white mt-2">{resolvedMasteryData.level}</p>
+              <p className="text-xs text-purple-200 mt-1 truncate">{resolvedMasteryData.title}</p>
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-3 mt-3">
+            <button
+              onClick={() => setDetailModal('consistency')}
+              className="text-left bg-gradient-to-br from-cyan-900/30 to-cyan-950/30 border border-cyan-700/30 rounded-xl p-3 transition hover:border-cyan-600/50 ui-press ui-stagger-enter ui-stagger-d7 ui-card-magnet"
+            >
+              <p className="text-[10px] text-cyan-400 font-semibold tracking-widest">CONSISTENCY</p>
+              <p className="text-2xl font-black text-white mt-2">{consistencyData.consistency}%</p>
+              <p className="text-xs text-cyan-200 mt-1">{consistencyData.activeWeeks}/12 weeks</p>
+            </button>
+            
+            <button
+              onClick={() => setDetailModal('coaching')}
+              className="text-left bg-gradient-to-br from-orange-900/30 to-red-900/30 border border-orange-700/30 rounded-xl p-3 transition hover:border-orange-600/50 ui-press ui-stagger-enter ui-stagger-d9 ui-card-magnet"
+            >
+              <p className="text-[10px] text-orange-400 font-semibold tracking-widest">💡 AI COACHING</p>
+              <p className="text-sm font-black text-white mt-2">{coaching?.trainingZone?.toUpperCase() || 'No Data'}</p>
+              <p className="text-xs text-orange-200 mt-1">{coaching?.repRange || 'Set target'} • {coaching?.sets || '3-4'} sets</p>
+            </button>
+          </div>
 
 
 
@@ -386,128 +421,6 @@ const QuickInsightsSection = ({ workouts, readiness, muscleBalance }) => {
           )}
 
                     
-          {detailModal === 'coach' && coachLensQuick && (
-            <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 ui-backdrop-in">
-              <div className="bg-slate-900 border border-slate-700 rounded-xl p-5 max-w-sm w-full ui-sheet-rise-anim">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-bold text-white">Coach Lens</h2>
-                  <button onClick={() => setDetailModal(null)} className="p-1 hover:bg-slate-800 rounded transition">
-                    <X size={18} className="text-slate-400" />
-                  </button>
-                </div>
-                <p className="text-sm text-slate-100 font-semibold">{coachLensQuick.headline}</p>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full border font-bold ${
-                    coachLensQuick.status === 'push'
-                      ? 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10'
-                      : coachLensQuick.status === 'recover'
-                      ? 'text-amber-300 border-amber-500/30 bg-amber-500/10'
-                      : 'text-sky-300 border-sky-500/30 bg-sky-500/10'
-                  }`}>
-                    status: {coachLensQuick.status}
-                  </span>
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full border font-bold ${
-                    coachLensQuick.confidence === 'high'
-                      ? 'text-emerald-200 border-emerald-500/30 bg-emerald-500/10'
-                      : coachLensQuick.confidence === 'medium'
-                      ? 'text-sky-200 border-sky-500/30 bg-sky-500/10'
-                      : 'text-slate-300 border-slate-600/50 bg-slate-700/30'
-                  }`}>
-                    confidence: {coachLensQuick.confidence || 'low'}
-                  </span>
-                  {coachLensQuick.actionCertainty && (
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full border font-bold ${getCertaintyTone(coachLensQuick.actionCertainty.level)}`}>
-                      certainty: {coachLensQuick.actionCertainty.score}/100
-                    </span>
-                  )}
-                </div>
-                <div className="grid grid-cols-3 gap-2 mt-3">
-                  <div className="rounded-lg border border-slate-700/50 bg-slate-800/40 p-2.5">
-                    <p className="text-[10px] text-slate-500 font-semibold tracking-widest">PROGRESSION</p>
-                    <p className="text-sm font-bold text-white">{coachLensQuick.scores?.progression ?? 0}</p>
-                  </div>
-                  <div className="rounded-lg border border-slate-700/50 bg-slate-800/40 p-2.5">
-                    <p className="text-[10px] text-slate-500 font-semibold tracking-widest">EXECUTION</p>
-                    <p className="text-sm font-bold text-white">{coachLensQuick.scores?.execution ?? 0}</p>
-                  </div>
-                  <div className="rounded-lg border border-slate-700/50 bg-slate-800/40 p-2.5">
-                    <p className="text-[10px] text-slate-500 font-semibold tracking-widest">RISK</p>
-                    <p className="text-sm font-bold text-white">{coachLensQuick.scores?.fatigueRisk ?? 0}</p>
-                  </div>
-                </div>
-                <div className="space-y-1.5 mt-3 rounded-lg border border-cyan-500/15 bg-slate-900/30 px-3 py-2.5">
-                  <p className="text-sm text-slate-100"><span className="text-emerald-300 font-semibold">Keep:</span> {coachLensQuick.keep}</p>
-                  <p className="text-sm text-slate-100"><span className="text-amber-300 font-semibold">Improve:</span> {coachLensQuick.improve}</p>
-                  <p className="text-sm text-slate-100"><span className="text-blue-300 font-semibold">Focus:</span> {coachLensQuick.focus}</p>
-                </div>
-                {coachLensQuick.actionCertainty && (
-                  <div className="mt-2 rounded-lg border border-slate-700/60 bg-slate-900/45 px-3 py-2.5">
-                    <p className="text-[10px] text-slate-400 font-semibold tracking-widest">ACTION CERTAINTY</p>
-                    <p className="text-xs text-slate-300 mt-1">{coachLensQuick.actionCertainty.reason}</p>
-                    <div className="grid grid-cols-3 gap-2 mt-2 text-[10px]">
-                      <div className="rounded border border-slate-700/50 bg-slate-800/40 px-2 py-1">
-                        <p className="text-slate-500">Tracked</p>
-                        <p className="text-slate-100 font-bold">{coachLensQuick.actionCertainty.exposures?.trackedExercises ?? 0}</p>
-                      </div>
-                      <div className="rounded border border-slate-700/50 bg-slate-800/40 px-2 py-1">
-                        <p className="text-slate-500">Avg exp.</p>
-                        <p className="text-slate-100 font-bold">{coachLensQuick.actionCertainty.exposures?.average ?? 0}</p>
-                      </div>
-                      <div className="rounded border border-slate-700/50 bg-slate-800/40 px-2 py-1">
-                        <p className="text-slate-500">Stale</p>
-                        <p className="text-slate-100 font-bold">{coachLensQuick.actionCertainty.decay?.staleExercises ?? 0}</p>
-                      </div>
-                    </div>
-                    {(coachLensQuick.actionCertainty.perExercise || []).length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {(coachLensQuick.actionCertainty.perExercise || []).slice(0, 4).map((item) => (
-                          <span key={item.exerciseId} className={`text-[10px] px-2 py-0.5 rounded-full border ${getCertaintyTone(item.level)}`}>
-                            {item.exerciseName}: {item.score}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-                {(coachLensQuick.highlights || []).length > 0 && (
-                  <div className="mt-2 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2.5">
-                    <p className="text-[10px] text-emerald-300 font-semibold tracking-widest">WHAT WENT WELL</p>
-                    <div className="mt-1.5 space-y-1">
-                      {(coachLensQuick.highlights || []).slice(0, 3).map((item, idx) => (
-                        <p key={`quick-hl-${idx}`} className="text-xs text-emerald-100">- {item}</p>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {(coachLensQuick.risks || []).length > 0 && (
-                  <div className="mt-2 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2.5">
-                    <p className="text-[10px] text-amber-300 font-semibold tracking-widest">WATCH NEXT SESSION</p>
-                    <div className="mt-1.5 space-y-1">
-                      {(coachLensQuick.risks || []).slice(0, 2).map((item, idx) => (
-                        <p key={`quick-risk-${idx}`} className="text-xs text-amber-100">- {item}</p>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {(coachLensQuick.nextSessionPlan || []).length > 0 && (
-                  <div className="mt-2 rounded-lg border border-cyan-500/20 bg-cyan-500/5 px-3 py-2.5">
-                    <p className="text-[10px] text-cyan-300 font-semibold tracking-widest">NEXT SESSION PLAN</p>
-                    <div className="mt-1.5 space-y-1">
-                      {(coachLensQuick.nextSessionPlan || []).slice(0, 3).map((step, idx) => (
-                        <p key={`quick-plan-${idx}`} className="text-xs text-cyan-100">{idx + 1}. {step}</p>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                <div className="mt-3 rounded-lg border border-slate-700/50 bg-slate-800/30 p-2.5 text-xs text-slate-300">
-                  <p>Volume delta: <span className="font-bold text-white">{coachLensQuick.snapshot?.volumeDeltaPct ?? 0}%</span></p>
-                  <p className="mt-1">Work sets: <span className="font-bold text-white">{coachLensQuick.snapshot?.completedWorkSets ?? 0}/{coachLensQuick.snapshot?.plannedWorkSets ?? 0}</span></p>
-                  <p className="mt-1">Density: <span className="font-bold text-white">{coachLensQuick.snapshot?.density ?? 0}/min</span></p>
-                  <p className="mt-1">PRs: <span className="font-bold text-white">{coachLensQuick.snapshot?.prCount ?? 0}</span></p>
-                </div>
-              </div>
-            </div>
-          )}
           {detailModal === 'balance' && (
             <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 ui-backdrop-in">
               <div className="bg-slate-900 border border-slate-700 rounded-xl p-5 max-w-sm w-full ui-sheet-rise-anim">
@@ -573,7 +486,7 @@ const QuickInsightsSection = ({ workouts, readiness, muscleBalance }) => {
 
           {selectedInsight === 'prs' && (
             <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-              <div className="bg-slate-900 border border-slate-700 rounded-lg p-6 max-w-sm w-full">
+              <div className="bg-slate-900 border border-slate-700 rounded-lg p-6 max-w-sm w-full max-h-[80dvh] overflow-y-auto">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-bold text-white">This Week's Records</h2>
                   <button
@@ -590,80 +503,196 @@ const QuickInsightsSection = ({ workouts, readiness, muscleBalance }) => {
                   </p>
                 </div>
                 {thisWeekPRCount > 0 && (
-                  <div className="bg-gradient-to-br from-amber-900/30 to-amber-950/30 border border-amber-700/30 rounded-lg p-4 mb-4">
-                    <p className="text-sm text-amber-200">Keep up the momentum! You're hitting new PRs this week.</p>
-                  </div>
+                  <>
+                    <div className="bg-gradient-to-br from-amber-900/30 to-amber-950/30 border border-amber-700/30 rounded-lg p-4 mb-4">
+                      <p className="text-sm text-amber-200">Keep up the momentum! You're hitting new PRs this week.</p>
+                    </div>
+                    <div className="space-y-2 mb-4">
+                      {thisWeekPRs.map((pr, idx) => (
+                        <div key={idx} className="bg-slate-800/50 border border-slate-700/30 rounded-lg p-3">
+                          <p className="text-sm font-bold text-white">{pr.exerciseName}</p>
+                          <p className="text-xs text-amber-200 mt-1">{pr.recordTypes.join(', ')}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </>
                 )}
                 <p className="text-xs text-slate-400 text-center">
-                  PRs count all types of records: heaviest weight, most reps, and best set volume.
+                  PRs count all types of records: best 1RM, best set volume, and heaviest weight.
                 </p>
               </div>
             </div>
           )}
 
-          {selectedInsight === 'coach' && coachLensQuick && (
+          {detailModal === 'mastery' && (
             <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-              <div className="bg-slate-900 border border-slate-700 rounded-lg p-6 max-w-sm w-full max-h-[90dvh] overflow-y-auto">
+              <div className="bg-slate-900 border border-slate-700 rounded-lg p-6 max-w-sm w-full">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-bold text-white">Coach Insight</h2>
+                  <h2 className="text-lg font-bold text-white">Mastery Level</h2>
                   <button
-                    onClick={() => setSelectedInsight(null)}
+                    onClick={() => setDetailModal(null)}
                     className="p-1 hover:bg-slate-800 rounded transition"
                   >
                     <X size={18} className="text-slate-400" />
                   </button>
                 </div>
+                <div className="bg-gradient-to-br from-purple-900/30 to-purple-950/30 border border-purple-700/30 rounded-lg p-4 mb-4 text-center">
+                  <p className="text-[10px] text-purple-400 font-semibold tracking-widest mb-2">CURRENT TIER</p>
+                  <p className="text-4xl font-black text-white mb-2">{resolvedMasteryData.level}</p>
+                  <p className="text-sm font-bold text-purple-200">{resolvedMasteryData.title}</p>
+                </div>
                 <div className="space-y-3">
-                  <div className="rounded-lg border border-green-700/40 bg-green-900/20 p-3">
-                    <p className="text-[10px] text-green-400 font-semibold tracking-widest mb-1">HEADLINE</p>
-                    <p className="text-lg font-bold text-green-50">{coachLensQuick.headline}</p>
+                  <div className="bg-slate-800/50 border border-slate-700/30 rounded-lg p-3">
+                    <p className="text-xs text-slate-400 mb-1">MASTERY POINTS</p>
+                    <p className="text-2xl font-bold text-white">{resolvedMasteryData.masteryPoints || 0}</p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className={`text-[10px] px-3 py-1 rounded-full border font-bold ${
-                      coachLensQuick.status === 'push'
-                        ? 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10'
-                        : coachLensQuick.status === 'recover'
-                        ? 'text-amber-300 border-amber-500/30 bg-amber-500/10'
-                        : 'text-sky-300 border-sky-500/30 bg-sky-500/10'
-                    }`}>
-                      Status: {coachLensQuick.status}
-                    </span>
-                    <span className={`text-[10px] px-3 py-1 rounded-full border font-bold ${
-                      coachLensQuick.confidence === 'high'
-                        ? 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10'
-                        : coachLensQuick.confidence === 'medium'
-                        ? 'text-sky-300 border-sky-500/30 bg-sky-500/10'
-                        : 'text-slate-300 border-slate-600/50 bg-slate-700/30'
-                    }`}>
-                      {coachLensQuick.confidence} confidence
-                    </span>
+                  <div className="bg-slate-800/50 border border-slate-700/30 rounded-lg p-3">
+                    <p className="text-xs text-slate-400 mb-1">TO NEXT TIER</p>
+                    <p className="text-sm text-slate-300">{resolvedMasteryData.nextMilestone || 'Master level achieved!'}</p>
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="rounded-lg border border-slate-700/50 bg-slate-900/40 p-2 text-center">
-                      <p className="text-[10px] text-slate-500 mb-1">PROGRESSION</p>
-                      <p className="text-sm font-bold text-white">{coachLensQuick.scores?.progression ?? 0}</p>
-                    </div>
-                    <div className="rounded-lg border border-slate-700/50 bg-slate-900/40 p-2 text-center">
-                      <p className="text-[10px] text-slate-500 mb-1">EXECUTION</p>
-                      <p className="text-sm font-bold text-white">{coachLensQuick.scores?.execution ?? 0}</p>
-                    </div>
-                    <div className="rounded-lg border border-slate-700/50 bg-slate-900/40 p-2 text-center">
-                      <p className="text-[10px] text-slate-500 mb-1">FATIGUE RISK</p>
-                      <p className="text-sm font-bold text-white">{coachLensQuick.scores?.fatigueRisk ?? 0}</p>
-                    </div>
+                  <div className="bg-slate-800/50 border border-slate-700/30 rounded-lg p-3">
+                    <p className="text-xs text-slate-400 mb-1">EXERCISES MASTERED</p>
+                    <p className="text-lg font-bold text-white">{resolvedMasteryData.exercisesMastered || 0}</p>
                   </div>
-                  <div className="rounded-lg border border-emerald-700/40 bg-emerald-900/20 p-3">
-                    <p className="text-[10px] text-emerald-400 font-semibold mb-1">KEEP</p>
-                    <p className="text-sm text-emerald-50">{coachLensQuick.keep}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {detailModal === 'consistency' && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+              <div className="bg-slate-900 border border-slate-700 rounded-lg p-6 max-w-sm w-full">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-bold text-white">Consistency Streak</h2>
+                  <button
+                    onClick={() => setDetailModal(null)}
+                    className="p-1 hover:bg-slate-800 rounded transition"
+                  >
+                    <X size={18} className="text-slate-400" />
+                  </button>
+                </div>
+                <div className="bg-gradient-to-br from-cyan-900/30 to-cyan-950/30 border border-cyan-700/30 rounded-lg p-4 mb-4 text-center">
+                  <p className="text-[10px] text-cyan-400 font-semibold tracking-widest mb-2">CONSISTENCY RATE</p>
+                  <p className="text-5xl font-black text-white mb-2">{consistencyData.consistency}%</p>
+                  <p className="text-sm text-cyan-200">{consistencyData.activeWeeks} out of 12 weeks active</p>
+                </div>
+                <div className="space-y-3">
+                  <div className="bg-slate-800/50 border border-slate-700/30 rounded-lg p-3">
+                    <p className="text-xs text-slate-400 mb-1">12-WEEK PERFORMANCE</p>
+                    <p className="text-sm text-slate-300">You've worked out in <span className="font-bold text-cyan-400">{consistencyData.activeWeeks}</span> weeks out of the last 12.</p>
                   </div>
-                  <div className="rounded-lg border border-amber-700/40 bg-amber-900/20 p-3">
-                    <p className="text-[10px] text-amber-400 font-semibold mb-1">IMPROVE</p>
-                    <p className="text-sm text-amber-50">{coachLensQuick.improve}</p>
+                  <div className="bg-gradient-to-br from-cyan-500/10 to-cyan-500/5 border border-cyan-500/20 rounded-lg p-3">
+                    <p className="text-xs text-cyan-300 font-semibold mb-2">💪 TIP</p>
+                    <p className="text-xs text-cyan-100">Aim for consistency over intensity. One workout every week is better than sporadic intensive sessions.</p>
                   </div>
-                  <div className="rounded-lg border border-blue-700/40 bg-blue-900/20 p-3">
-                    <p className="text-[10px] text-blue-400 font-semibold mb-1">NEXT FOCUS</p>
-                    <p className="text-sm text-blue-50">{coachLensQuick.focus}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {detailModal === 'readynext' && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+              <div className="bg-slate-900 border border-slate-700 rounded-lg p-6 max-w-sm w-full">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-bold text-white">Ready for Next Session?</h2>
+                  <button
+                    onClick={() => setDetailModal(null)}
+                    className="p-1 hover:bg-slate-800 rounded transition"
+                  >
+                    <X size={18} className="text-slate-400" />
+                  </button>
+                </div>
+                <div className={`bg-gradient-to-br ${
+                  momentumData.motivationTier === 'peak'
+                    ? 'from-emerald-900/30 to-emerald-950/30 border border-emerald-700/30'
+                    : momentumData.motivationTier === 'high'
+                    ? 'from-cyan-900/30 to-cyan-950/30 border border-cyan-700/30'
+                    : momentumData.motivationTier === 'moderate'
+                    ? 'from-amber-900/30 to-amber-950/30 border border-amber-700/30'
+                    : 'from-rose-900/30 to-rose-950/30 border border-rose-700/30'
+                } rounded-lg p-4 mb-4 text-center`}>
+                  <p className={`text-[10px] font-semibold tracking-widest mb-2 ${
+                    momentumData.motivationTier === 'peak'
+                      ? 'text-emerald-400'
+                      : momentumData.motivationTier === 'high'
+                      ? 'text-cyan-400'
+                      : momentumData.motivationTier === 'moderate'
+                      ? 'text-amber-400'
+                      : 'text-rose-400'
+                  }`}>MOTIVATION STATUS</p>
+                  <p className="text-3xl font-black text-white capitalize mb-2">{momentumData.motivationTier}</p>
+                  <p className={`text-sm ${
+                    momentumData.motivationTier === 'peak'
+                      ? 'text-emerald-200'
+                      : momentumData.motivationTier === 'high'
+                      ? 'text-cyan-200'
+                      : momentumData.motivationTier === 'moderate'
+                      ? 'text-amber-200'
+                      : 'text-rose-200'
+                  }`}>{momentumData.currentStreak} week streak going</p>
+                </div>
+                <div className="space-y-3">
+                  <div className="bg-slate-800/50 border border-slate-700/30 rounded-lg p-3">
+                    <p className="text-xs text-slate-400 mb-1">THIS WEEK'S MOMENTUM</p>
+                    <p className="text-sm text-slate-300">{momentumData.weeklyMessage || 'You\'re making great progress!'}</p>
                   </div>
+                  <div className={`rounded-lg p-3 ${
+                    momentumData.motivationTier === 'peak'
+                      ? 'bg-emerald-500/10 border border-emerald-500/20'
+                      : momentumData.motivationTier === 'high'
+                      ? 'bg-cyan-500/10 border border-cyan-500/20'
+                      : momentumData.motivationTier === 'moderate'
+                      ? 'bg-amber-500/10 border border-amber-500/20'
+                      : 'bg-rose-500/10 border border-rose-500/20'
+                  }`}>
+                    <p className={`text-xs font-semibold mb-2 ${
+                      momentumData.motivationTier === 'peak'
+                        ? 'text-emerald-300'
+                        : momentumData.motivationTier === 'high'
+                        ? 'text-cyan-300'
+                        : momentumData.motivationTier === 'moderate'
+                        ? 'text-amber-300'
+                        : 'text-rose-300'
+                    }`}>💡 SESSION PLAN</p>
+                    <p className="text-xs text-slate-200">{momentumData.sessionRecommendation || 'Time for a focused session!'}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* AI Coaching Modal */}
+          {detailModal === 'coaching' && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
+              <div className="bg-slate-900 border border-slate-700 rounded-xl p-5 max-w-md w-full my-8">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-bold text-white">Today's Coaching</h2>
+                  <button onClick={() => setDetailModal(null)} className="p-1 hover:bg-slate-800 rounded transition">
+                    <X size={18} className="text-slate-400" />
+                  </button>
+                </div>
+                <EliteCoachingCard 
+                  readiness={readiness} 
+                  masteryData={masteryData}
+                  anomalyDetection={anomalyDetection}
+                />
+
+                <div className="mt-4 rounded-lg border border-orange-500/30 bg-orange-900/20 p-3">
+                  <p className="text-xs text-orange-200 font-semibold mb-2">Action</p>
+                  <p className="text-[11px] text-orange-100 mb-3">
+                    This recommendation can be used as a template plan summary for your next session. Copy and paste into exercise notes or set up a matching plan in Template Plans.
+                  </p>
+                  <button
+                    onClick={() => {
+                      const summary = `AI Coaching: ${coaching.trainingZone} • ${coaching.intensity} • ${coaching.repRange} reps • ${coaching.sets} sets • RIR ${coaching.rirTarget}`;
+                      if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+                        navigator.clipboard.writeText(summary);
+                      }
+                    }}
+                    className="w-full px-3 py-2 bg-orange-500 hover:bg-orange-600 rounded-lg text-xs font-bold text-slate-900 transition"
+                  >
+                    Copy Plan Summary
+                  </button>
                 </div>
               </div>
             </div>
@@ -678,12 +707,6 @@ const getPairTone = (status) => {
   if (status === 'imbalanced') return 'text-rose-300 bg-rose-500/10 border-rose-500/30';
   if (status === 'slight') return 'text-amber-300 bg-amber-500/10 border-amber-500/30';
   return 'text-emerald-300 bg-emerald-500/10 border-emerald-500/30';
-};
-
-const getCertaintyTone = (level) => {
-  if (level === 'high') return 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10';
-  if (level === 'medium') return 'text-sky-300 border-sky-500/30 bg-sky-500/10';
-  return 'text-slate-300 border-slate-600/50 bg-slate-700/30';
 };
 
 const getPairLabel = (pair) => {
@@ -712,6 +735,8 @@ export const HomeView = ({
   weeklyGoal,
   readiness,
   muscleBalance,
+  masteryData,
+  anomalyDetection,
   trainingNotes,
   onTrainingNotesChange,
   onStartWorkout,
@@ -865,8 +890,10 @@ export const HomeView = ({
             <span className="text-xs">Calendar</span>
           </button>
         </div>
-        <QuickInsightsSection workouts={workouts} readiness={readiness} muscleBalance={muscleBalance} />
+        <QuickInsightsSection workouts={workouts} readiness={readiness} muscleBalance={muscleBalance} masteryData={masteryData} anomalyDetection={anomalyDetection} />
       </div>
+
+
 
       {/* Training Notes */}
       <div className="px-4 pb-4 ui-notes-reveal">
@@ -1007,6 +1034,8 @@ export const HomeView = ({
     </div>
   );
 };
+
+
 
 
 

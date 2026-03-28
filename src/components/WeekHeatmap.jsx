@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { calculateTotalVolume } from '../domain/calculations';
 
@@ -7,6 +8,8 @@ export const WeekHeatmap = ({ workouts = [] }) => {
   const [showMonthModal, setShowMonthModal] = useState(false);
   const [monthOffset, setMonthOffset] = useState(0);
   const [selectedCell, setSelectedCell] = useState(null);
+  const [modalPos, setModalPos] = useState(null);
+  const heatmapRef = useRef(null);
 
   const days = useMemo(() => {
     const today = new Date();
@@ -92,23 +95,35 @@ export const WeekHeatmap = ({ workouts = [] }) => {
       {/* Week heatmap with day labels */}
       <div className="mt-4">
         {/* Day labels */}
-        <div className="flex items-center gap-2 justify-center mb-2" aria-hidden>
+        <div className="flex items-center gap-3 justify-center mb-2" aria-hidden>
           {dayLabels.map((label, i) => (
-            <div key={i} className="w-3.5 sm:w-4 text-[9px] text-slate-500 font-bold text-center">
+            <div key={i} className="w-6 sm:w-4 text-[11px] sm:text-[9px] text-slate-500 font-bold text-center">
               {label}
             </div>
           ))}
         </div>
 
                 {/* Clickable heatmap */}
-        <div className="flex items-center gap-2 justify-center cursor-pointer" onClick={() => setShowMonthModal(true)}>
+        <div ref={heatmapRef} className="flex items-center gap-2 justify-center cursor-pointer" onClick={() => {
+            if (heatmapRef.current && typeof window !== 'undefined') {
+              const r = heatmapRef.current.getBoundingClientRect();
+              const centerY = r.top + r.height / 2;
+              const minY = window.innerHeight * 0.3;
+              const maxY = window.innerHeight * 0.7;
+              const top = Math.min(maxY, Math.max(minY, centerY));
+              setModalPos({ top, left: window.innerWidth / 2 });
+            } else if (typeof window !== 'undefined') {
+              setModalPos({ top: window.innerHeight / 2, left: window.innerWidth / 2 });
+            }
+            setShowMonthModal(true);
+          }}>
           {volumes.map((v, i) => {
             const isToday = i === volumes.length - 1;
             const isSelected = selectedCell === i;
-            return (
+              return (
               <div
                 key={i}
-                className={`w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full ${getColor(v)} transition-all duration-200 ease-out hover:scale-110 ${isToday ? 'heatmap-today ui-heatmap-today-pulse' : ''} ${isSelected ? 'ui-heatmap-cell-active' : ''}`}
+                className={`w-5 h-5 sm:w-4 sm:h-4 rounded-full ${getColor(v)} transition-all duration-200 ease-out hover:scale-110 ${isToday ? 'heatmap-today ui-heatmap-today-pulse' : ''} ${isSelected ? 'ui-heatmap-cell-active' : ''}`}
                 title={`${days[i].toDateString()}: ${v > 0 ? v + ' volume' : 'rest day'}`}
                 onMouseDown={() => setSelectedCell(i)}
                 onMouseUp={() => setTimeout(() => setSelectedCell(null), 300)}
@@ -122,11 +137,11 @@ export const WeekHeatmap = ({ workouts = [] }) => {
       </div>
 
       {/* Month calendar modal */}
-      {showMonthModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-700 rounded-lg p-6 max-w-sm w-full">
+      {showMonthModal && modalPos && (typeof document !== 'undefined' ? createPortal(
+        <div className="z-50" style={{ position: 'fixed', left: modalPos.left, top: modalPos.top, transform: 'translate(-50%, -50%)' }}>
+          <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 sm:p-8 max-w-3xl w-[96vw] sm:w-[80vw] lg:w-[60vw]">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-white">{monthStr}</h2>
+              <h2 className="text-xl sm:text-2xl font-extrabold text-white">{monthStr}</h2>
               <button
                 onClick={() => setShowMonthModal(false)}
                 className="p-1 hover:bg-slate-800 rounded transition"
@@ -158,10 +173,10 @@ export const WeekHeatmap = ({ workouts = [] }) => {
             </div>
 
             {/* Calendar grid */}
-            <div className="grid grid-cols-7 gap-1 text-center">
+            <div className="grid grid-cols-7 gap-2 sm:gap-3 text-center">
               {/* Day headers */}
               {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => (
-                <div key={d} className="text-[10px] font-bold text-slate-500 py-1">
+                <div key={d} className="text-[12px] sm:text-[11px] font-bold text-slate-400 py-2">
                   {d}
                 </div>
               ))}
@@ -180,7 +195,7 @@ export const WeekHeatmap = ({ workouts = [] }) => {
                 return (
                   <div
                     key={day}
-                    className={`w-full aspect-square flex items-center justify-center text-xs font-bold rounded transition ${
+                    className={`w-full aspect-square flex items-center justify-center text-sm sm:text-base font-extrabold rounded-md transition p-1 ${
                       vol > 0 ? getColor(vol) : 'bg-slate-800/30'
                     } ${isToday ? 'heatmap-today ui-heatmap-today-pulse' : ''}`}
                     title={vol > 0 ? `${vol} volume` : 'rest'}
@@ -197,8 +212,22 @@ export const WeekHeatmap = ({ workouts = [] }) => {
                 : 'No workout today'}
             </p>
           </div>
-        </div>
-      )}
+        </div>, document.body) : (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-slate-900 border border-slate-700 rounded-lg p-6 max-w-sm w-full">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold text-white">{monthStr}</h2>
+                <button
+                  onClick={() => setShowMonthModal(false)}
+                  className="p-1 hover:bg-slate-800 rounded transition"
+                >
+                  <X size={20} className="text-slate-400" />
+                </button>
+              </div>
+              <div className="grid grid-cols-7 gap-1 text-center">{Array(monthData.daysInMonth).fill(null).map((_, i) => <div key={i} />)}</div>
+            </div>
+          </div>
+        ))}
     </>
   );
 };

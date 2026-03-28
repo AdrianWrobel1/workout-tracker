@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { X, Plus } from 'lucide-react';
 import { TemplateCard } from '../components/TemplateCard';
+import { TemplatePlansEditor } from '../components/TemplatePlansEditor';
 
 export const TemplatesView = ({
   templates,
@@ -13,6 +14,13 @@ export const TemplatesView = ({
   onChange,
   onAddExercise
 }) => {
+  const [showPlansEditor, setShowPlansEditor] = useState(false);
+
+  const handleSavePlans = (updatedTemplate) => {
+    onChange(updatedTemplate);
+    setShowPlansEditor(false);
+  };
+
   if (editingTemplate) {
     return (
       <div className="bg-black text-white pb-32">
@@ -21,6 +29,13 @@ export const TemplatesView = ({
             <X size={22} />
           </button>
           <h1 className="text-lg sm:text-xl font-black flex-1 truncate">Edit Template</h1>
+          <button
+            onClick={() => setShowPlansEditor(true)}
+            className="px-3 py-2 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 font-bold text-sm rounded-lg transition"
+            title="Edit training plans"
+          >
+            📋 Plans
+          </button>
           <button
             onClick={onSave}
             className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm rounded-lg transition shadow-lg shadow-emerald-600/30 ui-press"
@@ -71,7 +86,25 @@ export const TemplatesView = ({
                     </button>
                   </div>
 
-                  <div className="space-y-2.5">
+                  {/* Exercise-specific training guidance */}
+                  <div className="bg-slate-800/40 border border-slate-700/40 rounded-lg p-2.5">
+                    <label className="text-[11px] text-slate-400 font-semibold">
+                      🎯 SESSION GUIDANCE (e.g., "explosive tempo", "4x8 heavy", "focus on control")
+                      <input
+                        type="text"
+                        value={exercise.planNotes || ''}
+                        onChange={(e) => {
+                          const updated = { ...editingTemplate };
+                          updated.exercises[exIndex].planNotes = e.target.value;
+                          onChange(updated);
+                        }}
+                        placeholder="Describe how this exercise should feel"
+                        maxLength={80}
+                        className="touch-input mt-1 w-full bg-slate-700/50 border border-slate-600/30 rounded-lg text-white text-sm placeholder-slate-500 focus:border-blue-500 outline-none"
+                      />
+                    </label>
+                  </div>
+                  <div className="space-y-2">
                     {(exercise.sets || []).length === 0 ? (
                       <p className="text-xs text-slate-500 text-center py-3 bg-slate-900/50 rounded-lg border border-slate-700/40">
                         No sets
@@ -132,7 +165,15 @@ export const TemplatesView = ({
                   <button
                     onClick={() => {
                       const updated = { ...editingTemplate };
-                      updated.exercises[exIndex].sets.push({ kg: 0, reps: 0 });
+                      const exerciseSets = updated.exercises[exIndex].sets || [];
+                      const lastSet = exerciseSets.length > 0 ? exerciseSets[exerciseSets.length - 1] : null;
+                      
+                      // Duplicate last set, or create empty if no sets exist
+                      const newSet = lastSet 
+                        ? { ...lastSet }
+                        : { kg: 0, reps: 0 };
+                      
+                      updated.exercises[exIndex].sets.push(newSet);
                       onChange(updated);
                     }}
                     className="w-full py-2.5 text-xs accent-text hover:opacity-80 hover:accent-bg-light accent-border-light rounded-lg transition font-bold"
@@ -161,6 +202,14 @@ export const TemplatesView = ({
             </button>
           </div>
         </div>
+
+        {showPlansEditor && (
+          <TemplatePlansEditor
+            template={editingTemplate}
+            onClose={() => setShowPlansEditor(false)}
+            onSave={handleSavePlans}
+          />
+        )}
       </div>
     );
   }
@@ -207,7 +256,6 @@ export const TemplatesView = ({
     </div>
   );
 };
-
 
 
 

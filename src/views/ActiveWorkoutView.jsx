@@ -1,13 +1,14 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { X, Plus, ChevronDown, Check } from 'lucide-react';
+import React, { useEffect, useMemo, useState, useContext } from 'react';
+import { X, Plus, ChevronDown, Check, ChevronUp } from 'lucide-react';
 import { SortableExerciseList } from '../components/SortableExerciseList';
 import { SessionTimelineStrip } from '../components/SessionTimelineStrip';
+import { PlanGuidanceDisplay } from '../components/PlanGuidanceDisplay';
+import { TemplatesContext } from '../contexts/TemplatesContext';
 import { formatTime } from '../domain/calculations';
 
 export const ActiveWorkoutView = ({
   activeWorkout,
   workouts,
-  templates,
   workoutTimer,
   readiness,
   autosaveStatus,
@@ -37,6 +38,12 @@ export const ActiveWorkoutView = ({
   const [warmupModeIndex, setWarmupModeIndex] = useState(null);
   const [progressViewMode, setProgressViewMode] = useState('bar'); // 'bar' | 'timeline'
   const [finishTapPulse, setFinishTapPulse] = useState(false);
+  const [showPlanSelector, setShowPlanSelector] = useState(false);
+  
+  const { templates, getActivePlan, selectPlanForTemplate } = useContext(TemplatesContext);
+  const templateId = activeWorkout?.templateId ?? null;
+  const currentTemplate = templates?.find(t => t.id === templateId) ?? null;
+  const currentPlan = getActivePlan?.(templateId) ?? null;
 
   const progressStats = useMemo(() => {
     const totalSets = (activeWorkout?.exercises || []).reduce(
@@ -158,6 +165,56 @@ export const ActiveWorkoutView = ({
               </span>
             </div>
           )}
+
+          {/* Plan Selector */}
+          {currentTemplate?.plans && currentTemplate.plans.length > 0 && (
+            <div className="relative">
+              <button
+                onClick={() => setShowPlanSelector(!showPlanSelector)}
+                className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg flex items-center justify-between hover:bg-slate-800 transition text-sm font-semibold text-white"
+              >
+                <span className="flex items-center gap-2">
+                  <span className="text-xs text-blue-400">📋</span>
+                  {currentPlan?.name || 'Select Plan'}
+                </span>
+                <ChevronUp size={16} className={`transition-transform ${showPlanSelector ? 'rotate-180' : 'rotate-0'}`} />
+              </button>
+
+              {showPlanSelector && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-slate-900 border border-slate-700 rounded-lg shadow-lg z-40 max-h-60 overflow-y-auto">
+                  <button
+                    onClick={() => {
+                      selectPlanForTemplate?.(activeWorkout?.templateId, null);
+                      setShowPlanSelector(false);
+                    }}
+                    className={`w-full px-3 py-2.5 text-left text-sm font-semibold border-b border-slate-700/30 ${currentPlan === null ? 'bg-blue-600/20 text-blue-100' : 'text-slate-300 hover:bg-slate-800/50'}`}
+                  >
+                    No plan
+                  </button>
+                  {currentTemplate.plans.map(plan => (
+                    <button
+                      key={plan.id}
+                      onClick={() => {
+                        selectPlanForTemplate?.(activeWorkout?.templateId, plan);
+                        setShowPlanSelector(false);
+                      }}
+                      className={`w-full px-3 py-2.5 text-left text-sm font-semibold border-b border-slate-700/30 last:border-b-0 transition ${
+                        currentPlan?.id === plan.id
+                          ? 'bg-blue-600/20 text-blue-100'
+                          : 'text-slate-300 hover:bg-slate-800/50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span>{plan.name}</span>
+                        <span className="text-[10px] text-slate-400">{plan.percentageRange.min}-{plan.percentageRange.max}%</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="flex items-baseline justify-between">
             <p className="text-xs text-slate-400 font-semibold tracking-widest">PROGRESS</p>
             <div className="flex items-center gap-2">
@@ -223,7 +280,7 @@ export const ActiveWorkoutView = ({
           exercises={activeWorkout.exercises}
           workouts={workouts}
           activeWorkoutStartTime={activeWorkout.startTime}
-          templateLastSnapshot={templates?.find(t => t.id === activeWorkout.templateId)?.lastWorkoutSnapshot ?? null}
+          templateLastSnapshot={currentTemplate?.lastWorkoutSnapshot ?? null}
           menuOpenIndex={menuOpenIndex}
           setMenuOpenIndex={setMenuOpenIndex}
           onReorderExercises={onReorderExercises}
@@ -246,6 +303,8 @@ export const ActiveWorkoutView = ({
           onOpenKeypad={onOpenKeypad}
           onCreateSuperset={onCreateSuperset}
           onRemoveSuperset={onRemoveSuperset}
+          currentTemplate={currentTemplate}
+          currentPlan={currentPlan}
         />
 
         <button
@@ -259,7 +318,6 @@ export const ActiveWorkoutView = ({
     </div>
   );
 };
-
 
 
 

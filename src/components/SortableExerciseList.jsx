@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { GripVertical, MoreVertical, Link2, Edit2, Flame, Zap, Trash, Link, Minus } from 'lucide-react';
 import {
   DndContext,
@@ -18,6 +19,7 @@ import {
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { ActiveWorkoutExerciseCard } from './ActiveWorkoutExerciseCard';
+import { PlanGuidanceDisplay } from './PlanGuidanceDisplay';
 import { getPreviousSets } from '../domain/workouts';
 
 /**
@@ -51,6 +53,8 @@ function SortableExerciseItem({
   allExercises,
   onCreateSuperset,
   onRemoveSuperset,
+  currentTemplate,
+  currentPlan,
 }) {
   const {
     attributes,
@@ -65,6 +69,9 @@ function SortableExerciseItem({
   const [showSupersetModal, setShowSupersetModal] = useState(false);
   const [exerciseSwapPulse, setExerciseSwapPulse] = useState(false);
   const [noteFocusPulse, setNoteFocusPulse] = useState(false);
+  const [menuPosition, setMenuPosition] = useState(null);
+  const menuRef = useRef(null);
+  const menuButtonRef = useRef(null);
   const prevExerciseNameRef = useRef(exercise.name);
 
   const style = {
@@ -133,12 +140,58 @@ function SortableExerciseItem({
     prevSetCountRef.current = exercise.sets.length;
   }, [exercise.sets.length, exIndex]);
 
+  useEffect(() => {
+    const handleDocumentClick = (event) => {
+      if (menuOpenIndex !== exIndex) return;
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setMenuOpenIndex(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleDocumentClick);
+    return () => document.removeEventListener('mousedown', handleDocumentClick);
+  }, [menuOpenIndex, exIndex, setMenuOpenIndex]);
+
+  useEffect(() => {
+    if (menuOpenIndex !== exIndex) {
+      return undefined;
+    }
+
+    const updateMenuPosition = () => {
+      if (!menuButtonRef.current) return;
+
+      const buttonRect = menuButtonRef.current.getBoundingClientRect();
+      const menuWidth = 224;
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const gap = 8;
+      const top = Math.max(12, Math.min(viewportHeight - 12, buttonRect.bottom + gap));
+      const left = Math.min(
+        viewportWidth - menuWidth - 12,
+        Math.max(12, buttonRect.right - menuWidth)
+      );
+      const maxHeight = Math.max(160, viewportHeight - top - 12);
+
+      setMenuPosition({ top, left, width: menuWidth, maxHeight });
+    };
+
+    const rafId = window.requestAnimationFrame(updateMenuPosition);
+    window.addEventListener('resize', updateMenuPosition);
+    window.addEventListener('scroll', updateMenuPosition, true);
+
+    return () => {
+      window.cancelAnimationFrame(rafId);
+      window.removeEventListener('resize', updateMenuPosition);
+      window.removeEventListener('scroll', updateMenuPosition, true);
+    };
+  }, [menuOpenIndex, exIndex]);
+
   return (
     <div
       ref={setNodeRef}
       style={style}
       data-exercise-index={exIndex}
-      className={`relative bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-4 transition-all duration-200 ease-out ui-exercise-card-stagger ui-list-item-lift ui-active-exercise-card ${menuOpenIndex === exIndex ? 'z-[80]' : 'z-0'} ${
+      className={`relative ${menuOpenIndex === exIndex ? 'z-[60] shadow-2xl' : 'z-0'} bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-4 transition-all duration-200 ease-out ui-exercise-card-stagger ui-list-item-lift ui-active-exercise-card ${
         isDragging ? 'ui-drag-active ring-2 ring-blue-500/70' : ''
       } ${isOver ? 'bg-blue-500/15 border-blue-500/50 ring-2 ring-blue-500/30 scale-[1.01]' : ''} ${supersetColor ? `border-l-4 ${supersetColor.border}` : ''} ${exercise.supersetId ? 'ui-superset-active' : ''}` }
     >
@@ -171,6 +224,12 @@ function SortableExerciseItem({
               </button>
             </div>
             <p className="text-xs text-slate-400 mt-1 font-semibold">{exercise.category}</p>
+            {currentPlan && (
+              <div className="mt-2 inline-flex items-center gap-1 text-[10px] font-semibold text-blue-100 bg-blue-700/25 border border-blue-500/40 px-2 py-1 rounded">
+                <span className="text-blue-200">📋 Plan:</span>
+                <span>{currentPlan.name}</span>
+              </div>
+            )}
             {(() => {
               const exFromDB = exercisesDB?.find(e => e.id === exercise.exerciseId);
               return exFromDB?.note && (
@@ -179,118 +238,140 @@ function SortableExerciseItem({
                 </div>
               );
             })()}
+            {exercise.planNotes && currentTemplate && (
+              <div className="mt-2 text-xs bg-blue-900/30 border border-blue-600/40 text-blue-300 px-2 py-1 rounded font-medium">
+                📌 {exercise.planNotes}
+              </div>
+            )}
           </div>
         </div>
 
         <div className="relative flex-shrink-0">
           <button
+            ref={menuButtonRef}
             onClick={(e) => {
               e.stopPropagation();
+              e.preventDefault();
               setMenuOpenIndex(menuOpenIndex === exIndex ? null : exIndex);
             }}
-            className="p-2 hover:bg-white/10 rounded-lg transition"
+            className="p-2 hover:bg-white/10 rounded-lg transition z-[50]"
           >
             <MoreVertical size={18} className="text-slate-400" />
           </button>
+        </div>
 
-          {menuOpenIndex === exIndex && (
-            <div className="absolute right-0 mt-2 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-[95] w-56 overflow-hidden ui-menu-pop pointer-events-auto">
-              {/* Exercise Actions Section */}
-              <div className="p-2">
-                <div className="text-xs font-bold text-slate-500 uppercase tracking-widest px-3 py-2">Exercise</div>
-                <button
-                  onClick={() => {
-                    onReplaceExercise(exIndex);
-                    setMenuOpenIndex(null);
-                  }}
-                  className="flex items-center gap-3 w-full text-left px-3 py-2.5 text-sm hover:bg-slate-800 rounded-lg transition text-blue-400 font-medium"
-                >
-                  <Edit2 size={16} className="flex-shrink-0" />
-                  <span>Replace Exercise</span>
-                </button>
-              </div>
-              
-              {/* Set Type Section */}
-              <div className="border-t border-slate-700 p-2">
-                <div className="text-xs font-bold text-slate-500 uppercase tracking-widest px-3 py-2">Set Types</div>
-                <button
-                  onClick={() => {
-                    onAddWarmupSet(exIndex);
-                    setMenuOpenIndex(null);
-                  }}
-                  className="flex items-center gap-3 w-full text-left px-3 py-2.5 text-sm hover:bg-slate-800 rounded-lg transition text-amber-400 font-medium"
-                >
-                  <Flame size={16} className="flex-shrink-0" />
-                  <span>Add Warmup Set</span>
-                </button>
-                <button
-                  onClick={() => {
-                    setWarmupModeIndex(warmupModeIndex === exIndex ? null : exIndex);
-                    setMenuOpenIndex(null);
-                  }}
-                  className="flex items-center gap-3 w-full text-left px-3 py-2.5 text-sm hover:bg-slate-800 rounded-lg transition text-amber-300 font-medium"
-                >
-                  <Zap size={16} className="flex-shrink-0" />
-                  <span>Edit Set Types</span>
-                </button>
-              </div>
-              
-              {/* Superset Section */}
-              <div className="border-t border-slate-700 p-2">
-                <div className="text-xs font-bold text-slate-500 uppercase tracking-widest px-3 py-2">Superset</div>
-                {!exercise.supersetId && allExercises.length > 1 && (
+          {menuOpenIndex === exIndex && typeof document !== 'undefined' && createPortal(
+            <>
+              <button
+                type="button"
+                aria-label="Close exercise menu"
+                className="fixed inset-0 z-[110] bg-black/30"
+                onClick={() => setMenuOpenIndex(null)}
+              />
+              <div
+                ref={menuRef}
+                className="fixed bg-slate-900 border border-slate-700 rounded-lg shadow-2xl z-[120] w-56 overflow-y-auto overflow-x-hidden ui-menu-pop"
+                style={menuPosition ? { top: `${menuPosition.top}px`, left: `${menuPosition.left}px`, maxHeight: `${menuPosition.maxHeight}px` } : { visibility: 'hidden' }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Exercise Actions Section */}
+                <div className="p-2">
+                  <div className="text-xs font-bold text-slate-500 uppercase tracking-widest px-3 py-2">Exercise</div>
                   <button
                     onClick={() => {
-                      setShowSupersetModal(true);
+                      onReplaceExercise(exIndex);
                       setMenuOpenIndex(null);
                     }}
-                    className="flex items-center gap-3 w-full text-left px-3 py-2.5 text-sm hover:bg-slate-800 rounded-lg transition text-purple-400 font-medium"
+                    className="flex items-center gap-3 w-full text-left px-3 py-2.5 text-sm hover:bg-slate-800 rounded-lg transition text-blue-400 font-medium"
                   >
-                    <Link size={16} className="flex-shrink-0" />
-                    <span>Create Superset</span>
+                    <Edit2 size={16} className="flex-shrink-0" />
+                    <span>Replace Exercise</span>
                   </button>
-                )}
-                {exercise.supersetId && (
+                </div>
+
+                {/* Set Type Section */}
+                <div className="border-t border-slate-700 p-2">
+                  <div className="text-xs font-bold text-slate-500 uppercase tracking-widest px-3 py-2">Set Types</div>
                   <button
                     onClick={() => {
-                      onRemoveSuperset(exIndex);
+                      onAddWarmupSet(exIndex);
                       setMenuOpenIndex(null);
                     }}
-                    className="flex items-center gap-3 w-full text-left px-3 py-2.5 text-sm hover:bg-slate-800 rounded-lg transition text-purple-300 font-medium"
+                    className="flex items-center gap-3 w-full text-left px-3 py-2.5 text-sm hover:bg-slate-800 rounded-lg transition text-amber-400 font-medium"
                   >
-                    <Minus size={16} className="flex-shrink-0" />
-                    <span>Remove Superset</span>
+                    <Flame size={16} className="flex-shrink-0" />
+                    <span>Add Warmup Set</span>
                   </button>
-                )}
+                  <button
+                    onClick={() => {
+                      setWarmupModeIndex(warmupModeIndex === exIndex ? null : exIndex);
+                      setMenuOpenIndex(null);
+                    }}
+                    className="flex items-center gap-3 w-full text-left px-3 py-2.5 text-sm hover:bg-slate-800 rounded-lg transition text-amber-300 font-medium"
+                  >
+                    <Zap size={16} className="flex-shrink-0" />
+                    <span>Edit Set Types</span>
+                  </button>
+                </div>
+
+                {/* Superset Section */}
+                <div className="border-t border-slate-700 p-2">
+                  <div className="text-xs font-bold text-slate-500 uppercase tracking-widest px-3 py-2">Superset</div>
+                  {!exercise.supersetId && allExercises.length > 1 && (
+                    <button
+                      onClick={() => {
+                        setShowSupersetModal(true);
+                        setMenuOpenIndex(null);
+                      }}
+                      className="flex items-center gap-3 w-full text-left px-3 py-2.5 text-sm hover:bg-slate-800 rounded-lg transition text-purple-400 font-medium"
+                    >
+                      <Link size={16} className="flex-shrink-0" />
+                      <span>Create Superset</span>
+                    </button>
+                  )}
+                  {exercise.supersetId && (
+                    <button
+                      onClick={() => {
+                        onRemoveSuperset(exIndex);
+                        setMenuOpenIndex(null);
+                      }}
+                      className="flex items-center gap-3 w-full text-left px-3 py-2.5 text-sm hover:bg-slate-800 rounded-lg transition text-purple-300 font-medium"
+                    >
+                      <Minus size={16} className="flex-shrink-0" />
+                      <span>Remove Superset</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Delete Section */}
+                <div className="border-t border-slate-700 p-2">
+                  <div className="text-xs font-bold text-slate-500 uppercase tracking-widest px-3 py-2">Delete</div>
+                  <button
+                    onClick={() => {
+                      setDeleteModeIndex(deleteModeIndex === exIndex ? null : exIndex);
+                      setMenuOpenIndex(null);
+                    }}
+                    className="flex items-center gap-3 w-full text-left px-3 py-2.5 text-sm hover:bg-red-500/20 rounded-lg transition text-red-400 font-medium mb-2"
+                  >
+                    <Trash size={16} className="flex-shrink-0" />
+                    <span>Delete Sets</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (confirm('Delete this exercise?')) {
+                        onDeleteExercise(exIndex);
+                      }
+                      setMenuOpenIndex(null);
+                    }}
+                    className="flex items-center gap-3 w-full text-left px-3 py-2.5 text-sm hover:bg-red-500/20 rounded-lg transition text-red-500 font-bold"
+                  >
+                    <Trash size={16} className="flex-shrink-0" />
+                    <span>Delete Exercise</span>
+                  </button>
+                </div>
               </div>
-              
-              {/* Delete Section */}
-              <div className="border-t border-slate-700 p-2">
-                <div className="text-xs font-bold text-slate-500 uppercase tracking-widest px-3 py-2">Delete</div>
-                <button
-                  onClick={() => {
-                    setDeleteModeIndex(deleteModeIndex === exIndex ? null : exIndex);
-                    setMenuOpenIndex(null);
-                  }}
-                  className="flex items-center gap-3 w-full text-left px-3 py-2.5 text-sm hover:bg-red-500/20 rounded-lg transition text-red-400 font-medium mb-2"
-                >
-                  <Trash size={16} className="flex-shrink-0" />
-                  <span>Delete Sets</span>
-                </button>
-                <button
-                  onClick={() => {
-                    if (confirm('Delete this exercise?')) {
-                      onDeleteExercise(exIndex);
-                    }
-                    setMenuOpenIndex(null);
-                  }}
-                  className="flex items-center gap-3 w-full text-left px-3 py-2.5 text-sm hover:bg-red-500/20 rounded-lg transition text-red-500 font-bold"
-                >
-                  <Trash size={16} className="flex-shrink-0" />
-                  <span>Delete Exercise</span>
-                </button>
-              </div>
-            </div>
+            </>,
+            document.body
           )}
           
           {/* Superset Modal */}
@@ -329,7 +410,6 @@ function SortableExerciseItem({
               </div>
             </div>
           )}
-        </div>
       </div>
 
       {/* Delete mode - Toggle delete buttons on individual sets */}
@@ -371,6 +451,16 @@ function SortableExerciseItem({
       </div>
 
       {/* Exercise Card */}
+      {currentPlan && currentTemplate && (
+        <div className="mb-2">
+          <PlanGuidanceDisplay 
+            template={currentTemplate}
+            exercise={exercise}
+            sets={exercise.sets || []}
+            plan={currentPlan}
+          />
+        </div>
+      )}
       <ActiveWorkoutExerciseCard
         exercise={exercise}
         exerciseIndex={exIndex}
@@ -421,6 +511,8 @@ export function SortableExerciseList({
   onOpenKeypad,
   onCreateSuperset,
   onRemoveSuperset,
+  currentTemplate,
+  currentPlan,
 }) {
   // Configure sensors: PointerSensor (desktop), TouchSensor (mobile)
   // Delay touch sensor activation to prevent accidental triggers
@@ -496,6 +588,8 @@ export function SortableExerciseList({
               allExercises={exercises}
               onCreateSuperset={onCreateSuperset}
               onRemoveSuperset={onRemoveSuperset}
+              currentTemplate={currentTemplate}
+              currentPlan={currentPlan}
             />
           ))}
         </div>
@@ -503,7 +597,3 @@ export function SortableExerciseList({
     </DndContext>
   );
 }
-
-
-
-

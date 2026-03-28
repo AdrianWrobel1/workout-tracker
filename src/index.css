@@ -1008,17 +1008,24 @@ body {
 }
 
 
-.active-workout-bar {
+.mini-workout-shell {
   position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 0;
+  right: 0;
   bottom: calc(64px + 24px + env(safe-area-inset-bottom));
-  width: min(92%, 500px);
+  display: flex;
+  justify-content: center;
   z-index: 2000;
+  pointer-events: none;
+}
+
+.active-workout-bar {
+  width: min(92%, 500px);
   border-radius: 16px;
   box-shadow:
     0 8px 24px rgba(0,0,0,0.6),
     0 0 40px rgba(168,85,247,0.35);
+  pointer-events: auto;
 }
 
 .bottom-navbar {

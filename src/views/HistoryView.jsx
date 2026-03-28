@@ -187,6 +187,15 @@ const HistoryViewInner = ({
     resetEditorHelpers();
   };
 
+  const editSummary = useMemo(() => {
+    if (!editData) return { exerciseCount: 0, setCount: 0, totalVolume: 0, prCount: 0 };
+    const exerciseCount = (editData.exercises || []).length;
+    const setCount = (editData.exercises || []).reduce((sum, ex) => sum + ((ex.sets || []).length), 0);
+    const totalVolume = (editData.exercises || []).reduce((sum, ex) => sum + calculateTotalVolume(ex.sets || []), 0);
+    const prCount = (editData.exercises || []).reduce((sum, ex) => sum + ((ex.sets || []).filter(s => s?.isBest1RM || s?.isBestSetVolume || s?.isHeaviestWeight).length), 0);
+    return { exerciseCount, setCount, totalVolume, prCount };
+  }, [editData]);
+
   const handleOpenWorkoutFromHistory = (workout) => {
     if (!onViewWorkoutDetail) return;
     if (prWorkoutIds.has(workout.id)) {
@@ -276,8 +285,23 @@ const HistoryViewInner = ({
         <div className="fixed inset-x-0 top-0 z-50 bg-black/85 backdrop-blur-sm" style={{ height: 'calc(100vh - 4rem)' }}>
           <div className="h-full w-full sm:max-w-3xl sm:mx-auto sm:my-4 sm:h-[calc(100%-2rem)] bg-gradient-to-br from-slate-900/98 to-black border border-slate-700/60 sm:rounded-2xl flex flex-col shadow-2xl">
             <div className="p-4 border-b border-slate-700/50 bg-slate-950/90">
-              <p className="text-[11px] text-slate-400 font-semibold tracking-widest uppercase">Edit Workout</p>
-              <h2 className="text-lg font-black text-white mt-1 truncate">{current.name || 'Workout'}</h2>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[11px] text-slate-400 font-semibold tracking-widest uppercase">Edit Workout</p>
+                  <h2 className="text-lg font-black text-white mt-1 truncate">{current.name || 'Workout'}</h2>
+                </div>
+                <div className="text-xs text-slate-300 text-right">
+                  <p className="font-semibold">{current.date}</p>
+                  <p>{current.duration || 0} min</p>
+                </div>
+              </div>
+
+              <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] text-slate-400">
+                <div className="rounded-lg bg-slate-800/40 p-2">Exercises: <span className="font-bold text-white">{editSummary.exerciseCount}</span></div>
+                <div className="rounded-lg bg-slate-800/40 p-2">Sets: <span className="font-bold text-white">{editSummary.setCount}</span></div>
+                <div className="rounded-lg bg-slate-800/40 p-2">Volume: <span className="font-bold text-white">{editSummary.totalVolume}kg</span></div>
+                <div className="rounded-lg bg-slate-800/40 p-2">PR sets: <span className="font-bold text-white">{editSummary.prCount}</span></div>
+              </div>
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-24">
@@ -323,6 +347,15 @@ const HistoryViewInner = ({
                       </div>
                     </div>
                   ))}
+
+                  <div className="flex justify-center">
+                    <button
+                      onClick={() => updateEdit(updated => { updated.exercises[exIdx].sets.push({ kg: 0, reps: 0, completed: false }); })}
+                      className="w-fit px-3 py-2 text-xs font-bold rounded-lg bg-blue-600 hover:bg-blue-500 text-white transition"
+                    >
+                      + Add Set
+                    </button>
+                  </div>
                 </div>
               ))}
 
