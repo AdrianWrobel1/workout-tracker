@@ -1,27 +1,36 @@
-import { mapCategoryToMuscles } from '../domain/workouts';
+import { resolveAttribution, attributeAmount } from '../domain/muscles';
 import { isWorkSet } from '../domain/workoutExtensions';
-import { getRecentWorkouts, getWeekStartKey } from '../utils/workoutSelectors';
+import { parseWorkoutDate, getWeekStartKey as getCanonicalWeekStartKey } from '../domain/dates';
 
 const DEFAULT_OPTIONS = {
   weeksWindow: 12,
   minWeeksWithData: 4,
+  // Legacy option, kept for caller compatibility: precedence is now always
+  // the canonical one (stored V2 > knowledge base > legacy muscles >
+  // workout targets > category > unknown). Any value is accepted, ignored.
   musclesSource: 'exerciseDBFirst',
-  exerciseMap: null
+  exerciseMap: null,
+  exercisesDB: null,
 };
 
-const resolveMuscles = (exercise, options) => {
-  const exerciseMap = options.exerciseMap || {};
-  const entry = exercise?.exerciseId != null ? exerciseMap[exercise.exerciseId] : null;
-
-  if (options.musclesSource === 'exerciseDBFirst') {
-    if (entry?.muscles?.length) return entry.muscles;
-    if (exercise?.targetMuscles?.length) return exercise.targetMuscles;
-    return mapCategoryToMuscles(exercise?.category);
+const toExerciseMap = (options) => {
+  if (options.exerciseMap instanceof Map) return options.exerciseMap;
+  if (options.exerciseMap && typeof options.exerciseMap === 'object') {
+    return new Map(Object.entries(options.exerciseMap));
   }
+  if (Array.isArray(options.exercisesDB)) {
+    return new Map(options.exercisesDB.map((ex) => [ex?.id, ex]));
+  }
+  return new Map();
+};
 
-  if (exercise?.targetMuscles?.length) return exercise.targetMuscles;
-  if (entry?.muscles?.length) return entry.muscles;
-  return mapCategoryToMuscles(exercise?.category);
+/**
+ * Canonical weighted attribution: { axis: weightedSetCount }. Unknown
+ * exercises contribute nothing (never smeared).
+ */
+const resolveMuscles = (exercise, exerciseMap) => {
+  const resolution = resolveAttribution(exercise, exerciseMap);
+  return resolution.weights || {};
 };
 
 const average = (values) => {
@@ -45,21 +54,47 @@ const getConfidence = (activeWeeks, minWeeksWithData) => {
   return 'low';
 };
 
+/** Canonical confidence (NONE/LIMITED/NORMAL/STRONG) for Coaching V2. */
+const getConfidenceV2 = (activeWeeks, minWeeksWithData) => {
+  if (activeWeeks >= 8) return 'STRONG';
+  if (activeWeeks >= minWeeksWithData) return 'NORMAL';
+  if (activeWeeks >= 2) return 'LIMITED';
+  return 'NONE';
+};
+
+const resolveNowMs = (now) => {
+  if (now instanceof Date) {
+    const t = now.getTime();
+    return Number.isFinite(t) ? t : Date.now();
+  }
+  if (typeof now === 'number' && Number.isFinite(now)) return now;
+  const parsed = parseWorkoutDate(now);
+  if (parsed) return parsed.getTime();
+  return Date.now();
+};
+
 export const computeVolumeLandmarks = (workouts = [], options = {}) => {
   const settings = { ...DEFAULT_OPTIONS, ...options };
-  const referenceNow = options.now || new Date();
-  const recentWorkouts = getRecentWorkouts(
-    workouts,
-    settings.weeksWindow * 7,
-    referenceNow
-  );
+  const nowMs = resolveNowMs(options.now ?? new Date());
+  // Local 12-week window with canonical date parsing (legacy date-only =
+  // local midnight) and future exclusion. Replaces the UTC-based
+  // utils/workoutSelectors range helper for this evidence feed.
+  const windowMs = settings.weeksWindow * 7 * 24 * 60 * 60 * 1000;
+  const startTs = nowMs - windowMs;
+  const recentWorkouts = (Array.isArray(workouts) ? workouts : []).filter((w) => {
+    const parsed = parseWorkoutDate(w?.date);
+    if (!parsed) return false;
+    const ts = parsed.getTime();
+    return ts >= startTs && ts <= nowMs;
+  });
 
-  const byMuscleWeek = new Map(); // muscle -> Map<weekKey, workSetCount>
+  const byMuscleWeek = new Map(); // muscle -> Map<weekKey, weightedWorkSets>
   const allWeekKeys = new Set();
+  const exerciseMap = toExerciseMap(settings);
 
   for (let i = 0; i < recentWorkouts.length; i += 1) {
     const workout = recentWorkouts[i];
-    const weekKey = getWeekStartKey(workout?.date);
+    const weekKey = getCanonicalWeekStartKey(workout?.date);
     if (!weekKey) continue;
     allWeekKeys.add(weekKey);
 
@@ -74,12 +109,14 @@ export const computeVolumeLandmarks = (workouts = [], options = {}) => {
       }
       if (workSetCount === 0) continue;
 
-      const muscles = resolveMuscles(exercise, settings);
-      for (let m = 0; m < muscles.length; m += 1) {
-        const muscle = muscles[m];
+      const weights = resolveMuscles(exercise, exerciseMap);
+      const attributed = attributeAmount({ weights }, workSetCount);
+      for (const muscle of Object.keys(attributed)) {
+        const value = attributed[muscle];
+        if (!(value > 0)) continue;
         if (!byMuscleWeek.has(muscle)) byMuscleWeek.set(muscle, new Map());
         const weekMap = byMuscleWeek.get(muscle);
-        weekMap.set(weekKey, (weekMap.get(weekKey) || 0) + workSetCount);
+        weekMap.set(weekKey, (weekMap.get(weekKey) || 0) + value);
       }
     }
   }
@@ -105,12 +142,19 @@ export const computeVolumeLandmarks = (workouts = [], options = {}) => {
       high,
       recent: Math.round(average(recentSlice)),
       trend: getTrend(recentSlice, previousSlice),
-      confidence: getConfidence(activeSeries.length, settings.minWeeksWithData)
+      confidence: getConfidence(activeSeries.length, settings.minWeeksWithData),
+      confidenceV2: getConfidenceV2(activeSeries.length, settings.minWeeksWithData),
+      activeWeeks: activeSeries.length
     };
   });
 
   return {
     byMuscle,
-    generatedAt: new Date(referenceNow).toISOString()
+    // Explicit unit: landmarks track WEIGHTED WORK SETS per week per axis
+    // (primary 1.0 / secondary 0.5 via canonical attribution), NOT kg tonnage.
+    // Coaching V2 must not compare these numbers to work-volume kg.
+    unit: 'weighted-work-sets-per-week',
+    volumeSemantics: 'weighted-work-sets',
+    generatedAt: new Date(nowMs).toISOString()
   };
 };

@@ -14,3 +14,11 @@ The React Compiler is not enabled on this template because of its impact on dev 
 ## Expanding the ESLint configuration
 
 If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+
+## Artwork attribution
+
+The Body Map geometry (`src/components/bodyArtwork.js`) is adapted from the
+original [MuscleMap](https://github.com/melihcolpan/MuscleMap) artwork by Melih
+Colpan, used under the MIT License. The full license text (including the
+copyright notice) is reproduced at the top of that module, as the license
+requires for all copies or substantial portions.

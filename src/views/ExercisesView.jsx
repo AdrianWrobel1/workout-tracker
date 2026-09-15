@@ -78,63 +78,70 @@ export const ExercisesView = ({ exercisesDB, onAddExercise, onEditExercise, onDe
   return (
     <div className="bg-black text-white pb-16 flex flex-col">
       {/* Header */}
-      <div className="bg-gradient-to-b from-black to-black/80 border-b border-white/10 p-4 shrink-0 shadow-2xl sticky top-0 z-20">
-        <div className="flex items-center justify-between gap-3">
-          <h1 className="text-4xl font-black">EXERCISES</h1>
+      <div className="bg-black/95 backdrop-blur border-b border-white/10 p-4 shrink-0 sticky top-0 z-20">
+        <div className="flex items-center justify-between gap-3 max-w-2xl mx-auto w-full">
+          <div className="min-w-0">
+            <h1 className="ui-display">Exercises</h1>
+            <p className="ui-micro mt-1">Your exercise library</p>
+          </div>
           <button
             onClick={() => setCompactMode(!compactMode)}
-            className="p-2 hover:bg-white/10 rounded-lg transition text-slate-400 hover:text-white"
+            aria-label={compactMode ? 'Switch to card view' : 'Switch to compact list view'}
+            aria-pressed={compactMode}
+            className="ui-action-secondary min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-300"
             title={compactMode ? 'Grid view' : 'Compact list view'}
           >
-            {compactMode ? <Grid3X3 size={20} /> : <List size={20} />}
+            {compactMode ? <Grid3X3 size={20} aria-hidden="true" /> : <List size={20} aria-hidden="true" />}
           </button>
         </div>
-        <p className="text-xs text-slate-400 mt-2 font-semibold tracking-widest">YOUR EXERCISE LIBRARY</p>
       </div>
 
-      <div className="p-4 grow overflow-y-auto flex flex-col">
+      <div className="p-4 grow overflow-y-auto flex flex-col max-w-2xl mx-auto w-full">
         {/* Add Exercise Button */}
         <button
           onClick={onAddExercise}
-          className="w-full bg-gradient-accent hover:opacity-90 transition text-white rounded-xl p-4 mb-4 font-bold flex items-center justify-center gap-2 shadow-lg ui-press"
-          style={{ boxShadow: `0 10px 25px -5px var(--accent)` }}
+          className="ui-cta-primary w-full rounded-xl p-4 mb-4 font-bold flex items-center justify-center gap-2 min-h-[52px] ui-press"
         >
-          <Plus size={20} /> Add Exercise
+          <Plus size={20} aria-hidden="true" /> Add Exercise
         </button>
 
         {/* Search Bar */}
-        <div className="relative mb-4">
-          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+        <div className="relative mb-3">
+          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" aria-hidden="true" />
+          <label className="sr-only" htmlFor="exercise-search">Search exercises</label>
           <input
+            id="exercise-search"
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search exercises..."
-            className="w-full bg-slate-800/50 border border-slate-600/50 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-slate-500 focus:border-accent focus:outline-none focus:accent-ring transition"
+            className="touch-input w-full ui-surface-secondary pl-10 pr-4 py-3 text-sm text-white placeholder-slate-500 focus:border-accent focus:outline-none transition"
           />
         </div>
 
         {/* Sort + Category row */}
-        <div className="flex gap-2 mb-4">
+        <div className="flex gap-2 mb-3">
           <div className="relative flex-1" ref={sortDropdownRef}>
             <button
               onClick={() => setShowSortDropdown(!showSortDropdown)}
-              className="w-full bg-slate-800/50 border border-slate-600/50 hover:bg-slate-700/50 text-white rounded-lg px-4 py-3 text-sm font-bold flex items-center justify-between transition touch-input"
+              aria-expanded={showSortDropdown}
+              className="ui-action-secondary w-full px-4 py-3 text-sm font-bold flex items-center justify-between transition touch-input min-h-[48px]"
             >
-              <span>Sort: {SORT_OPTIONS.find(o => o.id === sortBy)?.label || 'Name A–Z'}</span>
-              <span className={`text-xs transition-transform ${showSortDropdown ? 'rotate-180' : ''}`}>▾</span>
+              <span className="truncate">Sort: {SORT_OPTIONS.find(o => o.id === sortBy)?.label || 'Name A–Z'}</span>
+              <span className={`text-xs shrink-0 transition-transform ${showSortDropdown ? 'rotate-180' : ''}`} aria-hidden="true">▾</span>
             </button>
             {showSortDropdown && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-slate-900/95 border border-slate-700/50 rounded-lg shadow-lg z-50">
+              <div className="absolute top-full left-0 right-0 mt-2 bg-slate-900/95 border border-slate-700/50 rounded-lg shadow-lg z-50 overflow-hidden">
                 {SORT_OPTIONS.map(opt => (
                   <button
                     key={opt.id}
                     onClick={() => { setSortBy(opt.id); setShowSortDropdown(false); }}
-                    className={`w-full text-left px-4 py-3 text-sm font-semibold transition-colors ${
+                    aria-current={sortBy === opt.id ? 'true' : undefined}
+                    className={`w-full text-left px-4 py-3 min-h-[44px] text-sm font-semibold transition-colors ${
                       sortBy === opt.id ? 'accent-bg-light text-white' : 'text-slate-300 hover:bg-slate-800/50'
                     }`}
                   >
-                    {opt.label}
+                    {opt.label}{sortBy === opt.id ? ' ✓' : ''}
                   </button>
                 ))}
               </div>
@@ -144,25 +151,26 @@ export const ExercisesView = ({ exercisesDB, onAddExercise, onEditExercise, onDe
             <div className="relative flex-1" ref={dropdownRef}>
               <button
                 onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
-                className="w-full bg-slate-800/50 border border-slate-600/50 hover:bg-slate-700/50 text-white rounded-lg px-4 py-3 text-sm font-bold flex items-center justify-between transition touch-input"
+                aria-expanded={showCategoryDropdown}
+                className="ui-action-secondary w-full px-4 py-3 text-sm font-bold flex items-center justify-between transition touch-input min-h-[48px]"
               >
                 <span className="truncate">Tag: {categoryFilter || 'All'}</span>
-                <span className={`text-xs shrink-0 transition-transform ${showCategoryDropdown ? 'rotate-180' : ''}`}>▾</span>
+                <span className={`text-xs shrink-0 transition-transform ${showCategoryDropdown ? 'rotate-180' : ''}`} aria-hidden="true">▾</span>
               </button>
             {showCategoryDropdown && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-slate-900/95 border border-slate-700/50 rounded-lg shadow-lg z-50">
+              <div className="absolute top-full left-0 right-0 mt-2 bg-slate-900/95 border border-slate-700/50 rounded-lg shadow-lg z-50 overflow-hidden max-h-64 overflow-y-auto">
                 <button
                   onClick={() => {
                     setCategoryFilter(null);
                     setShowCategoryDropdown(false);
                   }}
-                  className={`w-full text-left px-4 py-3 text-sm font-semibold transition-colors ${
+                  className={`w-full text-left px-4 py-3 min-h-[44px] text-sm font-semibold transition-colors ${
                     categoryFilter === null
                       ? 'accent-bg-light text-white'
                       : 'text-slate-300 hover:bg-slate-800/50'
                   }`}
                 >
-                  All
+                  All{categoryFilter === null ? ' ✓' : ''}
                 </button>
                 {categories.map(cat => (
                   <button
@@ -171,13 +179,13 @@ export const ExercisesView = ({ exercisesDB, onAddExercise, onEditExercise, onDe
                       setCategoryFilter(cat);
                       setShowCategoryDropdown(false);
                     }}
-                    className={`w-full text-left px-4 py-3 text-sm font-semibold transition-colors ${
+                    className={`w-full text-left px-4 py-3 min-h-[44px] text-sm font-semibold transition-colors ${
                       categoryFilter === cat
                         ? 'accent-bg-light text-white'
                         : 'text-slate-300 hover:bg-slate-800/50'
                     }`}
                   >
-                    {cat}
+                    {cat}{categoryFilter === cat ? ' ✓' : ''}
                   </button>
                 ))}
               </div>
@@ -188,17 +196,17 @@ export const ExercisesView = ({ exercisesDB, onAddExercise, onEditExercise, onDe
 
         {/* Results Count */}
         {searchQuery && (
-          <p className="text-xs text-slate-400 mb-3">Found {filtered.all.length} exercise{filtered.all.length !== 1 ? 's' : ''}</p>
+          <p className="ui-secondary mb-3" role="status">Found {filtered.all.length} exercise{filtered.all.length !== 1 ? 's' : ''}</p>
         )}
 
         {/* Exercise List */}
         {filtered.all.length === 0 ? (
           <div className="flex-1 flex items-center justify-center">
-            <div className="text-center">
-              <p className="text-slate-400 text-sm font-semibold">
-                {searchQuery ? 'No exercises match your search' : 'No exercises yet'}
+            <div className="ui-surface-secondary text-center px-6 py-10 w-full">
+              <p className="ui-card-title">
+                {searchQuery ? 'No matches' : 'No exercises yet'}
               </p>
-              <p className="text-slate-600 text-xs mt-2">
+              <p className="ui-secondary mt-1.5">
                 {searchQuery ? 'Try a different search term' : 'Create your first exercise to get started'}
               </p>
             </div>
@@ -217,7 +225,7 @@ export const ExercisesView = ({ exercisesDB, onAddExercise, onEditExercise, onDe
                     <div className="font-semibold text-white group-hover:accent-text transition truncate">{exercise.name}</div>
                     <div className="text-xs text-slate-500">{exercise.category} • {exercise.muscles?.join(', ') || 'General'}</div>
                   </div>
-                  {exercise.isFavorite && <span className="text-amber-400 ml-2 shrink-0">⭐</span>}
+                  {exercise.isFavorite && <span className="text-amber-300 ml-2 shrink-0 text-sm font-black" aria-label="Favorite" role="img">★</span>}
                 </div>
               </button>
             ))}
@@ -228,7 +236,7 @@ export const ExercisesView = ({ exercisesDB, onAddExercise, onEditExercise, onDe
             items={filtered.all}
             itemHeight={140}
             overscan={3}
-            renderItem={(exercise, idx) => (
+            renderItem={(exercise) => (
               <ExerciseCard
                 key={exercise.id}
                 exercise={exercise}
@@ -244,8 +252,8 @@ export const ExercisesView = ({ exercisesDB, onAddExercise, onEditExercise, onDe
             {/* Favorites Section */}
             {filtered.favorites.length > 0 && (
               <>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-xs font-black text-amber-400 tracking-widest">⭐ FAVORITES</span>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="ui-micro !text-amber-300">★ Favorites</span>
                   <div className="flex-1 h-px bg-amber-500/20"></div>
                 </div>
                 {filtered.favorites.map(exercise => (
@@ -263,8 +271,8 @@ export const ExercisesView = ({ exercisesDB, onAddExercise, onEditExercise, onDe
             
             {/* Other Exercises */}
             {filtered.others.length > 0 && filtered.favorites.length > 0 && (
-              <div className="flex items-center gap-2 my-4">
-                <span className="text-xs font-black text-slate-500 tracking-widest">ALL EXERCISES</span>
+              <div className="flex items-center gap-2 my-3">
+                <span className="ui-micro">All exercises</span>
                 <div className="flex-1 h-px bg-slate-700/30"></div>
               </div>
             )}

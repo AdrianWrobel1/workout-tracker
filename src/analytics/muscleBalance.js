@@ -1,5 +1,11 @@
 import { isWorkSet } from '../domain/workoutExtensions';
-import { mapCategoryToMuscles } from '../domain/workouts';
+import { parseWorkoutDate } from '../domain/dates';
+import {
+  PUSH_AXES,
+  PULL_AXES,
+  resolveAttribution,
+  detailWeights,
+} from '../domain/muscles';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_OPTIONS = {
@@ -8,18 +14,33 @@ const DEFAULT_OPTIONS = {
 };
 
 const toTs = (dateValue) => {
-  const ts = new Date(dateValue).getTime();
-  return Number.isFinite(ts) ? ts : null;
+  const parsed = parseWorkoutDate(dateValue);
+  if (parsed) return parsed.getTime();
+  return null;
 };
 
-const normalizeText = (value) => String(value || '').toLowerCase();
+/**
+ * Canonical set contributions from ONE resolution. No name/category keyword
+ * heuristics: push/pull/chest/back come from the weighted axis attribution,
+ * quads/hamstrings from the leg detail tags (each detail inherits its
+ * roll-up axis weight). Unknown exercises contribute to nothing.
+ */
+const classifySetContributions = (exercise, workSetCount, exerciseMap) => {
+  const resolution = resolveAttribution(exercise, exerciseMap);
+  const weights = resolution.weights || {};
+  const details = detailWeights(resolution);
 
-const inferMuscles = (exercise, exerciseMap) => {
-  const dbExercise = exercise?.exerciseId != null ? exerciseMap.get(exercise.exerciseId) : null;
-  const fromDb = Array.isArray(dbExercise?.muscles) ? dbExercise.muscles : [];
-  const fromWorkout = Array.isArray(exercise?.targetMuscles) ? exercise.targetMuscles : [];
-  const fallback = mapCategoryToMuscles(exercise?.category);
-  return (fromDb.length ? fromDb : (fromWorkout.length ? fromWorkout : fallback)).map(normalizeText);
+  let push = 0;
+  let pull = 0;
+  for (const axis of PUSH_AXES) push += (Number(weights[axis]) || 0) * workSetCount;
+  for (const axis of PULL_AXES) pull += (Number(weights[axis]) || 0) * workSetCount;
+
+  const chest = (Number(weights.Chest) || 0) * workSetCount;
+  const back = (Number(weights.Back) || 0) * workSetCount;
+  const quads = (Number(details.Quads) || 0) * workSetCount;
+  const hamstrings = (Number(details.Hamstrings) || 0) * workSetCount;
+
+  return { push, pull, chest, back, quads, hamstrings };
 };
 
 const addPair = (bucket, pairKey, sideA, sideB, aValue, bValue) => {
@@ -33,37 +54,6 @@ const addPair = (bucket, pairKey, sideA, sideB, aValue, bValue) => {
   }
   bucket[pairKey].a += aValue;
   bucket[pairKey].b += bValue;
-};
-
-const classifySetContributions = (exercise, workSetCount, muscles) => {
-  const name = normalizeText(exercise?.name);
-  const category = normalizeText(exercise?.category);
-  const contains = (terms) => terms.some(term => muscles.includes(term) || name.includes(term) || category.includes(term));
-
-  let push = 0;
-  let pull = 0;
-  if (contains(['chest', 'shoulders', 'triceps', 'push'])) push += workSetCount;
-  if (contains(['back', 'biceps', 'pull', 'rear'])) pull += workSetCount;
-
-  let chest = 0;
-  let back = 0;
-  if (contains(['chest', 'pec'])) chest += workSetCount;
-  if (contains(['back', 'lat'])) back += workSetCount;
-
-  let quads = 0;
-  let hamstrings = 0;
-  const quadHint = contains(['quad', 'squat', 'leg press', 'lunge', 'split squat', 'extension', 'hack']);
-  const hamHint = contains(['ham', 'rdl', 'deadlift', 'curl', 'good morning', 'hip thrust', 'glute']);
-  if (quadHint && hamHint) {
-    quads += workSetCount * 0.5;
-    hamstrings += workSetCount * 0.5;
-  } else if (quadHint) {
-    quads += workSetCount;
-  } else if (hamHint) {
-    hamstrings += workSetCount;
-  }
-
-  return { push, pull, chest, back, quads, hamstrings };
 };
 
 const finalizePair = (pair) => {
@@ -169,8 +159,7 @@ export const calculateMuscleBalance = (workouts = [], exercisesDB = [], options 
       }
       if (workSetCount === 0) continue;
 
-      const muscles = inferMuscles(exercise, exerciseMap);
-      const values = classifySetContributions(exercise, workSetCount, muscles);
+      const values = classifySetContributions(exercise, workSetCount, exerciseMap);
 
       if (inWeek) {
         addPair(weekScope.pairs, 'pushPull', 'Push', 'Pull', values.push, values.pull);

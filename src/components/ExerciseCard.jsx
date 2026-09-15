@@ -15,52 +15,65 @@ export const ExerciseCard = React.memo(({
   return (
     <div
       onClick={() => onViewDetail && onViewDetail(exercise.id)}
-      className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-4 cursor-pointer hover:from-slate-800/60 hover:to-slate-900/60 hover:border-slate-600/70 transition-all group ui-card-mount-anim"
+      onKeyDown={(e) => {
+        if ((e.key === 'Enter' || e.key === ' ') && onViewDetail) {
+          e.preventDefault();
+          onViewDetail(exercise.id);
+        }
+      }}
+      role={onViewDetail ? 'button' : undefined}
+      tabIndex={onViewDetail ? 0 : undefined}
+      aria-label={onViewDetail ? `View details for ${exercise.name}` : undefined}
+      className="ui-surface-secondary p-4 cursor-pointer hover:border-slate-500/40 transition-all group ui-card-mount-anim"
     >
-      <div className="flex justify-between items-start gap-4">
+      <div className="flex justify-between items-start gap-3">
         <div className="flex-1 min-w-0">
-          <h3 className="font-black text-lg text-white group-hover:text-blue-400 transition">{exercise.name}</h3>
-          <div className="flex flex-wrap gap-2 mt-2">
+          <h3 className="ui-card-title text-base truncate group-hover:accent-text transition">{exercise.name}</h3>
+          <div className="flex flex-wrap gap-1.5 mt-2">
             {exercise.category && (
-              <span className="text-xs accent-bg-light accent-text accent-border-light px-2.5 py-1 rounded-full border font-semibold">
+              <span className="text-[11px] ui-active-pill px-2.5 py-1 font-bold">
                 {exercise.category}
               </span>
             )}
             {exercise.muscles && exercise.muscles.length > 0 && (
               exercise.muscles.map((muscle) => (
-                <span key={`${exercise.id}-${muscle}`} className="text-xs bg-slate-700/50 text-slate-300 px-2.5 py-1 rounded-full border border-slate-600/50 font-semibold">
+                <span key={`${exercise.id}-${muscle}`} className="text-[11px] ui-surface-sub px-2.5 py-1 font-semibold text-slate-300">
                   {muscle}
                 </span>
               ))
             )}
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-1.5 shrink-0">
           {onToggleFavorite && (
             <button
               onClick={(e) => { e.stopPropagation(); onToggleFavorite(exercise.id); }}
-              className={`p-2 border rounded-lg transition ${exercise.isFavorite ? 'bg-yellow-500/20 border-yellow-500/30 text-yellow-400' : 'bg-slate-700/20 hover:bg-slate-700/30 border-slate-600/50 text-slate-400'}`}
+              aria-label={exercise.isFavorite ? `Remove ${exercise.name} from favorites` : `Add ${exercise.name} to favorites`}
+              aria-pressed={Boolean(exercise.isFavorite)}
+              className={`min-w-[44px] min-h-[44px] flex items-center justify-center border rounded-[12px] transition ${exercise.isFavorite ? 'bg-yellow-500/15 border-yellow-500/40 text-yellow-300' : 'bg-slate-700/20 hover:bg-slate-700/30 border-slate-600/40 text-slate-400'}`}
               title={exercise.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
             >
-              <Star size={16} fill={exercise.isFavorite ? 'currentColor' : 'none'} />
+              <Star size={16} fill={exercise.isFavorite ? 'currentColor' : 'none'} aria-hidden="true" />
             </button>
           )}
           {onEditExercise && (
             <button
               onClick={(e) => { e.stopPropagation(); onEditExercise(exercise); }}
-              className="p-2 accent-bg/30 hover:accent-bg/50 border accent-border rounded-lg accent-text transition"
+              aria-label={`Edit ${exercise.name}`}
+              className="ui-action-secondary min-w-[44px] min-h-[44px] flex items-center justify-center accent-text"
               title="Edit"
             >
-              <Edit2 size={16} />
+              <Edit2 size={16} aria-hidden="true" />
             </button>
           )}
           {onDeleteExercise && (
             <button
               onClick={(e) => { e.stopPropagation(); onDeleteExercise(exercise.id); }}
-              className="p-2 bg-red-600/20 hover:bg-red-600/30 border border-red-500/30 rounded-lg text-red-400 transition"
+              aria-label={`Delete ${exercise.name}`}
+              className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-[12px] bg-red-500/10 border border-red-500/30 text-red-300/90 hover:bg-red-500/20 transition"
               title="Delete"
             >
-              <Trash2 size={16} />
+              <Trash2 size={16} aria-hidden="true" />
             </button>
           )}
         </div>

@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { X, Plus, Search, ChevronRight } from 'lucide-react';
+import { primaryOf } from '../domain/muscles';
 
 export const ExerciseSelectorModal = ({
   exercisesDB,
@@ -11,10 +12,8 @@ export const ExerciseSelectorModal = ({
   const [q, setQ] = useState('');
   const [sortBy, setSortBy] = useState('name'); // 'name' | 'muscle'
 
-  const getPrimaryGroup = (exercise) => {
-    const muscles = Array.isArray(exercise?.muscles) ? exercise.muscles.filter(Boolean) : [];
-    return muscles[0] || exercise?.category || 'Other';
-  };
+  // Canonical grouping: same primary axis the Body Map attributes to.
+  const getPrimaryGroup = (exercise) => primaryOf(exercise);
 
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase();

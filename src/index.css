@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./styles/ui30.css";
 
 html, body {
   height: 100%;
@@ -44,6 +45,16 @@ body {
   input.touch-input[type="text"] {
     font-size: 16px !important;
   }
+}
+
+/* Keyboard focus must always be visible (release-gate a11y): many controls
+   rely on native buttons without per-component focus rings, and the SVG body
+   map uses roving tabindex. One global rule covers bottom nav, dialogs,
+   rest-timer bar, statistics ranges and template controls. */
+:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: 2px;
+  border-radius: 6px;
 }
 
 /* Ukrycie paska przewijania, ale zachowanie funkcjonalności */
@@ -1018,7 +1029,6 @@ body {
   z-index: 2000;
   pointer-events: none;
 }
-
 .active-workout-bar {
   width: min(92%, 500px);
   border-radius: 16px;
@@ -1116,6 +1126,131 @@ body {
   /* removed spacer height to prevent phantom scroll gap */
   height: 0;
   flex-shrink: 0;
+}
+
+/* --- Rest timer (floating, non-blocking) --- */
+.rest-timer-shell {
+  position: fixed;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  z-index: 1500;
+  pointer-events: none;
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+.rest-timer-card {
+  width: min(92%, 500px);
+  pointer-events: auto;
+  background: linear-gradient(to bottom right, rgba(30, 41, 59, 0.97), rgba(2, 6, 23, 0.97));
+  border: 1px solid rgba(52, 211, 153, 0.25);
+  border-radius: 16px;
+  padding: 12px 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 32px rgba(16, 185, 129, 0.18);
+  backdrop-filter: blur(8px);
+}
+
+.rest-timer-time {
+  font-size: 28px;
+  line-height: 1;
+  font-weight: 900;
+  color: #fff;
+  min-width: 78px;
+  font-variant-numeric: tabular-nums;
+}
+
+.rest-timer-track {
+  height: 6px;
+  background: rgba(51, 65, 85, 0.7);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.rest-timer-fill {
+  height: 100%;
+  background: linear-gradient(to right, #059669, #34d399);
+  border-radius: 9999px;
+  transition: width 1s linear;
+}
+
+.rest-timer-controls {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.rest-timer-btn {
+  flex: 1;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 14px;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+.rest-timer-btn-ghost {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #e2e8f0;
+}
+
+.rest-timer-btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.rest-timer-btn-primary {
+  background: linear-gradient(to right, #059669, #16a34a);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(5, 150, 105, 0.4);
+}
+
+.rest-timer-btn-primary:hover {
+  filter: brightness(1.1);
+}
+
+.rest-timer-done {
+  border-color: rgba(52, 211, 153, 0.5);
+}
+
+@keyframes ui-rest-done-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.35); opacity: 0.75; }
+}
+.rest-timer-done-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 9999px;
+  background: #34d399;
+  box-shadow: 0 0 10px rgba(52, 211, 153, 0.8);
+  animation: ui-rest-done-pulse 1.2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+/* While resting, let scrolled content clear the floating bar. */
+body.resting .app-content {
+  padding-bottom: calc(190px + env(safe-area-inset-bottom));
+}
+
+:root[data-motion='reduced'] .rest-timer-fill {
+  transition: none;
+}
+
+@media (max-width: 480px) {
+  .rest-timer-card {
+    width: 94%;
+    border-radius: 14px;
+  }
+  .rest-timer-time {
+    font-size: 24px;
+    min-width: 68px;
+  }
 }
 
 

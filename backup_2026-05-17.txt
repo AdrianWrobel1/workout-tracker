@@ -1,0 +1,1345 @@
+WORKOUT EXPORT REPORT
+Generated: 5/18/2026, 1:02:39 AM
+Workouts: 71
+Exercises: 31
+Templates: 6
+
+------------------------------------------------------------------------
+
+TEMPLATE SUMMARY
+1. Pull A (8 exercises)
+2. Push-dipy A (7 exercises)
+3. Nogi (1 exercises)
+4. Pull B (4 exercises)
+5. Push-ohp B (6 exercises)
+6. Nogi (1 exercises)
+
+------------------------------------------------------------------------
+
+1. Push | 2025-11-03
+   Duration: 90 min
+   - Bench Press
+      1) [WORK] 100 kg x 5 (1RM 117)
+   - Dumbbell Shoulder Press
+      1) [WORK] 25 kg x 8 (1RM 32)
+   - Cable Triceps Pushdown
+      1) [WORK] 45 kg x 10 (1RM 60)
+
+2. Pull | 2025-11-04
+   Duration: 85 min
+   - Weighted Pull-Ups
+      1) [WORK] 10 kg x 6 (1RM 12)
+   - Barbell Row
+      1) [WORK] 60 kg x 10 (1RM 80)
+   - Hammer Curl
+      1) [WORK] 17.5 kg x 6 (1RM 21)
+
+3. Legs | 2025-11-05
+   Duration: 70 min
+   - Back Squat
+      1) [WORK] 60 kg x 10 (1RM 80)
+   - Leg Extension
+      1) [WORK] 25 kg x 12 (1RM 35)
+
+4. Pull | 2025-11-06
+   Duration: 85 min
+   - Weighted Pull-Ups
+      1) [WORK] 10 kg x 6 (1RM 12)
+   - Barbell Row
+      1) [WORK] 60 kg x 10 (1RM 80)
+   - Hammer Curl
+      1) [WORK] 17.5 kg x 6 (1RM 21)
+
+5. Push | 2025-11-07
+   Duration: 90 min
+   - Bench Press
+      1) [WORK] 100 kg x 5 (1RM 117)
+   - Dumbbell Shoulder Press
+      1) [WORK] 25 kg x 8 (1RM 32)
+   - Cable Triceps Pushdown
+      1) [WORK] 45 kg x 10 (1RM 60)
+
+6. Pull | 2025-11-10
+   Duration: 85 min
+   - Weighted Pull-Ups
+      1) [WORK] 10 kg x 6 (1RM 12)
+   - Barbell Row
+      1) [WORK] 60 kg x 10 (1RM 80)
+   - Hammer Curl
+      1) [WORK] 17.5 kg x 6 (1RM 21)
+
+7. Push | 2025-11-13
+   Duration: 90 min
+   - Bench Press
+      1) [WORK] 100 kg x 5 (1RM 117)
+   - Dumbbell Shoulder Press
+      1) [WORK] 25 kg x 8 (1RM 32)
+   - Cable Triceps Pushdown
+      1) [WORK] 45 kg x 10 (1RM 60)
+
+8. Legs | 2025-11-14
+   Duration: 70 min
+   - Back Squat
+      1) [WORK] 60 kg x 10 (1RM 80)
+   - Leg Extension
+      1) [WORK] 25 kg x 12 (1RM 35)
+
+9. Push | 2025-11-17
+   Duration: 90 min
+   - Bench Press
+      1) [WORK] 100 kg x 5 (1RM 117)
+   - Dumbbell Shoulder Press
+      1) [WORK] 25 kg x 8 (1RM 32)
+   - Cable Triceps Pushdown
+      1) [WORK] 45 kg x 10 (1RM 60)
+
+10. Pull | 2025-11-18
+   Duration: 85 min
+   - Weighted Pull-Ups
+      1) [WORK] 10 kg x 6 (1RM 12)
+   - Barbell Row
+      1) [WORK] 60 kg x 10 (1RM 80)
+   - Hammer Curl
+      1) [WORK] 17.5 kg x 6 (1RM 21)
+
+11. Push | 2025-11-20
+   Duration: 90 min
+   - Bench Press
+      1) [WORK] 100 kg x 5 (1RM 117)
+   - Dumbbell Shoulder Press
+      1) [WORK] 25 kg x 8 (1RM 32)
+   - Cable Triceps Pushdown
+      1) [WORK] 45 kg x 10 (1RM 60)
+
+12. Pull | 2025-11-21
+   Duration: 85 min
+   - Weighted Pull-Ups
+      1) [WORK] 10 kg x 6 (1RM 12)
+   - Barbell Row
+      1) [WORK] 60 kg x 10 (1RM 80)
+   - Hammer Curl
+      1) [WORK] 17.5 kg x 6 (1RM 21)
+
+13. Legs | 2025-11-24
+   Duration: 70 min
+   - Back Squat
+      1) [WORK] 60 kg x 10 (1RM 80)
+   - Leg Extension
+      1) [WORK] 25 kg x 12 (1RM 35)
+
+14. Pull | 2025-11-25
+   Duration: 85 min
+   - Weighted Pull-Ups
+      1) [WORK] 10 kg x 6 (1RM 12)
+   - Barbell Row
+      1) [WORK] 60 kg x 10 (1RM 80)
+   - Hammer Curl
+      1) [WORK] 17.5 kg x 6 (1RM 21)
+
+15. Push | 2025-11-27
+   Duration: 90 min
+   - Bench Press
+      1) [WORK] 100 kg x 5 (1RM 117)
+   - Dumbbell Shoulder Press
+      1) [WORK] 25 kg x 8 (1RM 32)
+   - Cable Triceps Pushdown
+      1) [WORK] 45 kg x 10 (1RM 60)
+
+16. Pull | 2025-11-28
+   Duration: 85 min
+   - Weighted Pull-Ups
+      1) [WORK] 10 kg x 6 (1RM 12)
+   - Barbell Row
+      1) [WORK] 60 kg x 10 (1RM 80)
+   - Hammer Curl
+      1) [WORK] 17.5 kg x 6 (1RM 21)
+
+17. Push | 2025-12-03
+   Duration: 90 min
+   - Bench Press
+      1) [WORK] 100 kg x 5 (1RM 117)
+   - Dumbbell Shoulder Press
+      1) [WORK] 25 kg x 8 (1RM 32)
+   - Cable Triceps Pushdown
+      1) [WORK] 45 kg x 10 (1RM 60)
+
+18. Legs | 2025-12-05
+   Duration: 70 min
+   - Back Squat
+      1) [WORK] 60 kg x 10 (1RM 80)
+   - Leg Extension
+      1) [WORK] 25 kg x 12 (1RM 35)
+
+19. Push | 2025-12-11
+   Duration: 90 min
+   - Bench Press
+      1) [WORK] 100 kg x 5 (1RM 117)
+   - Dumbbell Shoulder Press
+      1) [WORK] 25 kg x 8 (1RM 32)
+   - Cable Triceps Pushdown
+      1) [WORK] 45 kg x 10 (1RM 60)
+
+20. Pull | 2025-12-22
+   Duration: 85 min
+   - Weighted Pull-Ups
+      1) [WORK] 10 kg x 6 (1RM 12)
+   - Barbell Row
+      1) [WORK] 60 kg x 10 (1RM 80)
+   - Hammer Curl
+      1) [WORK] 17.5 kg x 6 (1RM 21)
+
+21. Push | 2025-12-30
+   Duration: 90 min
+   - Bench Press
+      1) [WORK] 100 kg x 5 (1RM 117)
+   - Dumbbell Shoulder Press
+      1) [WORK] 25 kg x 8 (1RM 32)
+   - Cable Triceps Pushdown
+      1) [WORK] 45 kg x 10 (1RM 60)
+
+22. Nie rozjeb sobie bardziej barku challenge  | 2026-01-03
+   Duration: 0 min
+   Note: Dojeabny 1:30 wszystko zrobione 
+   - Weighted Pull-Ups
+      1) [WORK] 1 kg x 10 (1RM 1)
+      2) [WORK] 10 kg x 6 (1RM 12)
+      3) [WORK] 10 kg x 6 (1RM 12)
+   - Barbell Curl
+      1) [WORK] 30 kg x 12 (1RM 42)
+      2) [WORK] 35 kg x 12 (1RM 49)
+      3) [WORK] 35 kg x 14 (1RM 51)
+      4) [WORK] 35 kg x 12 (1RM 49)
+   - Cable Triceps Pushdown
+      1) [WORK] 50 kg x 11 (1RM 68)
+      2) [WORK] 50 kg x 11 (1RM 68)
+      3) [WORK] 50 kg x 9 (1RM 65)
+   - Barbell Row
+      1) [WORK] 60 kg x 10 (1RM 80)
+      2) [WORK] 60 kg x 10 (1RM 80)
+   - Overhead Triceps Extension
+      1) [WORK] 40 kg x 12 (1RM 56)
+      2) [WORK] 45 kg x 6 (1RM 54)
+      3) [WORK] 45 kg x 6 (1RM 54)
+   - Hammer Curl
+      1) [WORK] 17.5 kg x 9 (1RM 23)
+      2) [WORK] 17.5 kg x 6 (1RM 21)
+      3) [WORK] 17.5 kg x 6 (1RM 21)
+   - Ab Wheel Rollout
+      1) [WORK] 1 kg x 10 (1RM 1)
+      2) [WORK] 1 kg x 16 (1RM 2)
+
+23. Empty Workout | 2026-01-04
+   Duration: 0 min
+   - Cable Triceps Pushdown
+      1) [WORK] 50 kg x 9 (1RM 65)
+      2) [WORK] 50 kg x 9 (1RM 65)
+      3) [WORK] 50 kg x 9 (1RM 65)
+   - Hammer Curl
+      1) [WORK] 17.5 kg x 9 (1RM 23)
+      2) [WORK] 17.5 kg x 7 (1RM 22)
+      3) [WORK] 17.5 kg x 6 (1RM 21)
+   - Overhead Triceps Extension
+      1) [WORK] 40 kg x 10 (1RM 53)
+      2) [WORK] 40 kg x 10 (1RM 53)
+      3) [WORK] 40 kg x 6 (1RM 48)
+   - Ab Wheel Rollout
+      1) [WORK] 1 kg x 18 (1RM 2)
+      2) [WORK] 1 kg x 12 (1RM 1)
+      3) [WORK] 1 kg x 15 (1RM 2)
+
+24. Empty Workout | 2026-01-05
+   Duration: 0 min
+   Note: Push 
+   - Bench Press
+      1) [WORK] 100 kg x 2 (1RM 107)
+      2) [WORK] 100 kg x 3 (1RM 110)
+      3) [WORK] 90 kg x 6 (1RM 108)
+      4) [WORK] 80 kg x 7 (1RM 99)
+   - Dumbbell Shoulder Press
+      1) [WORK] 25 kg x 7 (1RM 31)
+      2) [WORK] 25 kg x 5 (1RM 29)
+      3) [WORK] 25 kg x 7 (1RM 31)
+   - Cable Triceps Pushdown
+      1) [WORK] 50 kg x 9 (1RM 65)
+      2) [WORK] 50 kg x 8 (1RM 63)
+      3) [WORK] 50 kg x 12 (1RM 70)
+   - Lateral Raises
+      1) [WORK] 10 kg x 12 (1RM 14)
+      2) [WORK] 10 kg x 12 (1RM 14)
+      3) [WORK] 10 kg x 12 (1RM 14)
+   - Overhead Triceps Extension
+      1) [WORK] 45 kg x 7 (1RM 56)
+   - Weighted Pull-Ups
+      1) [WORK] 1 kg x 8 (1RM 1)
+      2) [WORK] 10 kg x 6 (1RM 12)
+      3) [WORK] 10 kg x 6 (1RM 12)
+
+25. Pushhh | 2026-01-08
+   Duration: 0 min
+   Note: /grzelak
+   - Bench Press
+      1) [WORK] 80 kg x 7 (1RM 99)
+      2) [WORK] 100 kg x 4 (1RM 113)
+      3) [WORK] 100 kg x 3 (1RM 110)
+      4) [WORK] 90 kg x 6 (1RM 108)
+      5) [WORK] 90 kg x 4 (1RM 102)
+   - Dipy
+      1) [WORK] 10 kg x 8 (1RM 13)
+      2) [WORK] 20 kg x 7 (1RM 25)
+      3) [WORK] 20 kg x 6 (1RM 24)
+      4) [WORK] 20 kg x 5 (1RM 23)
+   - Overhead Press (Barbell)
+      1) [WORK] 50 kg x 6 (1RM 60)
+      2) [WORK] 50 kg x 5 (1RM 58)
+      3) [WORK] 50 kg x 5 (1RM 58)
+   - Cable Triceps Pushdown
+      1) [WORK] 55 kg x 12 (1RM 77)
+      2) [WORK] 55 kg x 7 (1RM 68)
+      3) [WORK] 55 kg x 7 (1RM 68)
+      4) [WORK] 55 kg x 5 (1RM 64)
+   - Lateral Raises
+      1) [WORK] 10 kg x 8 (1RM 13)
+      2) [WORK] 10 kg x 12 (1RM 14)
+   - Overhead Triceps Extension
+      1) [WORK] 45 kg x 6 (1RM 54)
+      2) [WORK] 40 kg x 7 (1RM 49)
+      3) [WORK] 45 kg x 6 (1RM 54)
+   - Tył barku hantle na ławce 
+      1) [WORK] 10 kg x 15 (1RM 15)
+      2) [WORK] 10 kg x 15 (1RM 15)
+
+26. Pulll | 2026-01-09
+   Duration: 0 min
+   - Weighted Pull-Ups
+      1) [WORK] 1 kg x 9 (1RM 1)
+      2) [WORK] 1 kg x 8 (1RM 1)
+      3) [WORK] 10 kg x 5 (1RM 12)
+   - Chin up
+      1) [WORK] 1 kg x 7 (1RM 1)
+   - Barbell Curl
+      1) [WORK] 35 kg x 12 (1RM 49)
+      2) [WORK] 40 kg x 11 (1RM 55)
+      3) [WORK] 40 kg x 8 (1RM 51)
+      4) [WORK] 40 kg x 7 (1RM 49)
+   - Barbell Row
+      1) [WORK] 70 kg x 5 (1RM 82)
+      2) [WORK] 60 kg x 12 (1RM 84)
+      3) [WORK] 65 kg x 7 (1RM 80)
+      4) [WORK] 65 kg x 10 (1RM 87)
+   - Hammer Curl
+      1) [WORK] 17.5 kg x 6 (1RM 21)
+      2) [WORK] 17.5 kg x 6 (1RM 21)
+      3) [WORK] 17.5 kg x 4 (1RM 20)
+   - Lateral Raises
+      1) [WORK] 10 kg x 8 (1RM 13)
+      2) [WORK] 10 kg x 8 (1RM 13)
+      3) [WORK] 10 kg x 8 (1RM 13)
+
+27. Empty Workout | 2026-01-11
+   Duration: 0 min
+   Note: I love when u count me out 
+   - Overhead Press (Barbell)
+      1) [WORK] 50 kg x 8 (1RM 63)
+      2) [WORK] 50 kg x 8 (1RM 63)
+      3) [WORK] 50 kg x 7 (1RM 62)
+   - Weighted Pull-Ups
+      1) [WORK] 15 kg x 6 (1RM 18)
+      2) [WORK] 15 kg x 6 (1RM 18)
+      3) [WORK] 15 kg x 6 (1RM 18)
+      4) [WORK] 15 kg x 4 (1RM 17)
+   - Barbell Curl
+      1) [WORK] 40 kg x 9 (1RM 52)
+      2) [WORK] 40 kg x 6 (1RM 48)
+      3) [WORK] 40 kg x 7 (1RM 49)
+      4) [WORK] 40 kg x 9 (1RM 52)
+   - Lateral Raises
+      1) [WORK] 10 kg x 6 (1RM 12)
+      2) [WORK] 10 kg x 12 (1RM 14)
+      3) [WORK] 10 kg x 8 (1RM 13)
+      4) [WORK] 10 kg x 7 (1RM 12)
+   - Overhead Triceps Extension
+      1) [WORK] 45 kg x 7 (1RM 56)
+      2) [WORK] 45 kg x 7 (1RM 56)
+   - Cable Triceps Pushdown
+      1) [WORK] 55 kg x 10 (1RM 73)
+      2) [WORK] 55 kg x 11 (1RM 75)
+
+28. Nowa kultura pushh | 2026-01-13
+   Duration: 0 min
+   - Bench Press
+      1) [WARMUP] 80 kg x 4
+      2) [WORK] 100 kg x 4 (1RM 113)
+      3) [WORK] 100 kg x 3 (1RM 110)
+      4) [WORK] 100 kg x 2 (1RM 107)
+      5) [WORK] 90 kg x 7 (1RM 111)
+      6) [WORK] 90 kg x 7 (1RM 111)
+   - Lateral Raises
+      1) [WORK] 10 kg x 12 (1RM 14)
+      2) [WORK] 10 kg x 12 (1RM 14)
+      3) [WORK] 10 kg x 12 (1RM 14)
+      4) [WORK] 10 kg x 12 (1RM 14)
+   - Dipy
+      1) [WORK] 10 kg x 7 (1RM 12)
+      2) [WORK] 20 kg x 6 (1RM 24)
+      3) [WORK] 20 kg x 7 (1RM 25)
+      4) [WORK] 20 kg x 6 (1RM 24)
+   - Cable Triceps Pushdown
+      1) [WORK] 55 kg x 7 (1RM 68)
+      2) [WORK] 55 kg x 7 (1RM 68)
+   - Dumbbell Shoulder Press
+      1) [WORK] 25 kg x 5 (1RM 29)
+   - Tył barku hantle na ławce 
+      1) [WORK] 10 kg x 15 (1RM 15)
+      2) [WORK] 10 kg x 15 (1RM 15)
+   - Overhead Triceps Extension
+      1) [WORK] 40 kg x 6 (1RM 48)
+      2) [WORK] 40 kg x 7 (1RM 49)
+
+29. Pulll | 2026-01-17
+   Duration: 0 min
+   - Weighted Pull-Ups
+      1) [WARMUP] 10 kg x 5
+      2) [WORK] 17.5 kg x 5 (1RM 20)
+      3) [WORK] 17.5 kg x 5 (1RM 20)
+      4) [WORK] 17.5 kg x 5 (1RM 20)
+      5) [WORK] 17.5 kg x 3 (1RM 19)
+      6) [WORK] 15 kg x 4 (1RM 17)
+   - Hammer Curl
+      1) [WORK] 17.5 kg x 8 (1RM 22)
+      2) [WORK] 17.5 kg x 7 (1RM 22)
+      3) [WORK] 17.5 kg x 7 (1RM 22)
+   - Lateral Raises
+      1) [WORK] 10 kg x 12 (1RM 14)
+      2) [WORK] 10 kg x 7 (1RM 12)
+      3) [WORK] 10 kg x 6 (1RM 12)
+   - Cable Triceps Pushdown
+      1) [WORK] 55 kg x 9 (1RM 72)
+      2) [WORK] 55 kg x 8 (1RM 70)
+      3) [WORK] 55 kg x 7 (1RM 68)
+      4) [WORK] 55 kg x 7 (1RM 68)
+
+30. Push-dipy | 2026-01-20
+   Duration: 0 min
+   - Bench Press
+      1) [WORK] 100 kg x 5 (1RM 117)
+      2) [WORK] 100 kg x 3 (1RM 110)
+      3) [WORK] 90 kg x 3 (1RM 99)
+      4) [WORK] 90 kg x 4 (1RM 102)
+   - Dipy
+      1) [WARMUP] 10 kg x 1
+      2) [WORK] 20 kg x 7 (1RM 25)
+      3) [WORK] 20 kg x 6 (1RM 24)
+      4) [WORK] 20 kg x 4 (1RM 23)
+   - Lateral Raises
+      1) [WORK] 10 kg x 11 (1RM 14)
+      2) [WORK] 10 kg x 8 (1RM 13)
+      3) [WORK] 10 kg x 8 (1RM 13)
+      4) [WORK] 10 kg x 8 (1RM 13)
+   - Cable Triceps Pushdown
+      1) [WORK] 55 kg x 8 (1RM 70)
+      2) [WORK] 55 kg x 7 (1RM 68)
+   - Overhead Triceps Extension
+      1) [WORK] 45 kg x 5 (1RM 53)
+      2) [WORK] 40 kg x 5 (1RM 47)
+
+31. Pulll | 2026-01-21
+   Duration: 0 min
+   - Weighted Pull-Ups
+      1) [WORK] 20 kg x 5 (1RM 23)
+      2) [WORK] 20 kg x 5 (1RM 23)
+      3) [WORK] 20 kg x 4 (1RM 23)
+      4) [WORK] 17.5 kg x 4 (1RM 20)
+      5) [WORK] 17.5 kg x 4 (1RM 20)
+   - Barbell Curl
+      1) [WORK] 40 kg x 10 (1RM 53)
+      2) [WORK] 40 kg x 7 (1RM 49)
+      3) [WORK] 40 kg x 7 (1RM 49)
+   - Barbell Row
+      1) [WORK] 65 kg x 8 (1RM 82)
+      2) [WORK] 65 kg x 8 (1RM 82)
+      3) [WORK] 65 kg x 7 (1RM 80)
+      4) [WORK] 65 kg x 7 (1RM 80)
+   - Biceps na lince 
+      1) [WORK] 35 kg x 12 (1RM 49)
+      2) [WORK] 40 kg x 7 (1RM 49)
+      3) [WORK] 35 kg x 7 (1RM 43)
+      4) [WORK] 30 kg x 10 (1RM 40)
+   - Lateral Raises
+      1) [WORK] 10 kg x 10 (1RM 13)
+      2) [WORK] 10 kg x 10 (1RM 13)
+      3) [WORK] 10 kg x 8 (1RM 13)
+
+32. Pulll | 2026-01-26
+   Duration: 0 min
+   - Weighted Pull-Ups
+      1) [WORK] 22.5 kg x 3 (1RM 25)
+      2) [WORK] 22.5 kg x 3 (1RM 25)
+      3) [WORK] 22.5 kg x 3 (1RM 25)
+      4) [WORK] 22.5 kg x 3 (1RM 25)
+      5) [WORK] 22.5 kg x 3 (1RM 25)
+      6) [WORK] 22.5 kg x 3 (1RM 25)
+   - Barbell Curl
+      1) [WORK] 40 kg x 12 (1RM 56)
+      2) [WORK] 40 kg x 8 (1RM 51)
+      3) [WORK] 40 kg x 8 (1RM 51)
+   - Barbell Row
+      1) [WORK] 65 kg x 9 (1RM 85)
+      2) [WORK] 65 kg x 8 (1RM 82)
+      3) [WORK] 65 kg x 7 (1RM 80)
+   - Biceps na lince 
+      1) [WORK] 35 kg x 10 (1RM 47)
+      2) [WORK] 35 kg x 7 (1RM 43)
+      3) [WORK] 35 kg x 5 (1RM 41)
+
+33. Push-dipy | 2026-01-27
+   Duration: 0 min
+   - Bench Press
+      1) [WORK] 105 kg x 3 (1RM 116)
+      2) [WORK] 95 kg x 6 (1RM 114)
+      3) [WORK] 95 kg x 4 (1RM 108)
+      4) [WORK] 95 kg x 3 (1RM 105)
+   - Dipy
+      1) [WORK] 20 kg x 6 (1RM 24)
+      2) [WORK] 20 kg x 7 (1RM 25)
+      3) [WORK] 20 kg x 6 (1RM 24)
+      4) [WORK] 20 kg x 4 (1RM 23)
+   - Lateral Raises
+      1) [WARMUP] 7.5 kg x 8
+      2) [WARMUP] 7.5 kg x 8
+      3) [WARMUP] 7.5 kg x 13
+   - Overhead Triceps Extension
+      1) [WORK] 45 kg x 6 (1RM 54)
+      2) [WORK] 40 kg x 9 (1RM 52)
+   - Cable Triceps Pushdown
+      1) [WORK] 55 kg x 6 (1RM 66)
+      2) [WORK] 50 kg x 9 (1RM 65)
+   - Tył barku hantle na ławce 
+      1) [WARMUP] 10 kg x 8
+      2) [WORK] 10 kg x 0
+
+34. Pulll | 2026-02-02
+   Duration: 0 min
+   - Weighted Pull-Ups
+      1) [WORK] 22.5 kg x 3 (1RM 25)
+      2) [WORK] 25 kg x 3 (1RM 28)
+      3) [WORK] 25 kg x 3 (1RM 28)
+      4) [WORK] 25 kg x 3 (1RM 28)
+      5) [WORK] 25 kg x 3 (1RM 28)
+      6) [WORK] 22.5 kg x 3 (1RM 25)
+   - Barbell Curl
+      1) [WORK] 40 kg x 10 (1RM 53)
+      2) [WORK] 40 kg x 10 (1RM 53)
+      3) [WORK] 40 kg x 11 (1RM 55)
+      4) [WORK] 40 kg x 8 (1RM 51)
+   - Barbell Row
+      1) [WORK] 65 kg x 11 (1RM 89)
+      2) [WORK] 65 kg x 9 (1RM 85)
+      3) [WORK] 65 kg x 7 (1RM 80)
+      4) [WORK] 65 kg x 8 (1RM 82)
+   - Hammer Curl
+      1) [WORK] 17.5 kg x 6 (1RM 21)
+      2) [WORK] 15 kg x 8 (1RM 19)
+
+35. Push-dipy | 2026-02-03
+   Duration: 0 min
+   - Bench Press
+      1) [WARMUP] 100 kg x 1
+      2) [WORK] 107.5 kg x 2 (1RM 115)
+      3) [WORK] 105 kg x 2 (1RM 112)
+      4) [WORK] 95 kg x 4 (1RM 108)
+      5) [WORK] 95 kg x 4 (1RM 108)
+      6) [WORK] 95 kg x 3 (1RM 105)
+   - Dipy
+      1) [WORK] 20 kg x 5 (1RM 23)
+      2) [WORK] 20 kg x 5 (1RM 23)
+      3) [WORK] 20 kg x 5 (1RM 23)
+   - Lateral Raises
+      1) [WORK] 10 kg x 10 (1RM 13)
+      2) [WORK] 10 kg x 10 (1RM 13)
+   - Overhead Triceps Extension
+      1) [WORK] 40 kg x 9 (1RM 52)
+      2) [WORK] 40 kg x 8 (1RM 51)
+   - Cable Triceps Pushdown
+      1) [WORK] 55 kg x 9 (1RM 72)
+      2) [WORK] 50 kg x 10 (1RM 67)
+
+36. Pulll | 2026-02-09
+   Duration: 0 min
+   Tags: #power
+   - Weighted Pull-Ups
+      1) [WARMUP] 10 kg x 5
+      2) [WORK] 25 kg x 3 (1RM 28)
+      3) [WORK] 25 kg x 3 (1RM 28)
+      4) [WORK] 25 kg x 3 (1RM 28)
+      5) [WORK] 25 kg x 3 (1RM 28)
+      6) [WORK] 25 kg x 3 (1RM 28)
+      7) [WORK] 25 kg x 3 (1RM 28)
+   - Barbell Curl
+      1) [WORK] 42.5 kg x 8 (1RM 54)
+      2) [WORK] 42.5 kg x 8 (1RM 54)
+      3) [WORK] 42.5 kg x 6 (1RM 51)
+   - Barbell Row
+      1) [WORK] 65 kg x 10 (1RM 87)
+      2) [WORK] 65 kg x 10 (1RM 87)
+      3) [WORK] 65 kg x 8 (1RM 82)
+      4) [WORK] 65 kg x 6 (1RM 78)
+   - Hammer Curl
+      1) [WORK] 17.5 kg x 7 (1RM 22)
+      2) [WORK] 17.5 kg x 6 (1RM 21)
+      3) [WORK] 17.5 kg x 5 (1RM 20)
+
+37. Push-dipy A | 2026-02-10
+   Duration: 0 min
+   Tags: #sleep-bad
+   - Bench Press
+      1) [WARMUP] 100 kg x 1
+      2) [WORK] 110 kg x 1 (1RM 114)
+      3) [WORK] 105 kg x 3 (1RM 116)
+      4) [WORK] 95 kg x 5 (1RM 111)
+      5) [WORK] 95 kg x 4 (1RM 108)
+      6) [WORK] 95 kg x 3 (1RM 105)
+   - Dipy
+      1) [WORK] 20 kg x 7 (1RM 25)
+      2) [WORK] 20 kg x 6 (1RM 24)
+      3) [WORK] 20 kg x 4 (1RM 23)
+      4) [WORK] 20 kg x 4 (1RM 23)
+   - Incline Bench Press (Barbell)
+      1) [WORK] 70 kg x 3 (1RM 77)
+      2) [WORK] 60 kg x 6 (1RM 72)
+      3) [WORK] 60 kg x 4 (1RM 68)
+   - Lateral Raises
+      1) [WORK] 10 kg x 10 (1RM 13)
+      2) [WORK] 10 kg x 10 (1RM 13)
+      3) [WORK] 10 kg x 10 (1RM 13)
+      4) [WORK] 10 kg x 10 (1RM 13)
+   - Cable Triceps Pushdown
+      1) [WORK] 55 kg x 10 (1RM 73)
+      2) [WORK] 55 kg x 7 (1RM 68)
+      3) [WORK] 50 kg x 5 (1RM 58)
+   - Tył barku hantle na ławce 
+      1) [WORK] 10 kg x 12 (1RM 14)
+      2) [WORK] 10 kg x 12 (1RM 14)
+
+38. Pul A | 2026-02-13
+   Duration: 90 min
+   - Weighted Pull-Ups
+      1) [WORK] 20 kg x 6 (1RM 24)
+      2) [WORK] 20 kg x 6 (1RM 24)
+      3) [WORK] 20 kg x 5 (1RM 23)
+      4) [WORK] 20 kg x 4 (1RM 23)
+      5) [WORK] 15 kg x 4 (1RM 17)
+   - Barbell Curl
+      1) [WORK] 42.5 kg x 9 (1RM 55)
+      2) [WORK] 42.5 kg x 8 (1RM 54)
+      3) [WORK] 42.5 kg x 8 (1RM 54)
+   - Barbell Row
+      1) [WORK] 60 kg x 10 (1RM 80)
+      2) [WORK] 60 kg x 10 (1RM 80)
+      3) [WORK] 60 kg x 10 (1RM 80)
+   - Biceps na lince 
+      1) [WORK] 35 kg x 10 (1RM 47)
+      2) [WORK] 35 kg x 10 (1RM 47)
+      3) [WORK] 35 kg x 8 (1RM 44)
+   - Lateral Raises
+      1) [WORK] 10 kg x 10 (1RM 13)
+      2) [WORK] 10 kg x 10 (1RM 13)
+
+39. Push-dipy A | 2026-02-13
+   Duration: 79 min
+   Tags: #bulk #volume
+   - Bench Press
+      1) [WARMUP] 80 kg x 3
+      2) [WORK] 95 kg x 6 (1RM 114)
+      3) [WORK] 95 kg x 4 (1RM 108)
+      4) [WORK] 90 kg x 6 (1RM 108)
+      5) [WORK] 90 kg x 4 (1RM 102)
+      6) [WORK] 90 kg x 4 (1RM 102)
+      7) [WORK] 85 kg x 4 (1RM 96)
+   - Overhead Press (Barbell)
+      1) [WORK] 50 kg x 4 (1RM 57)
+      2) [WORK] 45 kg x 8 (1RM 57)
+      3) [WORK] 45 kg x 8 (1RM 57)
+   - Dipy
+      1) [WORK] 10 kg x 6 (1RM 12)
+   - Overhead Triceps Extension
+      1) [WORK] 40 kg x 9 (1RM 52)
+      2) [WORK] 40 kg x 8 (1RM 51)
+      3) [WORK] 40 kg x 7 (1RM 49)
+
+40. Pull A | 2026-02-16
+   Duration: 90 min
+   Tags: #power #bulk
+   - Weighted Pull-Ups
+      1) [WARMUP] 10 kg x 3
+      2) [WORK] 27.5 kg x 3 (1RM 30)
+      3) [WORK] 27.5 kg x 3 (1RM 30)
+      4) [WORK] 27.5 kg x 3 (1RM 30)
+      5) [WORK] 27.5 kg x 3 (1RM 30)
+      6) [WORK] 27.5 kg x 3 (1RM 30)
+      7) [WORK] 27.5 kg x 2 (1RM 29)
+   - Barbell Curl
+      1) [WORK] 45 kg x 8 (1RM 57)
+      2) [WORK] 45 kg x 8 (1RM 57)
+      3) [WORK] 45 kg x 7 (1RM 56)
+      4) [WORK] 45 kg x 6 (1RM 54)
+   - Barbell Row
+      1) [WORK] 62.5 kg x 9 (1RM 81)
+      2) [WORK] 60 kg x 10 (1RM 80)
+      3) [WORK] 60 kg x 11 (1RM 82)
+      4) [WORK] 60 kg x 10 (1RM 80)
+   - Biceps na lince 
+      1) [WORK] 40 kg x 13 (1RM 57)
+      2) [WORK] 40 kg x 10 (1RM 53)
+      3) [WORK] 40 kg x 9 (1RM 52)
+
+41. Push-dipy A | 2026-02-17
+   Duration: 73 min
+   - Bench Press
+      1) [WORK] 110 kg x 2 (1RM 117)
+      2) [WORK] 105 kg x 3 (1RM 116)
+      3) [WORK] 100 kg x 3 (1RM 110)
+   - Dipy
+      1) [WORK] 20 kg x 8 (1RM 25)
+      2) [WORK] 20 kg x 8 (1RM 25)
+      3) [WORK] 20 kg x 7 (1RM 25)
+      4) [WORK] 20 kg x 6 (1RM 24)
+   - Lateral Raises
+      1) [WORK] 10 kg x 10 (1RM 13)
+      2) [WORK] 10 kg x 12 (1RM 14)
+      3) [WORK] 10 kg x 12 (1RM 14)
+   - Cable Triceps Pushdown
+      1) [WORK] 55 kg x 10 (1RM 73)
+      2) [WORK] 55 kg x 9 (1RM 72)
+   - Triceps siedząc na ławce odwrócony do wyciągu 
+      1) [WORK] 50 kg x 10 (1RM 67)
+      2) [WORK] 50 kg x 10 (1RM 67)
+
+42. Pull B | 2026-02-19
+   Duration: 90 min
+   Tags: #volume #bulk
+   - Weighted Pull-Ups
+      1) [WORK] 20 kg x 6 (1RM 24)
+      2) [WORK] 20 kg x 6 (1RM 24)
+      3) [WORK] 20 kg x 5 (1RM 23)
+      4) [WORK] 15 kg x 5 (1RM 18)
+      5) [WORK] 15 kg x 4 (1RM 17)
+   - Hammer Curl
+      1) [WORK] 15 kg x 11 (1RM 21)
+      2) [WORK] 15 kg x 8 (1RM 19)
+      3) [WORK] 15 kg x 8 (1RM 19)
+      4) [WORK] 15 kg x 8 (1RM 19)
+   - Barbell Row
+      1) [WORK] 60 kg x 10 (1RM 80)
+      2) [WORK] 60 kg x 10 (1RM 80)
+      3) [WORK] 60 kg x 10 (1RM 80)
+      4) [WORK] 60 kg x 8 (1RM 76)
+   - Biceps na lince 
+      1) [WORK] 40 kg x 10 (1RM 53)
+      2) [WORK] 40 kg x 9 (1RM 52)
+      3) [WORK] 40 kg x 8 (1RM 51)
+      4) [WORK] 40 kg x 8 (1RM 51)
+
+43. Nogi | 2026-02-24
+   Duration: 0 min
+   - Back Squat
+      1) [WORK] 1 kg x 1 (1RM 1)
+
+44. Pull A | 2026-03-02T18:08:35.599Z
+   Duration: 118 min
+   Tags: #bulk
+   - Weighted Pull-Ups
+      1) [WORK] 27.5 kg x 3 (1RM 30)
+      2) [WORK] 27.5 kg x 2 (1RM 29)
+      3) [WORK] 25 kg x 3 (1RM 28)
+      4) [WORK] 25 kg x 3 (1RM 28)
+      5) [WORK] 25 kg x 1 (1RM 26)
+      6) [WORK] 20 kg x 5 (1RM 23)
+   - Barbell Curl
+      1) [WORK] 45 kg x 8 (1RM 57)
+      2) [WORK] 45 kg x 8 (1RM 57)
+      3) [WORK] 45 kg x 7 (1RM 56)
+   - Barbell Row
+      1) [WARMUP] 60 kg x 10
+      2) [WORK] 65 kg x 10 (1RM 87)
+      3) [WORK] 65 kg x 10 (1RM 87)
+      4) [WORK] 65 kg x 11 (1RM 89)
+   - Hammer Curl
+      1) [WORK] 17.5 kg x 7 (1RM 22)
+      2) [WORK] 17.5 kg x 5 (1RM 20)
+      3) [WORK] 17.5 kg x 4 (1RM 20)
+
+45. Push-dipy A | 2026-03-03T16:47:34.690Z
+   Duration: 112 min
+   Tags: #power #bulk
+   - Bench Press
+      1) [WARMUP] 80 kg x 3
+      2) [WORK] 110 kg x 2 (1RM 117)
+      3) [WORK] 105 kg x 4 (1RM 119)
+      4) [WORK] 105 kg x 3 (1RM 116)
+      5) [WORK] 102.5 kg x 3 (1RM 113)
+   - Dipy
+      1) [WORK] 20 kg x 8 (1RM 25)
+      2) [WORK] 25 kg x 4 (1RM 28)
+      3) [WORK] 22.5 kg x 5 (1RM 26)
+   - Incline Bench Press (Barbell)
+      1) [WORK] 70 kg x 4 (1RM 79)
+   - Incline barbell press (smith)
+      1) [WORK] 70 kg x 2 (1RM 75)
+      2) [WORK] 50 kg x 5 (1RM 58)
+   - Lateral Raises
+      1) [WORK] 10 kg x 10 (1RM 13)
+      2) [WORK] 10 kg x 10 (1RM 13)
+      3) [WORK] 10 kg x 12 (1RM 14)
+   - Cable Triceps Pushdown
+      1) [WORK] 55 kg x 7 (1RM 68)
+      2) [WORK] 50 kg x 8 (1RM 63)
+      3) [WORK] 50 kg x 7 (1RM 62)
+
+46. Pull B | 2026-03-04T16:31:11.074Z
+   Duration: 81 min
+   - Weighted Pull-Ups
+      1) [WORK] 20 kg x 5 (1RM 23)
+      2) [WORK] 20 kg x 5 (1RM 23)
+      3) [WORK] 20 kg x 5 (1RM 23)
+      4) [WORK] 20 kg x 4 (1RM 23)
+   - Barbell Curl
+      1) [WORK] 42.5 kg x 9 (1RM 55)
+      2) [WORK] 42.5 kg x 8 (1RM 54)
+      3) [WORK] 42.5 kg x 8 (1RM 54)
+   - Barbell Row
+      1) [WORK] 62.5 kg x 10 (1RM 83)
+      2) [WORK] 62.5 kg x 12 (1RM 88)
+      3) [WORK] 62.5 kg x 10 (1RM 83)
+   - Biceps na lince 
+      1) [WORK] 40 kg x 10 (1RM 53)
+      2) [WORK] 40 kg x 9 (1RM 52)
+      3) [WORK] 40 kg x 10 (1RM 53)
+      4) [WORK] 40 kg x 8 (1RM 51)
+
+47. Push-ohp B | 2026-03-05T17:12:45.613Z
+   Duration: 112 min
+   - Bench Press
+      1) [PAUSE] 80 kg x 7 (1RM 99)
+      2) [PAUSE] 95 kg x 5 (1RM 111)
+      3) [PAUSE] 95 kg x 5 (1RM 111)
+      4) [PAUSE] 92.5 kg x 6 (1RM 111)
+      5) [PAUSE] 92.5 kg x 3 (1RM 102)
+      6) [PAUSE] 87.5 kg x 4 (1RM 99)
+   - Overhead Press (Barbell)
+      1) [WORK] 52.5 kg x 6 (1RM 63)
+      2) [WORK] 52.5 kg x 5 (1RM 61)
+      3) [WORK] 50 kg x 6 (1RM 60)
+   - Dipy
+      1) [WARMUP] 1 kg x 8
+      2) [WORK] 15 kg x 6 (1RM 18)
+      3) [WORK] 15 kg x 5 (1RM 18)
+      4) [WORK] 15 kg x 4 (1RM 17)
+   - Overhead Triceps Extension
+      1) [WORK] 45 kg x 6 (1RM 54)
+      2) [WORK] 40 kg x 7 (1RM 49)
+      3) [WORK] 40 kg x 8 (1RM 51)
+   - Lateral Raises
+      1) [WORK] 10 kg x 12 (1RM 14)
+      2) [WORK] 12.5 kg x 8 (1RM 16)
+      3) [WORK] 12.5 kg x 6 (1RM 15)
+      4) [WORK] 10 kg x 8 (1RM 13)
+   - Cable Triceps Pushdown
+      1) [WORK] 55 kg x 7 (1RM 68)
+      2) [WORK] 55 kg x 6 (1RM 66)
+      3) [WORK] 50 kg x 7 (1RM 62)
+   - Face pull
+      1) [WORK] 35 kg x 15 (1RM 53)
+      2) [WORK] 40 kg x 15 (1RM 60)
+      3) [WORK] 40 kg x 15 (1RM 60)
+
+48. Pull A | 2026-03-09T17:55:38.199Z
+   Duration: 93 min
+   Tags: #sleep-bad #power #stress
+   - Weighted Pull-Ups
+      1) [WORK] 30 kg x 3 (1RM 33)
+      2) [WORK] 30 kg x 2 (1RM 32)
+      3) [WORK] 27.5 kg x 3 (1RM 30)
+      4) [WORK] 27.5 kg x 3 (1RM 30)
+      5) [WORK] 27.5 kg x 3 (1RM 30)
+      6) [WORK] 27.5 kg x 2 (1RM 29)
+   - Barbell Curl
+      1) [WORK] 45 kg x 9 (1RM 59)
+      2) [WORK] 45 kg x 8 (1RM 57)
+      3) [WORK] 45 kg x 7 (1RM 56)
+   - Barbell Row
+      1) [WORK] 70 kg x 8 (1RM 89)
+      2) [WORK] 70 kg x 8 (1RM 89)
+      3) [WORK] 70 kg x 7 (1RM 86)
+   - Biceps na lince 
+      1) [WORK] 45 kg x 10 (1RM 60)
+      2) [WORK] 45 kg x 8 (1RM 57)
+      3) [WORK] 45 kg x 6 (1RM 54)
+
+49. Push-dipy A | 2026-03-10T18:10:53.859Z
+   Duration: 127 min
+   Tags: #power
+   - Bench Press
+      1) [WORK] 115 kg x 1 (1RM 119)
+      2) [WORK] 110 kg x 2 (1RM 117)
+      3) [WORK] 105 kg x 2 (1RM 112)
+      4) [WORK] 100 kg x 3 (1RM 110)
+   - Dipy
+      1) [WORK] 25 kg x 8 (1RM 32)
+      2) [WORK] 25 kg x 7 (1RM 31)
+      3) [WORK] 25 kg x 6 (1RM 30)
+   - Dumbbell Shoulder Press
+      1) [WORK] 25 kg x 6 (1RM 30)
+      2) [WORK] 25 kg x 6 (1RM 30)
+      3) [WORK] 25 kg x 5 (1RM 29)
+   - Lateral Raises
+      1) [WORK] 10 kg x 8 (1RM 13)
+      2) [WORK] 10 kg x 8 (1RM 13)
+      3) [WORK] 10 kg x 8 (1RM 13)
+   - Cable Triceps Pushdown
+      1) [WORK] 60 kg x 6 (1RM 72)
+      2) [WORK] 60 kg x 5 (1RM 70)
+      3) [WORK] 55 kg x 7 (1RM 68)
+   - Face pull
+      1) [WORK] 40 kg x 12 (1RM 56)
+      2) [WORK] 40 kg x 12 (1RM 56)
+      3) [WORK] 40 kg x 12 (1RM 56)
+
+50. Nogi | 2026-03-11T12:10:43.700Z
+   Duration: 30 min
+   - Back Squat
+      1) [WORK] 50 kg x 8 (1RM 63)
+      2) [WORK] 50 kg x 7 (1RM 62)
+      3) [WORK] 50 kg x 8 (1RM 63)
+   - Leg Extension
+      1) [WORK] 40 kg x 10 (1RM 53)
+      2) [WORK] 50 kg x 10 (1RM 67)
+      3) [WORK] 60 kg x 9 (1RM 78)
+   - Nogi tył 
+      1) [WORK] 25 kg x 10 (1RM 33)
+
+51. Pull A | 2026-03-16T17:00:00.380Z
+   Duration: 121 min
+   - Weighted Pull-Ups
+      1) [WORK] 30 kg x 3 (1RM 33)
+      2) [WORK] 30 kg x 3 (1RM 33)
+      3) [WORK] 30 kg x 3 (1RM 33)
+      4) [WORK] 30 kg x 3 (1RM 33)
+   - Barbell Curl
+      1) [WORK] 47.5 kg x 8 (1RM 60)
+      2) [WORK] 47.5 kg x 7 (1RM 59)
+      3) [WORK] 47.5 kg x 7 (1RM 59)
+   - Barbell Row
+      1) [WORK] 70 kg x 10 (1RM 93)
+      2) [WORK] 75 kg x 6 (1RM 90)
+      3) [WORK] 72.5 kg x 8 (1RM 92)
+   - Biceps na lince 
+      1) [WORK] 45 kg x 10 (1RM 60)
+      2) [WORK] 45 kg x 9 (1RM 59)
+      3) [WORK] 45 kg x 4 (1RM 51)
+
+52. Push-dipy A | 2026-03-17T17:03:41.583Z
+   Duration: 108 min
+   - Bench Press
+      1) [WORK] 112.5 kg x 1 (1RM 116)
+   - Dipy
+      1) [WORK] 30 kg x 7 (1RM 37)
+      2) [WORK] 30 kg x 6 (1RM 36)
+      3) [WORK] 30 kg x 5 (1RM 35)
+   - Dumbbell Shoulder Press
+      1) [WORK] 25 kg x 7 (1RM 31)
+      2) [WORK] 25 kg x 6 (1RM 30)
+      3) [WORK] 25 kg x 5 (1RM 29)
+   - Lateral Raises
+      1) [WORK] 10 kg x 10 (1RM 13)
+      2) [WORK] 10 kg x 10 (1RM 13)
+      3) [WORK] 10 kg x 10 (1RM 13)
+   - Overhead Triceps Extension
+      1) [WORK] 45 kg x 7 (1RM 56)
+      2) [WORK] 45 kg x 6 (1RM 54)
+      3) [WORK] 40 kg x 6 (1RM 48)
+
+53. Pull B | 2026-03-19T19:07:32.004Z
+   Duration: 55 min
+   - Weighted Pull-Ups
+      1) [WORK] 22.5 kg x 5 (1RM 26)
+      2) [WORK] 22.5 kg x 5 (1RM 26)
+      3) [WORK] 20 kg x 5 (1RM 23)
+      4) [WORK] 20 kg x 4 (1RM 23)
+   - Hammer Curl
+      1) [WORK] 20 kg x 6 (1RM 24)
+      2) [WORK] 17.5 kg x 7 (1RM 22)
+      3) [WORK] 17.5 kg x 8 (1RM 22)
+   - Barbell Row
+      1) [WORK] 65 kg x 11 (1RM 89)
+      2) [WORK] 65 kg x 10 (1RM 87)
+      3) [WORK] 65 kg x 8 (1RM 82)
+   - Biceps na lince 
+      1) [WORK] 40 kg x 10 (1RM 53)
+      2) [WORK] 40 kg x 9 (1RM 52)
+      3) [WORK] 40 kg x 9 (1RM 52)
+   - Maszyna na plecy 
+      1) [WORK] 70 kg x 12 (1RM 98)
+
+54. Push-dipy A | 2026-03-23T14:36:45.527Z
+   Duration: 97 min
+   Tags: #power #bulk
+   - Bench Press
+      1) [WORK] 115 kg x 1 (1RM 119)
+      2) [WORK] 110 kg x 2 (1RM 117)
+      3) [WORK] 105 kg x 3 (1RM 116)
+      4) [WORK] 105 kg x 3 (1RM 116)
+      5) [WORK] 100 kg x 3 (1RM 110)
+   - Dipy
+      1) [WORK] 30 kg x 6 (1RM 36)
+      2) [WORK] 30 kg x 6 (1RM 36)
+      3) [WORK] 30 kg x 5 (1RM 35)
+   - Lateral Raises
+      1) [WORK] 10 kg x 10 (1RM 13)
+      2) [WORK] 10 kg x 10 (1RM 13)
+   - Rozpiętki 
+      1) [WORK] 25 kg x 8 (1RM 32)
+      2) [WORK] 25 kg x 7 (1RM 31)
+   - Cable Triceps Pushdown
+      1) [WORK] 55 kg x 10 (1RM 73)
+      2) [WORK] 55 kg x 7 (1RM 68)
+
+55. Pull A | 2026-03-24T16:19:00.608Z
+   Duration: 23 min
+   - Weighted Pull-Ups
+      1) [WORK] 32.5 kg x 2 (1RM 35)
+      2) [WORK] 30 kg x 3 (1RM 33)
+      3) [WORK] 30 kg x 3 (1RM 33)
+      4) [WORK] 30 kg x 2 (1RM 32)
+   - Barbell Row
+      1) [WORK] 70 kg x 10 (1RM 93)
+      2) [WORK] 72.5 kg x 10 (1RM 97)
+      3) [WORK] 72.5 kg x 10 (1RM 97)
+   - Barbell Curl
+      1) [WORK] 50 kg x 7 (1RM 62)
+      2) [WORK] 50 kg x 6 (1RM 60)
+      3) [WORK] 50 kg x 5 (1RM 58)
+   - Biceps na lince 
+      1) [WORK] 45 kg x 10 (1RM 60)
+      2) [WORK] 45 kg x 8 (1RM 57)
+      3) [WORK] 45 kg x 6 (1RM 54)
+
+56. Nogi | 2026-03-25T13:16:18.663Z
+   Duration: 50 min
+   - Back Squat
+      1) [WORK] 50 kg x 10 (1RM 67)
+      2) [WORK] 70 kg x 6 (1RM 84)
+      3) [WORK] 60 kg x 9 (1RM 78)
+   - Nogi tył 
+      1) [WORK] 45 kg x 8 (1RM 57)
+      2) [WORK] 45 kg x 12 (1RM 63)
+   - Leg Extension
+      1) [WORK] 60 kg x 10 (1RM 80)
+      2) [WORK] 60 kg x 14 (1RM 88)
+
+57. Push-ohp B | 2026-03-26T19:31:55.500Z
+   Duration: 96 min
+   - Bench Press
+      1) [WORK] 100 kg x 7 (1RM 123)
+      2) [WORK] 100 kg x 6 (1RM 120)
+      3) [WORK] 100 kg x 5 (1RM 117)
+      4) [PAUSE] 92.5 kg x 3 (1RM 102)
+      5) [PAUSE] 87.5 kg x 5 (1RM 102)
+   - Overhead Press (Smith Machine)
+      1) [WORK] 60 kg x 5 (1RM 70)
+      2) [WORK] 60 kg x 6 (1RM 72)
+      3) [WORK] 60 kg x 5 (1RM 70)
+   - Lateral Raises
+      1) [WORK] 12.5 kg x 8 (1RM 16)
+      2) [WORK] 12.5 kg x 10 (1RM 17)
+      3) [WORK] 12.5 kg x 6 (1RM 15)
+   - Overhead Triceps Extension
+      1) [WORK] 45 kg x 7 (1RM 56)
+      2) [WORK] 45 kg x 6 (1RM 54)
+   - Cable Triceps Pushdown
+      1) [WORK] 60 kg x 7 (1RM 74)
+
+58. Pull B | 2026-03-27T19:19:42.767Z
+   Duration: 110 min
+   - Weighted Pull-Ups
+      1) [WARMUP] 20 kg x 2
+      2) [WORK] 25 kg x 5 (1RM 29)
+      3) [WORK] 25 kg x 4 (1RM 28)
+      4) [WORK] 25 kg x 4 (1RM 28)
+      5) [WORK] 22.5 kg x 3 (1RM 25)
+      6) [WORK] 22.5 kg x 3 (1RM 25)
+   - Hammer Curl
+      1) [WORK] 20 kg x 8 (1RM 25)
+      2) [WORK] 20 kg x 5 (1RM 23)
+      3) [WORK] 20 kg x 3 (1RM 22)
+   - Barbell Row
+      1) [WORK] 70 kg x 10 (1RM 93)
+      2) [WORK] 70 kg x 12 (1RM 98)
+      3) [WORK] 70 kg x 10 (1RM 93)
+   - Biceps na lince 
+      1) [WORK] 45 kg x 7 (1RM 56)
+      2) [WORK] 40 kg x 9 (1RM 52)
+      3) [WORK] 40 kg x 6 (1RM 48)
+
+59. Empty Workout | 2026-04-07T14:25:20.997Z
+   Duration: 89 min
+   Tags: #power #bulk
+   - Bench Press
+      1) [WORK] 120 kg x 1 (1RM 124)
+      2) [WORK] 110 kg x 3 (1RM 121)
+      3) [WORK] 105 kg x 5 (1RM 123)
+      4) [WORK] 105 kg x 3 (1RM 116)
+   - Weighted Pull-Ups
+      1) [WORK] 22.5 kg x 6 (1RM 27)
+      2) [WORK] 22.5 kg x 5 (1RM 26)
+      3) [WORK] 22.5 kg x 4 (1RM 26)
+      4) [WORK] 22.5 kg x 3 (1RM 25)
+   - Dipy
+      1) [WORK] 30 kg x 5 (1RM 35)
+      2) [WORK] 30 kg x 5 (1RM 35)
+      3) [WORK] 30 kg x 4 (1RM 34)
+      4) [WORK] 30 kg x 4 (1RM 34)
+   - Lateral Raises
+      1) [WORK] 12.5 kg x 7 (1RM 15)
+      2) [WORK] 12.5 kg x 7 (1RM 15)
+   - Dumbbell Shoulder Press
+      1) [WORK] 25 kg x 5 (1RM 29)
+      2) [WORK] 25 kg x 4 (1RM 28)
+   - Cable Triceps Pushdown
+      1) [WORK] 60 kg x 6 (1RM 72)
+      2) [WORK] 55 kg x 7 (1RM 68)
+
+60. Empty Workout | 2026-04-08T11:18:01.308Z
+   Duration: 32 min
+   - Barbell Curl
+      1) [WORK] 50 kg x 7 (1RM 62)
+      2) [WORK] 50 kg x 6 (1RM 60)
+      3) [WORK] 50 kg x 5 (1RM 58)
+   - Back Squat
+      1) [WORK] 60 kg x 7 (1RM 74)
+
+61. Push-ohp B | 2026-04-09T14:34:22.827Z
+   Duration: 76 min
+   - Bench Press
+      1) [WARMUP] 80 kg x 4
+      2) [WORK] 100 kg x 7 (1RM 123)
+      3) [WORK] 100 kg x 4 (1RM 113)
+      4) [PAUSE] 90 kg x 4 (1RM 102)
+      5) [PAUSE] 85 kg x 5 (1RM 99)
+   - Dumbbell Shoulder Press
+      1) [WORK] 25 kg x 5 (1RM 29)
+      2) [WORK] 25 kg x 3 (1RM 28)
+   - Rozpiętki 
+      1) [WORK] 25 kg x 8 (1RM 32)
+      2) [WORK] 25 kg x 8 (1RM 32)
+      3) [WORK] 25 kg x 7 (1RM 31)
+   - Overhead Triceps Extension
+      1) [WORK] 45 kg x 7 (1RM 56)
+      2) [WORK] 40 kg x 8 (1RM 51)
+      3) [WORK] 40 kg x 8 (1RM 51)
+   - Lateral Raises
+      1) [WORK] 12.5 kg x 7 (1RM 15)
+      2) [WORK] 12.5 kg x 6 (1RM 15)
+   - Face pull
+      1) [WORK] 40 kg x 12 (1RM 56)
+      2) [WORK] 40 kg x 15 (1RM 60)
+
+62. Pull B | 2026-04-10T18:44:56.791Z
+   Duration: 324 min
+   - Weighted Pull-Ups
+      1) [WORK] 25 kg x 4 (1RM 28)
+      2) [WORK] 25 kg x 4 (1RM 28)
+      3) [WORK] 20 kg x 5 (1RM 23)
+   - Hammer Curl
+      1) [WORK] 20 kg x 6 (1RM 24)
+      2) [WORK] 20 kg x 7 (1RM 25)
+      3) [WORK] 20 kg x 6 (1RM 24)
+   - Barbell Row
+      1) [WORK] 70 kg x 12 (1RM 98)
+      2) [WORK] 70 kg x 12 (1RM 98)
+   - Biceps na lince 
+      1) [WORK] 45 kg x 8 (1RM 57)
+      2) [WORK] 45 kg x 7 (1RM 56)
+
+63. Push-dipy A | 2026-04-13T16:42:03.717Z
+   Duration: 175 min
+   - Bench Press
+      1) [WORK] 115 kg x 2 (1RM 123)
+      2) [WORK] 110 kg x 2 (1RM 117)
+      3) [WORK] 105 kg x 3 (1RM 116)
+      4) [WORK] 110 kg x 6 (1RM 132)
+   - Dipy
+      1) [WORK] 30 kg x 6 (1RM 36)
+      2) [WORK] 30 kg x 5 (1RM 35)
+   - Overhead Triceps Extension
+      1) [WORK] 45 kg x 9 (1RM 59)
+      2) [WORK] 45 kg x 8 (1RM 57)
+   - Rozpiętki 
+      1) [WORK] 25 kg x 10 (1RM 33)
+      2) [WORK] 25 kg x 8 (1RM 32)
+   - Lateral Raises
+      1) [WORK] 12.5 kg x 7 (1RM 15)
+
+64. Pull A | 2026-04-14T18:16:53.076Z
+   Duration: 97 min
+   - Weighted Pull-Ups
+      1) [WORK] 30 kg x 2 (1RM 32)
+      2) [WORK] 25 kg x 2 (1RM 27)
+      3) [WORK] 20 kg x 4 (1RM 23)
+   - Barbell Curl
+      1) [WORK] 45 kg x 9 (1RM 59)
+      2) [WORK] 45 kg x 8 (1RM 57)
+      3) [WORK] 45 kg x 7 (1RM 56)
+   - Barbell Row
+      1) [WORK] 70 kg x 10 (1RM 93)
+      2) [WORK] 75 kg x 8 (1RM 95)
+      3) [WORK] 75 kg x 8 (1RM 95)
+   - Biceps na lince 
+      1) [WORK] 45 kg x 11 (1RM 62)
+      2) [WORK] 45 kg x 9 (1RM 59)
+      3) [WORK] 45 kg x 8 (1RM 57)
+
+65. Push-ohp B | 2026-04-16T18:29:50.519Z
+   Duration: 99 min
+   - Bench Press
+      1) [WORK] 100 kg x 7 (1RM 123)
+      2) [WORK] 100 kg x 5 (1RM 117)
+      3) [WORK] 85 kg x 7 (1RM 105)
+      4) [WORK] 85 kg x 5 (1RM 99)
+   - Dipy
+      1) [WORK] 30 kg x 3 (1RM 33)
+      2) [WORK] 20 kg x 6 (1RM 24)
+      3) [WORK] 20 kg x 5 (1RM 23)
+   - Dumbbell Shoulder Press
+      1) [WORK] 25 kg x 6 (1RM 30)
+   - Overhead Triceps Extension
+      1) [WORK] 50 kg x 7 (1RM 62)
+      2) [WORK] 50 kg x 5 (1RM 58)
+      3) [WORK] 45 kg x 6 (1RM 54)
+   - Lateral Raises
+      1) [WORK] 12.5 kg x 6 (1RM 15)
+      2) [WORK] 10 kg x 12 (1RM 14)
+      3) [WORK] 10 kg x 10 (1RM 13)
+   - Rozpiętki 
+      1) [WORK] 25 kg x 8 (1RM 32)
+      2) [WORK] 25 kg x 8 (1RM 32)
+      3) [WORK] 25 kg x 8 (1RM 32)
+
+66. Pull B | 2026-04-17T17:42:58.124Z
+   Duration: 91 min
+   - Weighted Pull-Ups
+      1) [WARMUP] 20 kg x 2
+      2) [WORK] 25 kg x 4 (1RM 28)
+      3) [WORK] 25 kg x 2 (1RM 27)
+      4) [WORK] 20 kg x 4 (1RM 23)
+      5) [WORK] 20 kg x 4 (1RM 23)
+   - Hammer Curl
+      1) [WORK] 20 kg x 6 (1RM 24)
+      2) [WORK] 20 kg x 4 (1RM 23)
+      3) [WORK] 20 kg x 5 (1RM 23)
+   - Barbell Row
+      1) [WORK] 70 kg x 10 (1RM 93)
+      2) [WORK] 80 kg x 9 (1RM 104)
+      3) [WORK] 80 kg x 8 (1RM 101)
+      4) [WORK] 80 kg x 7 (1RM 99)
+   - Biceps na lince 
+      1) [WORK] 45 kg x 10 (1RM 60)
+      2) [WORK] 45 kg x 9 (1RM 59)
+      3) [WORK] 45 kg x 8 (1RM 57)
+
+67. Push-dipy A | 2026-04-20T18:03:16.852Z
+   Duration: 65 min
+   - Bench Press
+      1) [WORK] 115 kg x 1 (1RM 119)
+      2) [WORK] 105 kg x 3 (1RM 116)
+   - Dipy
+      1) [WORK] 30 kg x 6 (1RM 36)
+      2) [WORK] 30 kg x 7 (1RM 37)
+      3) [WORK] 30 kg x 6 (1RM 36)
+   - Lateral Raises
+      1) [WORK] 12.5 kg x 10 (1RM 17)
+      2) [WORK] 12.5 kg x 9 (1RM 16)
+      3) [WORK] 12.5 kg x 7 (1RM 15)
+   - Cable Triceps Pushdown
+      1) [WORK] 60 kg x 10 (1RM 80)
+      2) [WORK] 60 kg x 8 (1RM 76)
+      3) [WORK] 60 kg x 8 (1RM 76)
+
+68. Push-dipy A | 2026-05-11T16:49:47.288Z
+   Duration: 106 min
+   - Bench Press
+      1) [WORK] 110 kg x 3 (1RM 121)
+      2) [WORK] 105 kg x 3 (1RM 116)
+      3) [WORK] 100 kg x 4 (1RM 113)
+      4) [WORK] 80 kg x 8 (1RM 101)
+   - Dumbbell Shoulder Press
+      1) [WORK] 25 kg x 5 (1RM 29)
+   - Dipy
+      1) [WARMUP] 10 kg x 6
+      2) [WORK] 30 kg x 6 (1RM 36)
+   - Lateral Raises
+      1) [WORK] 10 kg x 10 (1RM 13)
+      2) [WORK] 10 kg x 10 (1RM 13)
+   - Overhead Triceps Extension
+      1) [WORK] 45 kg x 9 (1RM 59)
+      2) [WORK] 50 kg x 7 (1RM 62)
+
+69. Pull A | 2026-05-12T13:51:35.549Z
+   Duration: 58 min
+   - Weighted Pull-Ups
+      1) [WORK] 20 kg x 6 (1RM 24)
+      2) [WORK] 20 kg x 5 (1RM 23)
+      3) [WORK] 20 kg x 4 (1RM 23)
+   - Barbell Curl
+      1) [WORK] 55 kg x 4 (1RM 62)
+      2) [WORK] 50 kg x 6 (1RM 60)
+      3) [WORK] 50 kg x 5 (1RM 58)
+      4) [WORK] 50 kg x 3 (1RM 55)
+   - Barbell Row
+      1) [WORK] 80 kg x 10 (1RM 107)
+      2) [WORK] 80 kg x 6 (1RM 96)
+      3) [WORK] 80 kg x 7 (1RM 99)
+   - Biceps na lince 
+      1) [WORK] 50 kg x 8 (1RM 63)
+      2) [WORK] 45 kg x 8 (1RM 57)
+
+70. Push-ohp B | 2026-05-15T14:58:39.487Z
+   Duration: 90 min
+   - Bench Press
+      1) [WORK] 100 kg x 6 (1RM 120)
+      2) [WORK] 100 kg x 5 (1RM 117)
+      3) [PAUSE] 90 kg x 6 (1RM 108)
+   - Dipy
+      1) [WORK] 20 kg x 6 (1RM 24)
+      2) [WORK] 20 kg x 4 (1RM 23)
+   - Overhead Triceps Extension
+      1) [WORK] 50 kg x 8 (1RM 63)
+      2) [WORK] 45 kg x 7 (1RM 56)
+   - Cable Triceps Pushdown
+      1) [WORK] 60 kg x 6 (1RM 72)
+      2) [WORK] 55 kg x 5 (1RM 64)
+      3) [WORK] 50 kg x 6 (1RM 60)
+   - Lateral Raises
+      1) [WORK] 10 kg x 8 (1RM 13)
+      2) [WORK] 10 kg x 12 (1RM 14)
+      3) [WORK] 12.5 kg x 6 (1RM 15)
+
+71. Pull B | 2026-05-15T16:41:04.529Z
+   Duration: 101 min
+   - Weighted Pull-Ups
+      1) [WORK] 22.5 kg x 5 (1RM 26)
+      2) [WORK] 22.5 kg x 4 (1RM 26)
+      3) [WORK] 20 kg x 5 (1RM 23)
+   - Hammer Curl
+      1) [WORK] 20 kg x 4 (1RM 23)
+      2) [WORK] 20 kg x 3 (1RM 22)
+      3) [WORK] 17.5 kg x 4 (1RM 20)
+   - Barbell Row
+      1) [WORK] 75 kg x 10 (1RM 100)
+      2) [WORK] 75 kg x 8 (1RM 95)
+      3) [WORK] 75 kg x 8 (1RM 95)
+      4) [WORK] 75 kg x 7 (1RM 93)
+   - Biceps na lince 
+      1) [WORK] 55 kg x 6 (1RM 66)
+      2) [WORK] 50 kg x 5 (1RM 58)
+      3) [WORK] 45 kg x 7 (1RM 56)
+

@@ -10,6 +10,7 @@ export const ActiveWorkoutExerciseCard = React.memo(({
   exercise,
   exerciseIndex,
   previousSets = [],
+  currentSetIndex = -1,
   onUpdateSet,
   onToggleSet,
   onAddSet,
@@ -85,6 +86,26 @@ export const ActiveWorkoutExerciseCard = React.memo(({
     }, 170);
   };
 
+  const setTypeLabel = (set) => {
+    const type = resolveSetType(set);
+    if (type === 'warmup') return 'Warm-up';
+    if (type === 'drop') return 'Drop';
+    if (type === 'failure') return 'Failure';
+    if (type === 'tempo') return 'Tempo';
+    if (type === 'pause') return 'Pause';
+    return null;
+  };
+
+  const setTypeLabelTone = (set) => {
+    const type = resolveSetType(set);
+    if (type === 'warmup') return 'text-amber-300';
+    if (type === 'drop') return 'text-violet-300';
+    if (type === 'failure') return 'text-rose-300';
+    if (type === 'tempo') return 'text-cyan-300';
+    if (type === 'pause') return 'text-indigo-300';
+    return 'text-slate-400';
+  };
+
   const setTypeTone = (set) => {
     const type = resolveSetType(set);
     if (type === 'warmup') return 'bg-amber-600 border-amber-500 text-white shadow-lg shadow-amber-600/50';
@@ -124,6 +145,17 @@ export const ActiveWorkoutExerciseCard = React.memo(({
           const isPRSet = Boolean(set.completed && (set.isBest1RM || set.isBestSetVolume || set.isHeaviestWeight));
           const isNewSet = newSetIndex === i;
           const isRemovingSet = removingSetIndex === i;
+          // Current = first incomplete set (derived by the parent from the
+          // canonical workout value, never stored). Gives one-thumb users an
+          // explicit "do this next" target without relying on color alone.
+          const isCurrent = i === currentSetIndex && !set.completed;
+          const typeLabel = setTypeLabel(set);
+          const prevText = prev ? `${prev.kg}x${prev.reps}` : null;
+          const toggleLabel = set.completed
+            ? `Uncomplete set ${displayLabel} ${exercise.name}, ${set.kg} kilograms for ${set.reps} reps`
+            : `Complete set ${displayLabel} ${exercise.name}${prevText ? `, last time ${prevText}` : ''}`;
+          const kgId = `ex${exerciseIndex}-set${i}-kg`;
+          const repsId = `ex${exerciseIndex}-set${i}-reps`;
 
           return (
             <div
@@ -146,9 +178,12 @@ export const ActiveWorkoutExerciseCard = React.memo(({
 
               {/* Set card (slides on swipe) */}
               <div
+                aria-current={isCurrent ? 'true' : undefined}
                 className={`flex items-center gap-1.5 sm:gap-2.5 p-2.5 sm:p-3 rounded-lg border transition-all duration-250 ease-out relative z-10 ${
                   isSwipped && !deleteModeActive ? '-translate-x-full' : ''
                 } ${setTypeCardTone(set)} ${completedTone(set)} ${
+                  isCurrent ? 'ring-2 ring-sky-400/70 border-sky-400/60' : ''
+                } ${
                   isPRSet
                     ? 'bg-yellow-500/30 border-yellow-500/50 ring-2 ring-yellow-500/30'
                     : (set.isBest1RM || set.isBestSetVolume || set.isHeaviestWeight)
@@ -170,46 +205,75 @@ export const ActiveWorkoutExerciseCard = React.memo(({
                 )}
 
                 {/* Set Label */}
-                <div className="font-black text-white min-w-[1.75rem] text-sm shrink-0">{displayLabel}</div>
+                <div className="font-black text-white min-w-[2rem] text-sm shrink-0 text-center">
+                  <span aria-hidden="true">{displayLabel}</span>
+                  <span className="sr-only">Set {displayLabel}</span>
+                  {isCurrent && (
+                    <span className="block mt-0.5 text-[9px] font-black tracking-widest text-sky-300">
+                      NOW
+                    </span>
+                  )}
+                  {typeLabel && (
+                    <span className={`block mt-0.5 text-[9px] font-black tracking-widest ${setTypeLabelTone(set)}`}>
+                      {typeLabel.toUpperCase()}
+                    </span>
+                  )}
+                </div>
 
-                {/* Weight Input */}
+                {/* Weight Input — today's logged value */}
                 <div className={`flex flex-col gap-1 ${warmupModeActive ? 'flex-1 min-w-[84px]' : 'flex-1 min-w-[62px]'}`}>
-                  <label className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">KG</label>
+                  <label htmlFor={kgId} className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Kg · today</label>
                   <input
+                    id={kgId}
                     type="number"
                     inputMode="decimal"
+                    aria-label={`${exercise.name} set ${displayLabel} weight in kilograms, today`}
                     value={set.kg === 0 || set.kg === undefined || set.kg === '' ? '' : set.kg}
                     onChange={(e) => onUpdateSet(exerciseIndex, i, 'kg', Number(e.target.value) || 0)}
                     placeholder={set.suggestedKg ? `${set.suggestedKg}` : (prev?.kg ? `${prev.kg}` : '0')}
-                    className={`bg-slate-800/50 border border-slate-600/50 rounded-lg px-2.5 py-2 text-center text-sm font-bold w-full focus:border-accent focus:outline-none focus:accent-ring transition ${
+                    className={`bg-slate-800/50 border border-slate-600/50 rounded-lg px-2.5 py-2 min-h-[48px] text-center text-base font-black tabular-nums w-full focus:border-accent focus:outline-none focus:accent-ring transition ${
                       (set.kg === 0 || set.kg === undefined || set.kg === '') && !set.completed ? 'text-slate-500 placeholder-slate-600' : 'text-white'
                     } ${set.completed ? 'text-white' : ''}`}
                   />
                 </div>
 
-                {/* Reps Input */}
+                {/* Reps Input — today's logged value */}
                 <div className={`flex flex-col gap-1 ${warmupModeActive ? 'flex-1 min-w-[84px]' : 'flex-1 min-w-[62px]'}`}>
-                  <label className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">REPS</label>
+                  <label htmlFor={repsId} className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Reps · today</label>
                   <input
+                    id={repsId}
                     type="number"
                     inputMode="numeric"
+                    aria-label={`${exercise.name} set ${displayLabel} reps, today`}
                     value={set.reps === 0 || set.reps === undefined || set.reps === '' ? '' : set.reps}
                     onChange={(e) => onUpdateSet(exerciseIndex, i, 'reps', Number(e.target.value) || 0)}
                     placeholder={set.suggestedReps ? `${set.suggestedReps}` : (prev?.reps ? `${prev.reps}` : '0')}
-                    className={`bg-slate-800/50 border border-slate-600/50 rounded-lg px-2.5 py-2 text-center text-sm font-bold w-full focus:border-accent focus:outline-none focus:accent-ring transition ${
+                    className={`bg-slate-800/50 border border-slate-600/50 rounded-lg px-2.5 py-2 min-h-[48px] text-center text-base font-black tabular-nums w-full focus:border-accent focus:outline-none focus:accent-ring transition ${
                       (set.reps === 0 || set.reps === undefined || set.reps === '') && !set.completed ? 'text-slate-500 placeholder-slate-600' : 'text-white'
                     } ${set.completed ? 'text-white' : ''}`}
                   />
                 </div>
 
-                {/* Previous Set Reference */}
+                {/* Previous Set Reference — last time, contextual only */}
                 {prev && !warmupModeActive && !deleteModeActive && (
                   <div className="hidden min-[390px]:flex flex-col gap-1 min-w-[58px]">
-                    <label className="text-[11px] text-slate-500 font-bold uppercase tracking-wider">PREV</label>
-                    <div className="text-[11px] font-bold text-slate-400 px-1.5 py-2 rounded-lg bg-slate-800/50 border border-slate-700/50 text-center opacity-75">
+                    <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Last</label>
+                    <div className="text-[11px] font-bold text-slate-400 px-1.5 py-2 rounded-lg bg-slate-800/50 border border-slate-700/50 text-center tabular-nums opacity-75">
                       {prev.kg}x{prev.reps}
                     </div>
                   </div>
+                )}
+                {/* Compact previous fallback for narrow phones (<390px): the
+                    PREV column above is hidden there, so surface last-session
+                    values inline instead of losing them. Screen readers always
+                    get the value via the sr-only node. */}
+                {prevText && !warmupModeActive && !deleteModeActive && (
+                  <>
+                    <span className="sr-only">Last time {prevText}</span>
+                    <div className="min-[390px]:hidden text-[10px] font-bold text-slate-500 shrink-0" aria-hidden="true">
+                      ‹{prevText}
+                    </div>
+                  </>
                 )}
 
                 {/* Complete/Delete Toggle */}
@@ -230,13 +294,16 @@ export const ActiveWorkoutExerciseCard = React.memo(({
                       }
                       onToggleSet(exerciseIndex, i);
                     }}
-                    className={`w-9 h-9 rounded-lg font-bold transition-all flex items-center justify-center border shrink-0 ${
+                    aria-label={toggleLabel}
+                    aria-pressed={Boolean(set.completed)}
+                    title={toggleLabel}
+                    className={`w-12 h-12 rounded-lg font-black transition-all flex items-center justify-center border shrink-0 text-lg ${
                       set.completed
                         ? 'bg-emerald-600 border-emerald-500 text-white shadow-lg shadow-emerald-600/50 scale-105'
                         : 'bg-slate-700/50 border-slate-600/50 text-slate-400 hover:bg-slate-600/50'
                     } ui-press`}
                   >
-                    {set.completed ? '\u2713' : '\u25cb'}
+                    <span aria-hidden="true">{set.completed ? '✓' : '○'}</span>
                   </button>
                 )}
 
@@ -249,6 +316,7 @@ export const ActiveWorkoutExerciseCard = React.memo(({
                   <p className="text-[10px] text-amber-300/80 font-semibold uppercase tracking-wider mb-1">Set type</p>
                   <select
                     value={resolveSetType(set)}
+                    aria-label={`${exercise.name} set ${i + 1} type`}
                     onChange={(event) => onSetSetType && onSetSetType(exerciseIndex, i, event.target.value)}
                     className={`w-full h-9 px-3 rounded-lg font-bold text-[11px] tracking-wide transition-all border bg-slate-900/80 focus:outline-none ${setTypeTone(set)}`}
                   >
@@ -268,7 +336,8 @@ export const ActiveWorkoutExerciseCard = React.memo(({
         {/* Add Set Button */}
         <button
           onClick={() => onAddSet(exerciseIndex)}
-          className="w-full mt-3 py-2 font-bold text-sm border-2 border-dashed border-slate-600/50 hover:border-slate-500/50 text-slate-400 hover:text-slate-300 rounded-lg transition-all"
+          aria-label={`Add set to ${exercise.name}`}
+          className="w-full mt-3 py-2 min-h-[44px] font-bold text-sm border-2 border-dashed border-slate-600/50 hover:border-slate-500/50 text-slate-400 hover:text-slate-300 rounded-lg transition-all"
         >
           + Add set
         </button>

@@ -1,0 +1,5543 @@
+{
+  "workouts": [
+    {
+      "templateId": 1768434575176,
+      "name": "Push-dipy A",
+      "note": "",
+      "date": "2026-02-10",
+      "startTime": "2026-02-10T15:18:59.236Z",
+      "exercises": [
+        {
+          "exerciseId": 101,
+          "name": "Bench Press",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 100,
+              "reps": 1,
+              "completed": true,
+              "warmup": true
+            },
+            {
+              "kg": 110,
+              "reps": 2,
+              "completed": true
+            },
+            {
+              "kg": 105,
+              "reps": 3,
+              "completed": true
+            },
+            {
+              "kg": 0,
+              "reps": 5,
+              "completed": true
+            },
+            {
+              "kg": 0,
+              "reps": 4,
+              "completed": true
+            },
+            {
+              "kg": 0,
+              "reps": 3,
+              "completed": true
+            },
+            {
+              "kg": 0,
+              "reps": 4,
+              "completed": false
+            }
+          ]
+        },
+        {
+          "exerciseId": 1767883597455,
+          "name": "Dipy",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            },
+            {
+              "kg": 20,
+              "reps": 7,
+              "completed": true
+            },
+            {
+              "kg": 20,
+              "reps": 6,
+              "completed": true
+            },
+            {
+              "kg": 20,
+              "reps": 4,
+              "completed": true
+            },
+            {
+              "kg": 20,
+              "reps": 4,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 102,
+          "name": "Incline Bench Press (Barbell)",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 70,
+              "reps": 3,
+              "completed": true
+            },
+            {
+              "kg": 60,
+              "reps": 6,
+              "completed": true
+            },
+            {
+              "kg": 60,
+              "reps": 4,
+              "completed": true
+            },
+            {
+              "kg": 60,
+              "reps": 4,
+              "completed": false
+            }
+          ]
+        },
+        {
+          "exerciseId": 106,
+          "name": "Lateral Raises",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 10,
+              "reps": 10,
+              "completed": true
+            },
+            {
+              "kg": 10,
+              "reps": 10,
+              "completed": true
+            },
+            {
+              "kg": 10,
+              "reps": 10,
+              "completed": true
+            },
+            {
+              "kg": 10,
+              "reps": 10,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 108,
+          "name": "Cable Triceps Pushdown",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 55,
+              "reps": 10,
+              "completed": true
+            },
+            {
+              "kg": 55,
+              "reps": 7,
+              "completed": true
+            },
+            {
+              "kg": 50,
+              "reps": 5,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 1767889443067,
+          "name": "Tył barku hantle na ławce ",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 10,
+              "reps": 12,
+              "completed": true
+            },
+            {
+              "kg": 10,
+              "reps": 12,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 109,
+          "name": "Overhead Triceps Extension",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            },
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            }
+          ]
+        }
+      ],
+      "templateSnapshot": {
+        "name": "Push-dipy A",
+        "exercises": [
+          {
+            "name": "Bench Press",
+            "category": "Push",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Dipy",
+            "category": "Push",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Lateral Raises",
+            "category": "Push",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Overhead Triceps Extension",
+            "category": "Push",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Cable Triceps Pushdown",
+            "category": "Push",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Incline Bench Press (Barbell)",
+            "category": "Push",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Tył barku hantle na ławce ",
+            "category": "Push",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          }
+        ],
+        "id": 1768434575176
+      },
+      "id": 1770742868518,
+      "tags": [
+        "#sleep-bad"
+      ],
+      "prStatus": {
+        "101": "weight",
+        "102": "1RM"
+      },
+      "hasPR": true
+    },
+    {
+      "templateId": 1767962616911,
+      "name": "Pulll",
+      "note": "",
+      "date": "2026-02-09",
+      "startTime": "2026-02-09T15:25:07.249Z",
+      "exercises": [
+        {
+          "exerciseId": 201,
+          "name": "Weighted Pull-Ups",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 10,
+              "reps": 5,
+              "completed": true,
+              "warmup": true
+            },
+            {
+              "kg": 25,
+              "reps": 3,
+              "completed": true
+            },
+            {
+              "kg": 25,
+              "reps": 3,
+              "completed": true
+            },
+            {
+              "kg": 25,
+              "reps": 3,
+              "completed": true
+            },
+            {
+              "kg": 25,
+              "reps": 3,
+              "completed": true
+            },
+            {
+              "kg": 25,
+              "reps": 3,
+              "completed": true
+            },
+            {
+              "kg": 25,
+              "reps": 3,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 205,
+          "name": "Barbell Curl",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 42.5,
+              "reps": 8,
+              "completed": true
+            },
+            {
+              "kg": 42.5,
+              "reps": 8,
+              "completed": true
+            },
+            {
+              "kg": 42.5,
+              "reps": 6,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 202,
+          "name": "Barbell Row",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 65,
+              "reps": 10,
+              "completed": true
+            },
+            {
+              "kg": 65,
+              "reps": 10,
+              "completed": true
+            },
+            {
+              "kg": 65,
+              "reps": 8,
+              "completed": true
+            },
+            {
+              "kg": 65,
+              "reps": 6,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 207,
+          "name": "Hammer Curl",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 17.5,
+              "reps": 7,
+              "completed": true
+            },
+            {
+              "kg": 17.5,
+              "reps": 6,
+              "completed": true
+            },
+            {
+              "kg": 17.5,
+              "reps": 5,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 1769021802063,
+          "name": "Biceps na lince ",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            }
+          ]
+        },
+        {
+          "exerciseId": 106,
+          "name": "Lateral Raises",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            }
+          ]
+        },
+        {
+          "exerciseId": 1768434171138,
+          "name": "Face pull",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            }
+          ]
+        },
+        {
+          "exerciseId": 208,
+          "name": "Ab Wheel Rollout",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            }
+          ]
+        }
+      ],
+      "templateSnapshot": {
+        "name": "Pulll",
+        "exercises": [
+          {
+            "name": "Weighted Pull-Ups",
+            "category": "Pull",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Barbell Curl",
+            "category": "Pull",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Barbell Row",
+            "category": "Pull",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Biceps na lince ",
+            "category": "Pull",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Hammer Curl",
+            "category": "Pull",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Lateral Raises",
+            "category": "Push",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Face pull",
+            "category": "Pull",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Ab Wheel Rollout",
+            "category": "Pull",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          }
+        ],
+        "id": 1767962616911
+      },
+      "id": 1770654612858,
+      "tags": [
+        "#power"
+      ],
+      "prStatus": {
+        "205": "weight"
+      },
+      "hasPR": true
+    },
+    {
+      "templateId": 1768434575176,
+      "name": "Push-dipy",
+      "note": "",
+      "date": "2026-02-03",
+      "startTime": "2026-02-03T16:52:40.957Z",
+      "exercises": [
+        {
+          "exerciseId": 101,
+          "name": "Bench Press",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 100,
+              "reps": 1,
+              "completed": true,
+              "warmup": true
+            },
+            {
+              "kg": 107.5,
+              "reps": 2,
+              "completed": true
+            },
+            {
+              "kg": 105,
+              "reps": 2,
+              "completed": true
+            },
+            {
+              "kg": 95,
+              "reps": 4,
+              "completed": true
+            },
+            {
+              "kg": 95,
+              "reps": 4,
+              "completed": true
+            },
+            {
+              "kg": 95,
+              "reps": 3,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 1767883597455,
+          "name": "Dipy",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            },
+            {
+              "kg": 20,
+              "reps": 5,
+              "completed": true
+            },
+            {
+              "kg": 20,
+              "reps": 5,
+              "completed": true
+            },
+            {
+              "kg": 20,
+              "reps": 5,
+              "completed": true
+            },
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            }
+          ]
+        },
+        {
+          "exerciseId": 106,
+          "name": "Lateral Raises",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 10,
+              "reps": 10,
+              "completed": true
+            },
+            {
+              "kg": 10,
+              "reps": 10,
+              "completed": true
+            },
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            }
+          ]
+        },
+        {
+          "exerciseId": 109,
+          "name": "Overhead Triceps Extension",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 40,
+              "reps": 9,
+              "completed": true
+            },
+            {
+              "kg": 40,
+              "reps": 8,
+              "completed": true
+            },
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            }
+          ]
+        },
+        {
+          "exerciseId": 108,
+          "name": "Cable Triceps Pushdown",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 55,
+              "reps": 9,
+              "completed": true
+            },
+            {
+              "kg": 50,
+              "reps": 10,
+              "completed": true
+            },
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            }
+          ]
+        },
+        {
+          "exerciseId": 102,
+          "name": "Incline Bench Press (Barbell)",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            }
+          ]
+        },
+        {
+          "exerciseId": 1767889443067,
+          "name": "Tył barku hantle na ławce ",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            },
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            }
+          ]
+        }
+      ],
+      "templateSnapshot": {
+        "name": "Push-dipy",
+        "exercises": [
+          {
+            "name": "Bench Press",
+            "category": "Push",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Dipy",
+            "category": "Push",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Lateral Raises",
+            "category": "Push",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Overhead Triceps Extension",
+            "category": "Push",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Cable Triceps Pushdown",
+            "category": "Push",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Incline Bench Press (Barbell)",
+            "category": "Push",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Tył barku hantle na ławce ",
+            "category": "Push",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          }
+        ],
+        "id": 1768434575176
+      },
+      "id": 1770143710301
+    },
+    {
+      "templateId": 1767962616911,
+      "name": "Pulll",
+      "note": "",
+      "date": "2026-02-02",
+      "startTime": "2026-02-02T15:11:41.363Z",
+      "exercises": [
+        {
+          "exerciseId": 201,
+          "name": "Weighted Pull-Ups",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            },
+            {
+              "kg": 22.5,
+              "reps": 3,
+              "completed": true
+            },
+            {
+              "kg": 25,
+              "reps": 3,
+              "completed": true
+            },
+            {
+              "kg": 25,
+              "reps": 3,
+              "completed": true
+            },
+            {
+              "kg": 25,
+              "reps": 3,
+              "completed": true
+            },
+            {
+              "kg": 25,
+              "reps": 3,
+              "completed": true
+            },
+            {
+              "kg": 22.5,
+              "reps": 3,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 205,
+          "name": "Barbell Curl",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 40,
+              "reps": 10,
+              "completed": true
+            },
+            {
+              "kg": 40,
+              "reps": 10,
+              "completed": true
+            },
+            {
+              "kg": 40,
+              "reps": 11,
+              "completed": true
+            },
+            {
+              "kg": 40,
+              "reps": 8,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 202,
+          "name": "Barbell Row",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 65,
+              "reps": 11,
+              "completed": true
+            },
+            {
+              "kg": 65,
+              "reps": 9,
+              "completed": true
+            },
+            {
+              "kg": 65,
+              "reps": 7,
+              "completed": true
+            },
+            {
+              "kg": 65,
+              "reps": 8,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 1769021802063,
+          "name": "Biceps na lince ",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            },
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            },
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            }
+          ]
+        },
+        {
+          "exerciseId": 207,
+          "name": "Hammer Curl",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 17.5,
+              "reps": 6,
+              "completed": true
+            },
+            {
+              "kg": 15,
+              "reps": 8,
+              "completed": true
+            },
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            }
+          ]
+        },
+        {
+          "exerciseId": 106,
+          "name": "Lateral Raises",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            },
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            },
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            }
+          ]
+        },
+        {
+          "exerciseId": 1768434171138,
+          "name": "Face pull",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            }
+          ]
+        },
+        {
+          "exerciseId": 208,
+          "name": "Ab Wheel Rollout",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            }
+          ]
+        }
+      ],
+      "templateSnapshot": {
+        "name": "Pulll",
+        "exercises": [
+          {
+            "name": "Weighted Pull-Ups",
+            "category": "Pull",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Barbell Curl",
+            "category": "Pull",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Barbell Row",
+            "category": "Pull",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Biceps na lince ",
+            "category": "Pull",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Hammer Curl",
+            "category": "Pull",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Lateral Raises",
+            "category": "Push",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Face pull",
+            "category": "Pull",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Ab Wheel Rollout",
+            "category": "Pull",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          }
+        ],
+        "id": 1767962616911
+      },
+      "id": 1770051747657
+    },
+    {
+      "templateId": 1768434575176,
+      "name": "Push-dipy",
+      "note": "",
+      "date": "2026-01-27",
+      "startTime": "2026-01-27T16:35:08.802Z",
+      "exercises": [
+        {
+          "exerciseId": 101,
+          "name": "Bench Press",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            },
+            {
+              "kg": 105,
+              "reps": 3,
+              "completed": true
+            },
+            {
+              "kg": 95,
+              "reps": 6,
+              "completed": true
+            },
+            {
+              "kg": 95,
+              "reps": 4,
+              "completed": true
+            },
+            {
+              "kg": 95,
+              "reps": 3,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 1767883597455,
+          "name": "Dipy",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            },
+            {
+              "kg": 20,
+              "reps": 6,
+              "completed": true
+            },
+            {
+              "kg": 20,
+              "reps": 7,
+              "completed": true
+            },
+            {
+              "kg": 20,
+              "reps": 6,
+              "completed": true
+            },
+            {
+              "kg": 20,
+              "reps": 4,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 106,
+          "name": "Lateral Raises",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 7.5,
+              "reps": 8,
+              "completed": true,
+              "warmup": true
+            },
+            {
+              "kg": 7.5,
+              "reps": 8,
+              "completed": true,
+              "warmup": true
+            },
+            {
+              "kg": 7.5,
+              "reps": 13,
+              "completed": true,
+              "warmup": true
+            },
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            },
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            },
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            },
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            }
+          ]
+        },
+        {
+          "exerciseId": 109,
+          "name": "Overhead Triceps Extension",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 45,
+              "reps": 6,
+              "completed": true
+            },
+            {
+              "kg": 40,
+              "reps": 9,
+              "completed": true
+            },
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            }
+          ]
+        },
+        {
+          "exerciseId": 108,
+          "name": "Cable Triceps Pushdown",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 55,
+              "reps": 6,
+              "completed": true
+            },
+            {
+              "kg": 50,
+              "reps": 9,
+              "completed": true
+            },
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            }
+          ]
+        },
+        {
+          "exerciseId": 102,
+          "name": "Incline Bench Press (Barbell)",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            }
+          ]
+        },
+        {
+          "exerciseId": 1767889443067,
+          "name": "Tył barku hantle na ławce ",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 10,
+              "reps": 8,
+              "completed": true,
+              "warmup": true
+            },
+            {
+              "kg": 10,
+              "reps": 0,
+              "completed": true
+            }
+          ]
+        }
+      ],
+      "templateSnapshot": {
+        "name": "Push-dipy",
+        "exercises": [
+          {
+            "name": "Bench Press",
+            "category": "Push",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Dipy",
+            "category": "Push",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Lateral Raises",
+            "category": "Push",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Cable Triceps Pushdown",
+            "category": "Push",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Overhead Triceps Extension",
+            "category": "Push",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Incline Bench Press (Barbell)",
+            "category": "Push",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Tył barku hantle na ławce ",
+            "category": "Push",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          }
+        ],
+        "id": 1768434575176
+      },
+      "id": 1769535460481
+    },
+    {
+      "templateId": 1767962616911,
+      "name": "Pulll",
+      "note": "",
+      "date": "2026-01-26",
+      "startTime": "2026-01-26T18:27:23.659Z",
+      "exercises": [
+        {
+          "exerciseId": 201,
+          "name": "Weighted Pull-Ups",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            },
+            {
+              "kg": 22.5,
+              "reps": 3,
+              "completed": true
+            },
+            {
+              "kg": 22.5,
+              "reps": 3,
+              "completed": true
+            },
+            {
+              "kg": 22.5,
+              "reps": 3,
+              "completed": true
+            },
+            {
+              "kg": 22.5,
+              "reps": 3,
+              "completed": true
+            },
+            {
+              "kg": 22.5,
+              "reps": 3,
+              "completed": true
+            },
+            {
+              "kg": 22.5,
+              "reps": 3,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 205,
+          "name": "Barbell Curl",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 40,
+              "reps": 12,
+              "completed": true
+            },
+            {
+              "kg": 40,
+              "reps": 8,
+              "completed": true
+            },
+            {
+              "kg": 40,
+              "reps": 8,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 202,
+          "name": "Barbell Row",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 65,
+              "reps": 9,
+              "completed": true
+            },
+            {
+              "kg": 65,
+              "reps": 8,
+              "completed": true
+            },
+            {
+              "kg": 65,
+              "reps": 7,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 1769021802063,
+          "name": "Biceps na lince ",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 35,
+              "reps": 10,
+              "completed": true
+            },
+            {
+              "kg": 35,
+              "reps": 7,
+              "completed": true
+            },
+            {
+              "kg": 35,
+              "reps": 5,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 207,
+          "name": "Hammer Curl",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            },
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            },
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            }
+          ]
+        },
+        {
+          "exerciseId": 106,
+          "name": "Lateral Raises",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            },
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            },
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            }
+          ]
+        },
+        {
+          "exerciseId": 1768434171138,
+          "name": "Face pull",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            }
+          ]
+        },
+        {
+          "exerciseId": 208,
+          "name": "Ab Wheel Rollout",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            }
+          ]
+        }
+      ],
+      "templateSnapshot": {
+        "name": "Pulll",
+        "exercises": [
+          {
+            "name": "Weighted Pull-Ups",
+            "category": "Pull",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Barbell Curl",
+            "category": "Pull",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Barbell Row",
+            "category": "Pull",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Biceps na lince ",
+            "category": "Pull",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Hammer Curl",
+            "category": "Pull",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Lateral Raises",
+            "category": "Push",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Face pull",
+            "category": "Pull",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Ab Wheel Rollout",
+            "category": "Pull",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          }
+        ],
+        "id": 1767962616911
+      },
+      "id": 1769456051734
+    },
+    {
+      "templateId": 1767962616911,
+      "name": "Pulll",
+      "note": "",
+      "date": "2026-01-21",
+      "startTime": "2026-01-21T18:56:50.225Z",
+      "exercises": [
+        {
+          "exerciseId": 201,
+          "name": "Weighted Pull-Ups",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            },
+            {
+              "kg": 20,
+              "reps": 5,
+              "completed": true
+            },
+            {
+              "kg": 20,
+              "reps": 5,
+              "completed": true
+            },
+            {
+              "kg": 20,
+              "reps": 4,
+              "completed": true
+            },
+            {
+              "kg": 17.5,
+              "reps": 4,
+              "completed": true
+            },
+            {
+              "kg": 17.5,
+              "reps": 4,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 205,
+          "name": "Barbell Curl",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 40,
+              "reps": 10,
+              "completed": true
+            },
+            {
+              "kg": 40,
+              "reps": 7,
+              "completed": true
+            },
+            {
+              "kg": 40,
+              "reps": 7,
+              "completed": true
+            },
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            }
+          ]
+        },
+        {
+          "exerciseId": 202,
+          "name": "Barbell Row",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 65,
+              "reps": 8,
+              "completed": true
+            },
+            {
+              "kg": 65,
+              "reps": 8,
+              "completed": true
+            },
+            {
+              "kg": 65,
+              "reps": 7,
+              "completed": true
+            },
+            {
+              "kg": 65,
+              "reps": 7,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 1769021802063,
+          "name": "Biceps na lince ",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 35,
+              "reps": 12,
+              "completed": true
+            },
+            {
+              "kg": 40,
+              "reps": 7,
+              "completed": true
+            },
+            {
+              "kg": 35,
+              "reps": 7,
+              "completed": true
+            },
+            {
+              "kg": 30,
+              "reps": 10,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 207,
+          "name": "Hammer Curl",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            },
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            },
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            }
+          ]
+        },
+        {
+          "exerciseId": 106,
+          "name": "Lateral Raises",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 10,
+              "reps": 10,
+              "completed": true
+            },
+            {
+              "kg": 10,
+              "reps": 10,
+              "completed": true
+            },
+            {
+              "kg": 10,
+              "reps": 8,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 1768434171138,
+          "name": "Face pull",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            }
+          ]
+        },
+        {
+          "exerciseId": 208,
+          "name": "Ab Wheel Rollout",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            }
+          ]
+        }
+      ],
+      "templateSnapshot": {
+        "name": "Pulll",
+        "exercises": [
+          {
+            "name": "Weighted Pull-Ups",
+            "category": "Pull",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Barbell Curl",
+            "category": "Pull",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Barbell Row",
+            "category": "Pull",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Hammer Curl",
+            "category": "Pull",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Lateral Raises",
+            "category": "Push",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Face pull",
+            "category": "Pull",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Ab Wheel Rollout",
+            "category": "Pull",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          }
+        ],
+        "id": 1767962616911
+      },
+      "id": 1769023828597
+    },
+    {
+      "templateId": 1768434575176,
+      "name": "Push-dipy",
+      "note": "",
+      "date": "2026-01-20",
+      "startTime": "2026-01-20T18:25:30.201Z",
+      "exercises": [
+        {
+          "exerciseId": 101,
+          "name": "Bench Press",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 90,
+              "reps": 4,
+              "completed": false
+            },
+            {
+              "kg": 100,
+              "reps": 5,
+              "completed": true
+            },
+            {
+              "kg": 100,
+              "reps": 3,
+              "completed": true
+            },
+            {
+              "kg": 90,
+              "reps": 3,
+              "completed": true
+            },
+            {
+              "kg": 90,
+              "reps": 4,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 1767883597455,
+          "name": "Dipy",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 10,
+              "reps": 1,
+              "completed": true,
+              "warmup": true
+            },
+            {
+              "kg": 20,
+              "reps": 7,
+              "completed": true
+            },
+            {
+              "kg": 20,
+              "reps": 6,
+              "completed": true
+            },
+            {
+              "kg": 20,
+              "reps": 4,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 106,
+          "name": "Lateral Raises",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 10,
+              "reps": 11,
+              "completed": true
+            },
+            {
+              "kg": 10,
+              "reps": 8,
+              "completed": true
+            },
+            {
+              "kg": 10,
+              "reps": 8,
+              "completed": true
+            },
+            {
+              "kg": 10,
+              "reps": 8,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 108,
+          "name": "Cable Triceps Pushdown",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 55,
+              "reps": 8,
+              "completed": true
+            },
+            {
+              "kg": 55,
+              "reps": 7,
+              "completed": true
+            },
+            {
+              "kg": 55,
+              "reps": 7,
+              "completed": false
+            }
+          ]
+        },
+        {
+          "exerciseId": 109,
+          "name": "Overhead Triceps Extension",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 45,
+              "reps": 5,
+              "completed": true
+            },
+            {
+              "kg": 40,
+              "reps": 5,
+              "completed": true
+            },
+            {
+              "kg": 40,
+              "reps": 5,
+              "completed": false
+            }
+          ]
+        },
+        {
+          "exerciseId": 102,
+          "name": "Incline Bench Press (Barbell)",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 60,
+              "reps": 6,
+              "completed": false
+            }
+          ]
+        },
+        {
+          "exerciseId": 1767889443067,
+          "name": "Tył barku hantle na ławce ",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 10,
+              "reps": 15,
+              "completed": false
+            }
+          ]
+        }
+      ],
+      "templateSnapshot": {
+        "name": "Push-dipy",
+        "exercises": [
+          {
+            "exerciseId": 101,
+            "name": "Bench Press",
+            "category": "Push",
+            "sets": [
+              {
+                "kg": 90,
+                "reps": 4
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "exerciseId": 1767883597455,
+            "name": "Dipy",
+            "category": "Push",
+            "sets": [
+              {
+                "kg": 20,
+                "reps": 5
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "exerciseId": 102,
+            "name": "Incline Bench Press (Barbell)",
+            "category": "Push",
+            "sets": [
+              {
+                "kg": 60,
+                "reps": 6
+              }
+            ]
+          },
+          {
+            "exerciseId": 109,
+            "name": "Overhead Triceps Extension",
+            "category": "Push",
+            "sets": [
+              {
+                "kg": 45,
+                "reps": 6
+              }
+            ]
+          },
+          {
+            "exerciseId": 106,
+            "name": "Lateral Raises",
+            "category": "Push",
+            "sets": [
+              {
+                "kg": 10,
+                "reps": 8
+              }
+            ]
+          },
+          {
+            "exerciseId": 108,
+            "name": "Cable Triceps Pushdown",
+            "category": "Push",
+            "sets": [
+              {
+                "kg": 55,
+                "reps": 5
+              }
+            ]
+          },
+          {
+            "exerciseId": 1767889443067,
+            "name": "Tył barku hantle na ławce ",
+            "category": "Push",
+            "sets": [
+              {
+                "kg": 10,
+                "reps": 15
+              }
+            ]
+          }
+        ],
+        "id": 1768434575176
+      },
+      "id": 1768938518089
+    },
+    {
+      "templateId": 1767962616911,
+      "name": "Pulll",
+      "note": "",
+      "date": "2026-01-17",
+      "startTime": "2026-01-17T14:45:34.441Z",
+      "exercises": [
+        {
+          "exerciseId": 201,
+          "name": "Weighted Pull-Ups",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 10,
+              "reps": 5,
+              "completed": true,
+              "warmup": true
+            },
+            {
+              "kg": 17.5,
+              "reps": 5,
+              "completed": true
+            },
+            {
+              "kg": 17.5,
+              "reps": 5,
+              "completed": true
+            },
+            {
+              "kg": 17.5,
+              "reps": 5,
+              "completed": true
+            },
+            {
+              "kg": 17.5,
+              "reps": 3,
+              "completed": true
+            },
+            {
+              "kg": 15,
+              "reps": 4,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 205,
+          "name": "Barbell Curl",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            },
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            },
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            },
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            }
+          ]
+        },
+        {
+          "exerciseId": 202,
+          "name": "Barbell Row",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            },
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            },
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            },
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            }
+          ]
+        },
+        {
+          "exerciseId": 207,
+          "name": "Hammer Curl",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 17.5,
+              "reps": 8,
+              "completed": true
+            },
+            {
+              "kg": 17.5,
+              "reps": 7,
+              "completed": true
+            },
+            {
+              "kg": 17.5,
+              "reps": 7,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 106,
+          "name": "Lateral Raises",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 10,
+              "reps": 12,
+              "completed": true
+            },
+            {
+              "kg": 10,
+              "reps": 7,
+              "completed": true
+            },
+            {
+              "kg": 10,
+              "reps": 6,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 1768434171138,
+          "name": "Face pull",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 10,
+              "reps": 10,
+              "completed": false
+            }
+          ]
+        },
+        {
+          "exerciseId": 208,
+          "name": "Ab Wheel Rollout",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 1,
+              "reps": 15,
+              "completed": false
+            }
+          ]
+        },
+        {
+          "exerciseId": 108,
+          "name": "Cable Triceps Pushdown",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 55,
+              "reps": 9,
+              "completed": true
+            },
+            {
+              "kg": 55,
+              "reps": 8,
+              "completed": true
+            },
+            {
+              "kg": 55,
+              "reps": 7,
+              "completed": true
+            },
+            {
+              "kg": 55,
+              "reps": 7,
+              "completed": true
+            }
+          ]
+        }
+      ],
+      "templateSnapshot": {
+        "name": "Pulll",
+        "exercises": [
+          {
+            "name": "Weighted Pull-Ups",
+            "category": "Pull",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Barbell Curl",
+            "category": "Pull",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Barbell Row",
+            "category": "Pull",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Hammer Curl",
+            "category": "Pull",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "name": "Lateral Raises",
+            "category": "Push",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "exerciseId": 1768434171138,
+            "name": "Face pull",
+            "category": "Pull",
+            "sets": [
+              {
+                "kg": 10,
+                "reps": 10
+              }
+            ]
+          },
+          {
+            "exerciseId": 208,
+            "name": "Ab Wheel Rollout",
+            "category": "Pull",
+            "sets": [
+              {
+                "kg": 1,
+                "reps": 15
+              }
+            ]
+          }
+        ],
+        "id": 1767962616911
+      },
+      "id": 1768664187655
+    },
+    {
+      "templateId": 1768325696341,
+      "name": "Nowa kultura pushh",
+      "note": "",
+      "date": "2026-01-13",
+      "startTime": "2026-01-13T17:35:03.205Z",
+      "exercises": [
+        {
+          "exerciseId": 101,
+          "name": "Bench Press",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 80,
+              "reps": 4,
+              "completed": true,
+              "warmup": true
+            },
+            {
+              "kg": 100,
+              "reps": 4,
+              "completed": true
+            },
+            {
+              "kg": 100,
+              "reps": 3,
+              "completed": true
+            },
+            {
+              "kg": 100,
+              "reps": 2,
+              "completed": true
+            },
+            {
+              "kg": 90,
+              "reps": 7,
+              "completed": true
+            },
+            {
+              "kg": 90,
+              "reps": 7,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 106,
+          "name": "Lateral Raises",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 10,
+              "reps": 12,
+              "completed": true
+            },
+            {
+              "kg": 10,
+              "reps": 12,
+              "completed": true
+            },
+            {
+              "kg": 10,
+              "reps": 12,
+              "completed": true
+            },
+            {
+              "kg": 10,
+              "reps": 12,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 1767883597455,
+          "name": "Dipy",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 10,
+              "reps": 7,
+              "completed": true
+            },
+            {
+              "kg": 20,
+              "reps": 6,
+              "completed": true
+            },
+            {
+              "kg": 20,
+              "reps": 7,
+              "completed": true
+            },
+            {
+              "kg": 20,
+              "reps": 6,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 108,
+          "name": "Cable Triceps Pushdown",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 55,
+              "reps": 7,
+              "completed": true
+            },
+            {
+              "kg": 55,
+              "reps": 7,
+              "completed": true
+            },
+            {
+              "kg": 55,
+              "reps": 7,
+              "completed": false
+            }
+          ]
+        },
+        {
+          "exerciseId": 105,
+          "name": "Dumbbell Shoulder Press",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 25,
+              "reps": 5,
+              "completed": true
+            },
+            {
+              "kg": 25,
+              "reps": 7,
+              "completed": false
+            }
+          ]
+        },
+        {
+          "exerciseId": 1767889443067,
+          "name": "Tył barku hantle na ławce ",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 10,
+              "reps": 15,
+              "completed": true
+            },
+            {
+              "kg": 10,
+              "reps": 15,
+              "completed": true
+            }
+          ],
+          "exerciseNote": ""
+        },
+        {
+          "exerciseId": 109,
+          "name": "Overhead Triceps Extension",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 40,
+              "reps": 6,
+              "completed": true
+            },
+            {
+              "kg": 40,
+              "reps": 7,
+              "completed": true
+            }
+          ]
+        }
+      ],
+      "templateSnapshot": {
+        "name": "Nowa kultura pushh",
+        "exercises": [],
+        "id": 1768325696341
+      },
+      "id": 1768331293960
+    },
+    {
+      "templateId": "empty",
+      "name": "Empty Workout",
+      "note": "I love when u count me out ",
+      "date": "2026-01-11",
+      "startTime": "2026-01-11T15:59:42.547Z",
+      "exercises": [
+        {
+          "exerciseId": 103,
+          "name": "Overhead Press (Barbell)",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 50,
+              "reps": 8,
+              "completed": true
+            },
+            {
+              "kg": 50,
+              "reps": 8,
+              "completed": true
+            },
+            {
+              "kg": 50,
+              "reps": 7,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 201,
+          "name": "Weighted Pull-Ups",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 15,
+              "reps": 6,
+              "completed": true
+            },
+            {
+              "kg": 15,
+              "reps": 6,
+              "completed": true
+            },
+            {
+              "kg": 15,
+              "reps": 6,
+              "completed": true
+            },
+            {
+              "kg": 15,
+              "reps": 4,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 205,
+          "name": "Barbell Curl",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 40,
+              "reps": 9,
+              "completed": true
+            },
+            {
+              "kg": 40,
+              "reps": 6,
+              "completed": true
+            },
+            {
+              "kg": 40,
+              "reps": 7,
+              "completed": true
+            },
+            {
+              "kg": 40,
+              "reps": 9,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 106,
+          "name": "Lateral Raises",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 10,
+              "reps": 6,
+              "completed": true
+            },
+            {
+              "kg": 10,
+              "reps": 12,
+              "completed": true
+            },
+            {
+              "kg": 10,
+              "reps": 8,
+              "completed": true
+            },
+            {
+              "kg": 10,
+              "reps": 7,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 109,
+          "name": "Overhead Triceps Extension",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 45,
+              "reps": 7,
+              "completed": true
+            },
+            {
+              "kg": 45,
+              "reps": 7,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 108,
+          "name": "Cable Triceps Pushdown",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 55,
+              "reps": 10,
+              "completed": true
+            },
+            {
+              "kg": 55,
+              "reps": 11,
+              "completed": true
+            },
+            {
+              "kg": 55,
+              "reps": 11,
+              "completed": false
+            }
+          ]
+        }
+      ],
+      "templateSnapshot": {
+        "id": "empty",
+        "name": "Empty Workout",
+        "exercises": []
+      },
+      "id": 1768151661771
+    },
+    {
+      "templateId": 1767962616911,
+      "name": "Pulll",
+      "note": "",
+      "date": "2026-01-09",
+      "startTime": "2026-01-09T12:44:40.470Z",
+      "exercises": [
+        {
+          "exerciseId": 201,
+          "name": "Weighted Pull-Ups",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 1,
+              "reps": 9,
+              "completed": true
+            },
+            {
+              "kg": 1,
+              "reps": 8,
+              "completed": true
+            },
+            {
+              "kg": 10,
+              "reps": 5,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 1767962661644,
+          "name": "Chin up",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 1,
+              "reps": 7,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 205,
+          "name": "Barbell Curl",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 35,
+              "reps": 12,
+              "completed": true
+            },
+            {
+              "kg": 40,
+              "reps": 11,
+              "completed": true
+            },
+            {
+              "kg": 40,
+              "reps": 8,
+              "completed": true
+            },
+            {
+              "kg": 40,
+              "reps": 7,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 202,
+          "name": "Barbell Row",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 70,
+              "reps": 5,
+              "completed": true
+            },
+            {
+              "kg": 60,
+              "reps": 12,
+              "completed": true
+            },
+            {
+              "kg": 65,
+              "reps": 7,
+              "completed": true
+            },
+            {
+              "kg": 65,
+              "reps": 10,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 207,
+          "name": "Hammer Curl",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 17.5,
+              "reps": 6,
+              "completed": true
+            },
+            {
+              "kg": 17.5,
+              "reps": 6,
+              "completed": true
+            },
+            {
+              "kg": 17.5,
+              "reps": 4,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 106,
+          "name": "Lateral Raises",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 10,
+              "reps": 8,
+              "completed": true
+            },
+            {
+              "kg": 10,
+              "reps": 8,
+              "completed": true
+            },
+            {
+              "kg": 10,
+              "reps": 8,
+              "completed": true
+            }
+          ]
+        }
+      ],
+      "templateSnapshot": {
+        "name": "Pulll",
+        "exercises": [
+          {
+            "exerciseId": 201,
+            "name": "Weighted Pull-Ups",
+            "category": "Pull",
+            "sets": [
+              {
+                "kg": 10,
+                "reps": 6
+              }
+            ]
+          }
+        ],
+        "id": 1767962616911
+      },
+      "id": 1767967745438
+    },
+    {
+      "templateId": 1767883614840,
+      "name": "Pushhh",
+      "note": "/grzelak",
+      "date": "2026-01-08",
+      "startTime": "2026-01-08T14:46:58.907Z",
+      "exercises": [
+        {
+          "exerciseId": 101,
+          "name": "Bench Press",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 80,
+              "reps": 7,
+              "completed": true
+            },
+            {
+              "kg": 100,
+              "reps": 4,
+              "completed": true
+            },
+            {
+              "kg": 100,
+              "reps": 3,
+              "completed": true
+            },
+            {
+              "kg": 90,
+              "reps": 6,
+              "completed": true
+            },
+            {
+              "kg": 90,
+              "reps": 4,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 1767883597455,
+          "name": "Dipy",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 10,
+              "reps": 8,
+              "completed": true
+            },
+            {
+              "kg": 20,
+              "reps": 7,
+              "completed": true
+            },
+            {
+              "kg": 20,
+              "reps": 6,
+              "completed": true
+            },
+            {
+              "kg": 20,
+              "reps": 5,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 103,
+          "name": "Overhead Press (Barbell)",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 50,
+              "reps": 6,
+              "completed": true
+            },
+            {
+              "kg": 50,
+              "reps": 5,
+              "completed": true
+            },
+            {
+              "kg": 50,
+              "reps": 5,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 108,
+          "name": "Cable Triceps Pushdown",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 55,
+              "reps": 12,
+              "completed": true
+            },
+            {
+              "kg": 55,
+              "reps": 7,
+              "completed": true
+            },
+            {
+              "kg": 55,
+              "reps": 7,
+              "completed": true
+            },
+            {
+              "kg": 55,
+              "reps": 5,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 106,
+          "name": "Lateral Raises",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 10,
+              "reps": 8,
+              "completed": true
+            },
+            {
+              "kg": 10,
+              "reps": 12,
+              "completed": true
+            }
+          ],
+          "exerciseNote": "Lekko coś w barku się rusza ale chyba będzie git. Jest git "
+        },
+        {
+          "exerciseId": 109,
+          "name": "Overhead Triceps Extension",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 45,
+              "reps": 6,
+              "completed": true
+            },
+            {
+              "kg": 40,
+              "reps": 7,
+              "completed": true
+            },
+            {
+              "kg": 45,
+              "reps": 6,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 1767889443067,
+          "name": "Tył barku hantle na ławce ",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 10,
+              "reps": 15,
+              "completed": true
+            },
+            {
+              "kg": 10,
+              "reps": 15,
+              "completed": true
+            }
+          ]
+        }
+      ],
+      "templateSnapshot": {
+        "name": "Pushhh",
+        "exercises": [
+          {
+            "exerciseId": 101,
+            "name": "Bench Press",
+            "category": "Push",
+            "sets": [
+              {
+                "kg": 80,
+                "reps": 7
+              }
+            ]
+          },
+          {
+            "exerciseId": 1767883597455,
+            "name": "Dipy",
+            "category": "Push",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          }
+        ],
+        "id": 1767883614840
+      },
+      "id": 1767911468902
+    },
+    {
+      "templateId": "empty",
+      "name": "Empty Workout",
+      "note": "Push ",
+      "date": "2026-01-05",
+      "startTime": "2026-01-05T15:52:59.131Z",
+      "exercises": [
+        {
+          "exerciseId": 101,
+          "name": "Bench Press",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 100,
+              "reps": 2,
+              "completed": true
+            },
+            {
+              "kg": 100,
+              "reps": 3,
+              "completed": true
+            },
+            {
+              "kg": 90,
+              "reps": 6,
+              "completed": true
+            },
+            {
+              "kg": 80,
+              "reps": 7,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 105,
+          "name": "Dumbbell Shoulder Press",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 25,
+              "reps": 7,
+              "completed": true
+            },
+            {
+              "kg": 25,
+              "reps": 5,
+              "completed": true
+            },
+            {
+              "kg": 25,
+              "reps": 7,
+              "completed": true
+            }
+          ],
+          "exerciseNote": ""
+        },
+        {
+          "exerciseId": 108,
+          "name": "Cable Triceps Pushdown",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 50,
+              "reps": 9,
+              "completed": true
+            },
+            {
+              "kg": 50,
+              "reps": 8,
+              "completed": true
+            },
+            {
+              "kg": 50,
+              "reps": 12,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 106,
+          "name": "Lateral Raises",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 10,
+              "reps": 12,
+              "completed": true
+            },
+            {
+              "kg": 10,
+              "reps": 12,
+              "completed": true
+            },
+            {
+              "kg": 10,
+              "reps": 12,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 109,
+          "name": "Overhead Triceps Extension",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 45,
+              "reps": 7,
+              "completed": true
+            },
+            {
+              "kg": 40,
+              "reps": 6,
+              "completed": false
+            }
+          ]
+        },
+        {
+          "exerciseId": 201,
+          "name": "Weighted Pull-Ups",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 1,
+              "reps": 8,
+              "completed": true
+            },
+            {
+              "kg": 10,
+              "reps": 6,
+              "completed": true
+            },
+            {
+              "kg": 10,
+              "reps": 6,
+              "completed": true
+            }
+          ]
+        }
+      ],
+      "templateSnapshot": {
+        "id": "empty",
+        "name": "Empty Workout",
+        "exercises": []
+      },
+      "id": 1767632892254
+    },
+    {
+      "templateId": "empty",
+      "name": "Empty Workout",
+      "note": "",
+      "date": "2026-01-04",
+      "startTime": "2026-01-04T16:18:16.278Z",
+      "exercises": [
+        {
+          "exerciseId": 108,
+          "name": "Cable Triceps Pushdown",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 50,
+              "reps": 9,
+              "completed": true
+            },
+            {
+              "kg": 50,
+              "reps": 9,
+              "completed": true
+            },
+            {
+              "kg": 50,
+              "reps": 9,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 207,
+          "name": "Hammer Curl",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 17.5,
+              "reps": 9,
+              "completed": true
+            },
+            {
+              "kg": 17.5,
+              "reps": 7,
+              "completed": true
+            },
+            {
+              "kg": 17.5,
+              "reps": 6,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 109,
+          "name": "Overhead Triceps Extension",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 40,
+              "reps": 10,
+              "completed": true
+            },
+            {
+              "kg": 40,
+              "reps": 10,
+              "completed": true
+            },
+            {
+              "kg": 40,
+              "reps": 6,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 208,
+          "name": "Ab Wheel Rollout",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 1,
+              "reps": 18,
+              "completed": true
+            },
+            {
+              "kg": 1,
+              "reps": 12,
+              "completed": true
+            },
+            {
+              "kg": 1,
+              "reps": 15,
+              "completed": true
+            }
+          ]
+        }
+      ],
+      "templateSnapshot": {
+        "id": "empty",
+        "name": "Empty Workout",
+        "exercises": []
+      },
+      "id": 1767549655069
+    },
+    {
+      "templateId": 1767445769518,
+      "name": "Nie rozjeb sobie bardziej barku challenge ",
+      "note": "Dojeabny 1:30 wszystko zrobione ",
+      "date": "2026-01-03",
+      "startTime": "2026-01-03T14:55:13.433Z",
+      "exercises": [
+        {
+          "exerciseId": 201,
+          "name": "Weighted Pull-Ups",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 1,
+              "reps": 10,
+              "completed": true
+            },
+            {
+              "kg": 10,
+              "reps": 6,
+              "completed": true
+            },
+            {
+              "kg": 10,
+              "reps": 6,
+              "completed": true
+            },
+            {
+              "kg": 10,
+              "reps": 6,
+              "completed": false
+            }
+          ]
+        },
+        {
+          "exerciseId": 205,
+          "name": "Barbell Curl",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 30,
+              "reps": 12,
+              "completed": true
+            },
+            {
+              "kg": 35,
+              "reps": 12,
+              "completed": true
+            },
+            {
+              "kg": 35,
+              "reps": 14,
+              "completed": true
+            },
+            {
+              "kg": 35,
+              "reps": 12,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 108,
+          "name": "Cable Triceps Pushdown",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 50,
+              "reps": 11,
+              "completed": true
+            },
+            {
+              "kg": 50,
+              "reps": 11,
+              "completed": true
+            },
+            {
+              "kg": 50,
+              "reps": 9,
+              "completed": true
+            }
+          ],
+          "exerciseNote": ""
+        },
+        {
+          "exerciseId": 202,
+          "name": "Barbell Row",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 60,
+              "reps": 10,
+              "completed": true
+            },
+            {
+              "kg": 60,
+              "reps": 10,
+              "completed": true
+            }
+          ],
+          "exerciseNote": ""
+        },
+        {
+          "exerciseId": 109,
+          "name": "Overhead Triceps Extension",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 40,
+              "reps": 12,
+              "completed": true
+            },
+            {
+              "kg": 45,
+              "reps": 6,
+              "completed": true
+            },
+            {
+              "kg": 45,
+              "reps": 6,
+              "completed": true
+            }
+          ],
+          "exerciseNote": ""
+        },
+        {
+          "exerciseId": 207,
+          "name": "Hammer Curl",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 17.5,
+              "reps": 9,
+              "completed": true
+            },
+            {
+              "kg": 17.5,
+              "reps": 6,
+              "completed": true
+            },
+            {
+              "kg": 17.5,
+              "reps": 6,
+              "completed": true
+            }
+          ],
+          "exerciseNote": ""
+        },
+        {
+          "exerciseId": 208,
+          "name": "Ab Wheel Rollout",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 1,
+              "reps": 10,
+              "completed": true
+            },
+            {
+              "kg": 1,
+              "reps": 16,
+              "completed": true
+            },
+            {
+              "kg": 0,
+              "reps": 0,
+              "completed": false
+            }
+          ]
+        }
+      ],
+      "templateSnapshot": {
+        "name": "Nie rozjeb sobie bardziej barku challenge ",
+        "exercises": [
+          {
+            "exerciseId": 201,
+            "name": "Weighted Pull-Ups",
+            "category": "Pull",
+            "sets": [
+              {
+                "kg": 10,
+                "reps": 6
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "exerciseId": 205,
+            "name": "Barbell Curl",
+            "category": "Pull",
+            "sets": [
+              {
+                "kg": 40,
+                "reps": 8
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "exerciseId": 202,
+            "name": "Barbell Row",
+            "category": "Pull",
+            "sets": [
+              {
+                "kg": 60,
+                "reps": 10
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "exerciseId": 108,
+            "name": "Cable Triceps Pushdown",
+            "category": "Push",
+            "sets": [
+              {
+                "kg": 45,
+                "reps": 10
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "exerciseId": 207,
+            "name": "Hammer Curl",
+            "category": "Pull",
+            "sets": [
+              {
+                "kg": 17.5,
+                "reps": 6
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "exerciseId": 110,
+            "name": "French Press",
+            "category": "Push",
+            "sets": [
+              {
+                "kg": 25,
+                "reps": 10
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          },
+          {
+            "exerciseId": 208,
+            "name": "Ab Wheel Rollout",
+            "category": "Pull",
+            "sets": [
+              {
+                "kg": 0,
+                "reps": 10
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              },
+              {
+                "kg": 0,
+                "reps": 0
+              }
+            ]
+          }
+        ],
+        "id": 1767445769518
+      },
+      "id": 1767459332868
+    },
+    {
+      "id": 1003,
+      "date": "2025-11-03",
+      "name": "Push",
+      "duration": 90,
+      "exercises": [
+        {
+          "exerciseId": 101,
+          "name": "Bench Press",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 100,
+              "reps": 5,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 105,
+          "name": "Dumbbell Shoulder Press",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 25,
+              "reps": 8,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 108,
+          "name": "Cable Triceps Pushdown",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 45,
+              "reps": 10,
+              "completed": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 1004,
+      "date": "2025-11-04",
+      "name": "Pull",
+      "duration": 85,
+      "exercises": [
+        {
+          "exerciseId": 201,
+          "name": "Weighted Pull-Ups",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 10,
+              "reps": 6,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 202,
+          "name": "Barbell Row",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 60,
+              "reps": 10,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 207,
+          "name": "Hammer Curl",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 17.5,
+              "reps": 6,
+              "completed": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 1005,
+      "date": "2025-11-05",
+      "name": "Legs",
+      "duration": 70,
+      "exercises": [
+        {
+          "exerciseId": 301,
+          "name": "Back Squat",
+          "category": "Legs",
+          "sets": [
+            {
+              "kg": 60,
+              "reps": 10,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 302,
+          "name": "Leg Extension",
+          "category": "Legs",
+          "sets": [
+            {
+              "kg": 25,
+              "reps": 12,
+              "completed": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 1006,
+      "date": "2025-11-06",
+      "name": "Pull",
+      "duration": 85,
+      "exercises": [
+        {
+          "exerciseId": 201,
+          "name": "Weighted Pull-Ups",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 10,
+              "reps": 6,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 202,
+          "name": "Barbell Row",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 60,
+              "reps": 10,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 207,
+          "name": "Hammer Curl",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 17.5,
+              "reps": 6,
+              "completed": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 1007,
+      "date": "2025-11-07",
+      "name": "Push",
+      "duration": 90,
+      "exercises": [
+        {
+          "exerciseId": 101,
+          "name": "Bench Press",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 100,
+              "reps": 5,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 105,
+          "name": "Dumbbell Shoulder Press",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 25,
+              "reps": 8,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 108,
+          "name": "Cable Triceps Pushdown",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 45,
+              "reps": 10,
+              "completed": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 1008,
+      "date": "2025-11-10",
+      "name": "Pull",
+      "duration": 85,
+      "exercises": [
+        {
+          "exerciseId": 201,
+          "name": "Weighted Pull-Ups",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 10,
+              "reps": 6,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 202,
+          "name": "Barbell Row",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 60,
+              "reps": 10,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 207,
+          "name": "Hammer Curl",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 17.5,
+              "reps": 6,
+              "completed": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 1009,
+      "date": "2025-11-13",
+      "name": "Push",
+      "duration": 90,
+      "exercises": [
+        {
+          "exerciseId": 101,
+          "name": "Bench Press",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 100,
+              "reps": 5,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 105,
+          "name": "Dumbbell Shoulder Press",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 25,
+              "reps": 8,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 108,
+          "name": "Cable Triceps Pushdown",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 45,
+              "reps": 10,
+              "completed": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 1010,
+      "date": "2025-11-14",
+      "name": "Legs",
+      "duration": 70,
+      "exercises": [
+        {
+          "exerciseId": 301,
+          "name": "Back Squat",
+          "category": "Legs",
+          "sets": [
+            {
+              "kg": 60,
+              "reps": 10,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 302,
+          "name": "Leg Extension",
+          "category": "Legs",
+          "sets": [
+            {
+              "kg": 25,
+              "reps": 12,
+              "completed": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 1011,
+      "date": "2025-11-17",
+      "name": "Push",
+      "duration": 90,
+      "exercises": [
+        {
+          "exerciseId": 101,
+          "name": "Bench Press",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 100,
+              "reps": 5,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 105,
+          "name": "Dumbbell Shoulder Press",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 25,
+              "reps": 8,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 108,
+          "name": "Cable Triceps Pushdown",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 45,
+              "reps": 10,
+              "completed": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 1012,
+      "date": "2025-11-18",
+      "name": "Pull",
+      "duration": 85,
+      "exercises": [
+        {
+          "exerciseId": 201,
+          "name": "Weighted Pull-Ups",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 10,
+              "reps": 6,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 202,
+          "name": "Barbell Row",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 60,
+              "reps": 10,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 207,
+          "name": "Hammer Curl",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 17.5,
+              "reps": 6,
+              "completed": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 1013,
+      "date": "2025-11-20",
+      "name": "Push",
+      "duration": 90,
+      "exercises": [
+        {
+          "exerciseId": 101,
+          "name": "Bench Press",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 100,
+              "reps": 5,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 105,
+          "name": "Dumbbell Shoulder Press",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 25,
+              "reps": 8,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 108,
+          "name": "Cable Triceps Pushdown",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 45,
+              "reps": 10,
+              "completed": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 1014,
+      "date": "2025-11-21",
+      "name": "Pull",
+      "duration": 85,
+      "exercises": [
+        {
+          "exerciseId": 201,
+          "name": "Weighted Pull-Ups",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 10,
+              "reps": 6,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 202,
+          "name": "Barbell Row",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 60,
+              "reps": 10,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 207,
+          "name": "Hammer Curl",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 17.5,
+              "reps": 6,
+              "completed": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 1015,
+      "date": "2025-11-24",
+      "name": "Legs",
+      "duration": 70,
+      "exercises": [
+        {
+          "exerciseId": 301,
+          "name": "Back Squat",
+          "category": "Legs",
+          "sets": [
+            {
+              "kg": 60,
+              "reps": 10,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 302,
+          "name": "Leg Extension",
+          "category": "Legs",
+          "sets": [
+            {
+              "kg": 25,
+              "reps": 12,
+              "completed": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 1016,
+      "date": "2025-11-25",
+      "name": "Pull",
+      "duration": 85,
+      "exercises": [
+        {
+          "exerciseId": 201,
+          "name": "Weighted Pull-Ups",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 10,
+              "reps": 6,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 202,
+          "name": "Barbell Row",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 60,
+              "reps": 10,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 207,
+          "name": "Hammer Curl",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 17.5,
+              "reps": 6,
+              "completed": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 1017,
+      "date": "2025-11-27",
+      "name": "Push",
+      "duration": 90,
+      "exercises": [
+        {
+          "exerciseId": 101,
+          "name": "Bench Press",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 100,
+              "reps": 5,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 105,
+          "name": "Dumbbell Shoulder Press",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 25,
+              "reps": 8,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 108,
+          "name": "Cable Triceps Pushdown",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 45,
+              "reps": 10,
+              "completed": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 1018,
+      "date": "2025-11-28",
+      "name": "Pull",
+      "duration": 85,
+      "exercises": [
+        {
+          "exerciseId": 201,
+          "name": "Weighted Pull-Ups",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 10,
+              "reps": 6,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 202,
+          "name": "Barbell Row",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 60,
+              "reps": 10,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 207,
+          "name": "Hammer Curl",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 17.5,
+              "reps": 6,
+              "completed": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 1019,
+      "date": "2025-12-03",
+      "name": "Push",
+      "duration": 90,
+      "exercises": [
+        {
+          "exerciseId": 101,
+          "name": "Bench Press",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 100,
+              "reps": 5,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 105,
+          "name": "Dumbbell Shoulder Press",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 25,
+              "reps": 8,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 108,
+          "name": "Cable Triceps Pushdown",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 45,
+              "reps": 10,
+              "completed": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 1020,
+      "date": "2025-12-05",
+      "name": "Legs",
+      "duration": 70,
+      "exercises": [
+        {
+          "exerciseId": 301,
+          "name": "Back Squat",
+          "category": "Legs",
+          "sets": [
+            {
+              "kg": 60,
+              "reps": 10,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 302,
+          "name": "Leg Extension",
+          "category": "Legs",
+          "sets": [
+            {
+              "kg": 25,
+              "reps": 12,
+              "completed": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 1021,
+      "date": "2025-12-11",
+      "name": "Push",
+      "duration": 90,
+      "exercises": [
+        {
+          "exerciseId": 101,
+          "name": "Bench Press",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 100,
+              "reps": 5,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 105,
+          "name": "Dumbbell Shoulder Press",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 25,
+              "reps": 8,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 108,
+          "name": "Cable Triceps Pushdown",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 45,
+              "reps": 10,
+              "completed": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 1022,
+      "date": "2025-12-22",
+      "name": "Pull",
+      "duration": 85,
+      "exercises": [
+        {
+          "exerciseId": 201,
+          "name": "Weighted Pull-Ups",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 10,
+              "reps": 6,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 202,
+          "name": "Barbell Row",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 60,
+              "reps": 10,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 207,
+          "name": "Hammer Curl",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 17.5,
+              "reps": 6,
+              "completed": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 1023,
+      "date": "2025-12-30",
+      "name": "Push",
+      "duration": 90,
+      "exercises": [
+        {
+          "exerciseId": 101,
+          "name": "Bench Press",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 100,
+              "reps": 5,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 105,
+          "name": "Dumbbell Shoulder Press",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 25,
+              "reps": 8,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exerciseId": 108,
+          "name": "Cable Triceps Pushdown",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 45,
+              "reps": 10,
+              "completed": true
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "exercisesDB": [
+    {
+      "id": 101,
+      "name": "Bench Press",
+      "category": "Push",
+      "muscles": [
+        "Chest",
+        "Triceps",
+        "Shoulders"
+      ],
+      "defaultSets": [
+        {
+          "kg": 90,
+          "reps": 4
+        }
+      ]
+    },
+    {
+      "id": 102,
+      "name": "Incline Bench Press (Barbell)",
+      "category": "Push",
+      "muscles": [
+        "Chest",
+        "Triceps",
+        "Shoulders"
+      ],
+      "defaultSets": [
+        {
+          "kg": 60,
+          "reps": 4
+        }
+      ],
+      "note": "Technikę muszę wyczuć "
+    },
+    {
+      "id": 103,
+      "name": "Overhead Press (Barbell)",
+      "category": "Push",
+      "muscles": [
+        "Shoulders",
+        "Triceps"
+      ],
+      "defaultSets": [
+        {
+          "kg": 50,
+          "reps": 7
+        }
+      ]
+    },
+    {
+      "id": 104,
+      "name": "Overhead Press (Smith Machine)",
+      "category": "Push",
+      "muscles": [
+        "Shoulders",
+        "Triceps"
+      ],
+      "defaultSets": [
+        {
+          "kg": 40,
+          "reps": 6
+        }
+      ]
+    },
+    {
+      "id": 105,
+      "name": "Dumbbell Shoulder Press",
+      "category": "Push",
+      "muscles": [
+        "Shoulders",
+        "Triceps"
+      ],
+      "defaultSets": [
+        {
+          "kg": 25,
+          "reps": 7
+        }
+      ]
+    },
+    {
+      "id": 106,
+      "name": "Lateral Raises",
+      "category": "Push",
+      "muscles": [
+        "Shoulders"
+      ],
+      "defaultSets": [
+        {
+          "kg": 10,
+          "reps": 8
+        }
+      ]
+    },
+    {
+      "id": 107,
+      "name": "Cable Lateral Raises",
+      "category": "Push",
+      "muscles": [
+        "Shoulders"
+      ],
+      "defaultSets": [
+        {
+          "kg": 10,
+          "reps": 12
+        }
+      ]
+    },
+    {
+      "id": 108,
+      "name": "Cable Triceps Pushdown",
+      "category": "Push",
+      "muscles": [
+        "Triceps"
+      ],
+      "defaultSets": [
+        {
+          "kg": 55,
+          "reps": 5
+        }
+      ]
+    },
+    {
+      "id": 109,
+      "name": "Overhead Triceps Extension",
+      "category": "Push",
+      "muscles": [
+        "Triceps"
+      ],
+      "defaultSets": [
+        {
+          "kg": 45,
+          "reps": 6
+        }
+      ]
+    },
+    {
+      "id": 110,
+      "name": "French Press",
+      "category": "Push",
+      "muscles": [
+        "Triceps"
+      ],
+      "defaultSets": [
+        {
+          "kg": 25,
+          "reps": 10
+        }
+      ]
+    },
+    {
+      "id": 111,
+      "name": "Bench Triceps Extension",
+      "category": "Push",
+      "muscles": [
+        "Triceps"
+      ],
+      "defaultSets": [
+        {
+          "kg": 50,
+          "reps": 10
+        }
+      ]
+    },
+    {
+      "id": 201,
+      "name": "Weighted Pull-Ups",
+      "category": "Pull",
+      "muscles": [
+        "Back",
+        "Biceps"
+      ],
+      "defaultSets": [
+        {
+          "kg": 30,
+          "reps": 3
+        }
+      ]
+    },
+    {
+      "id": 202,
+      "name": "Barbell Row",
+      "category": "Pull",
+      "muscles": [
+        "Back"
+      ],
+      "defaultSets": [
+        {
+          "kg": 65,
+          "reps": 86
+        }
+      ]
+    },
+    {
+      "id": 203,
+      "name": "Lat Pulldown",
+      "category": "Pull",
+      "muscles": [
+        "Back"
+      ],
+      "defaultSets": [
+        {
+          "kg": 45,
+          "reps": 10
+        }
+      ]
+    },
+    {
+      "id": 204,
+      "name": "Narciarz",
+      "category": "Pull",
+      "muscles": [
+        "Back"
+      ],
+      "defaultSets": [
+        {
+          "kg": 45,
+          "reps": 10
+        }
+      ]
+    },
+    {
+      "id": 205,
+      "name": "Barbell Curl",
+      "category": "Pull",
+      "muscles": [
+        "Biceps"
+      ],
+      "defaultSets": [
+        {
+          "kg": 40,
+          "reps": 12
+        }
+      ]
+    },
+    {
+      "id": 206,
+      "name": "Dumbbell Curl",
+      "category": "Pull",
+      "muscles": [
+        "Biceps"
+      ],
+      "defaultSets": [
+        {
+          "kg": 15,
+          "reps": 8
+        }
+      ]
+    },
+    {
+      "id": 207,
+      "name": "Hammer Curl",
+      "category": "Pull",
+      "muscles": [
+        "Biceps"
+      ],
+      "defaultSets": [
+        {
+          "kg": 17.5,
+          "reps": 4
+        }
+      ]
+    },
+    {
+      "id": 208,
+      "name": "Ab Wheel Rollout",
+      "category": "Pull",
+      "muscles": [
+        "Core"
+      ],
+      "defaultSets": [
+        {
+          "kg": 1,
+          "reps": 15
+        }
+      ]
+    },
+    {
+      "id": 301,
+      "name": "Back Squat",
+      "category": "Legs",
+      "muscles": [
+        "Legs"
+      ],
+      "defaultSets": [
+        {
+          "kg": 60,
+          "reps": 8
+        }
+      ]
+    },
+    {
+      "id": 302,
+      "name": "Leg Extension",
+      "category": "Legs",
+      "muscles": [
+        "Legs"
+      ],
+      "defaultSets": [
+        {
+          "kg": 25,
+          "reps": 12
+        }
+      ]
+    },
+    {
+      "name": "Dipy",
+      "category": "Push",
+      "muscles": [
+        "Triceps"
+      ],
+      "defaultSets": [
+        {
+          "kg": 20,
+          "reps": 5
+        }
+      ],
+      "id": 1767883597455
+    },
+    {
+      "name": "Tył barku hantle na ławce ",
+      "category": "Push",
+      "muscles": [
+        "Shoulders"
+      ],
+      "defaultSets": [
+        {
+          "kg": 10,
+          "reps": 15
+        }
+      ],
+      "id": 1767889443067
+    },
+    {
+      "name": "Chin up",
+      "category": "Push",
+      "muscles": [
+        "Back",
+        "Biceps"
+      ],
+      "defaultSets": [
+        {
+          "kg": 1,
+          "reps": 7
+        }
+      ],
+      "id": 1767962661644
+    },
+    {
+      "name": "Face pull",
+      "category": "Pull",
+      "muscles": [
+        "Shoulders"
+      ],
+      "defaultSets": [
+        {
+          "kg": 10,
+          "reps": 10
+        }
+      ],
+      "usesBodyweight": false,
+      "id": 1768434171138
+    },
+    {
+      "name": "Biceps na lince ",
+      "category": "Pull",
+      "muscles": [
+        "Biceps"
+      ],
+      "defaultSets": [
+        {
+          "kg": 30,
+          "reps": 10
+        }
+      ],
+      "usesBodyweight": false,
+      "id": 1769021802063
+    }
+  ],
+  "templates": [
+    {
+      "name": "Pul A",
+      "exercises": [
+        {
+          "name": "Weighted Pull-Ups",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 0,
+              "reps": 0
+            },
+            {
+              "kg": 0,
+              "reps": 0
+            }
+          ]
+        },
+        {
+          "name": "Barbell Curl",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 0,
+              "reps": 0
+            }
+          ]
+        },
+        {
+          "name": "Barbell Row",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 0,
+              "reps": 0
+            }
+          ]
+        },
+        {
+          "name": "Biceps na lince ",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 0,
+              "reps": 0
+            }
+          ]
+        },
+        {
+          "name": "Hammer Curl",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 0,
+              "reps": 0
+            }
+          ]
+        },
+        {
+          "name": "Lateral Raises",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 0,
+              "reps": 0
+            }
+          ]
+        },
+        {
+          "name": "Face pull",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 0,
+              "reps": 0
+            }
+          ]
+        },
+        {
+          "name": "Ab Wheel Rollout",
+          "category": "Pull",
+          "sets": [
+            {
+              "kg": 0,
+              "reps": 0
+            }
+          ]
+        }
+      ],
+      "id": 1767962616911
+    },
+    {
+      "name": "Push-dipy A",
+      "exercises": [
+        {
+          "name": "Bench Press",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 0,
+              "reps": 0
+            },
+            {
+              "kg": 0,
+              "reps": 0
+            }
+          ]
+        },
+        {
+          "name": "Dipy",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 0,
+              "reps": 0
+            },
+            {
+              "kg": 0,
+              "reps": 0
+            }
+          ]
+        },
+        {
+          "name": "Lateral Raises",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 0,
+              "reps": 0
+            }
+          ]
+        },
+        {
+          "name": "Overhead Triceps Extension",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 0,
+              "reps": 0
+            }
+          ]
+        },
+        {
+          "name": "Cable Triceps Pushdown",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 0,
+              "reps": 0
+            }
+          ]
+        },
+        {
+          "name": "Incline Bench Press (Barbell)",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 0,
+              "reps": 0
+            }
+          ]
+        },
+        {
+          "name": "Tył barku hantle na ławce ",
+          "category": "Push",
+          "sets": [
+            {
+              "kg": 0,
+              "reps": 0
+            }
+          ]
+        }
+      ],
+      "id": 1768434575176
+    },
+    {
+      "name": "Nogi",
+      "exercises": [
+        {
+          "exerciseId": 301,
+          "name": "Back Squat",
+          "category": "Legs",
+          "sets": [
+            {
+              "kg": 60,
+              "reps": 8
+            }
+          ]
+        }
+      ],
+      "id": 1768434950800
+    }
+  ]
+}

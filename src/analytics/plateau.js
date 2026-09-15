@@ -1,4 +1,4 @@
-import { calculate1RM } from '../domain/calculations';
+import { calculate1RM, calculateEffectiveKg, calculateSetVolume } from '../domain/calculations';
 import { getExerciseHistory } from '../domain/exercises';
 import { isWorkSet } from '../domain/workoutExtensions';
 
@@ -6,28 +6,33 @@ const DEFAULT_OPTIONS = {
   minStagnationExposures: 3
 };
 
-const getSessionBestE1RM = (session) => {
+const getSessionBestE1RM = (session, volOpts = {}) => {
   const sets = session?.sets || [];
   let best = 0;
 
   for (let i = 0; i < sets.length; i += 1) {
     const set = sets[i];
     if (!isWorkSet(set)) continue;
-    const e1rm = calculate1RM(set.kg, set.reps);
+    // Bodyweight-aware where canonical calculator supports it: effective kg
+    // (base + userWeight for usesBodyweight) drives the estimate. Without
+    // bodyweight context this reduces exactly to calculate1RM(kg, reps).
+    const effectiveKg = calculateEffectiveKg(set, volOpts);
+    const e1rm = calculate1RM(effectiveKg, set.reps);
     if (e1rm > best) best = e1rm;
   }
 
   return best;
 };
 
-const getSessionBestSetVolume = (session) => {
+const getSessionBestSetVolume = (session, volOpts = {}) => {
   const sets = session?.sets || [];
   let best = 0;
 
   for (let i = 0; i < sets.length; i += 1) {
     const set = sets[i];
     if (!isWorkSet(set)) continue;
-    const volume = (Number(set.kg) || 0) * (Number(set.reps) || 0);
+    // Canonical work-effective volume (warmups excluded by isWorkSet).
+    const volume = calculateSetVolume(set, volOpts);
     if (volume > best) best = volume;
   }
 
@@ -60,33 +65,55 @@ const getConfidence = (isPlateau, exposuresChecked, staleSessions) => {
   return 'low';
 };
 
+/**
+ * Canonical confidence (NONE/LIMITED/NORMAL/STRONG) for Coaching V2.
+ * Legacy `confidence` (low/medium/high) is preserved for existing UI.
+ */
+const getConfidenceV2 = (isPlateau, exposuresChecked, staleSessions) => {
+  if (exposuresChecked < 2) return 'NONE';
+  if (exposuresChecked < 3) return 'LIMITED';
+  if (!isPlateau) return exposuresChecked >= 6 ? 'NORMAL' : 'LIMITED';
+  if (exposuresChecked >= 8 && staleSessions >= 5) return 'STRONG';
+  if (exposuresChecked >= 5 && staleSessions >= 3) return 'NORMAL';
+  return 'LIMITED';
+};
+
+const emptyResult = () => ({
+  isPlateau: false,
+  exposuresChecked: 0,
+  lastImprovementSessionsAgo: 0,
+  stagnationType: 'both',
+  confidence: 'low',
+  confidenceV2: 'NONE',
+  e1rmBaseline: 0,
+  e1rmCurrent: 0,
+  volumeBaseline: 0,
+  volumeCurrent: 0,
+  volumeSemantics: 'work-effective-kg'
+});
+
 export const detectPlateau = (exerciseId, workouts = [], options = {}) => {
   const settings = { ...DEFAULT_OPTIONS, ...options };
 
   if (!exerciseId) {
-    return {
-      isPlateau: false,
-      exposuresChecked: 0,
-      lastImprovementSessionsAgo: 0,
-      stagnationType: 'both',
-      confidence: 'low'
-    };
+    return emptyResult();
   }
 
   const historyDesc = getExerciseHistory(exerciseId, workouts);
   if (!historyDesc || historyDesc.length === 0) {
-    return {
-      isPlateau: false,
-      exposuresChecked: 0,
-      lastImprovementSessionsAgo: 0,
-      stagnationType: 'both',
-      confidence: 'low'
-    };
+    return emptyResult();
   }
 
+  // Bodyweight-aware volume opts for this exercise (canonical calculator).
+  // Without exercisesDB/userWeight this reduces exactly to legacy kg*reps.
+  const exercisesDB = Array.isArray(settings.exercisesDB) ? settings.exercisesDB : [];
+  const userWeight = settings.userWeight ?? null;
+  const dbDef = exercisesDB.find((e) => e && e.id === exerciseId) || null;
+  const volOpts = { usesBodyweight: Boolean(dbDef?.usesBodyweight), userWeight };
+
   const historyAsc = [...historyDesc].reverse(); // oldest -> newest
-  const e1rmSeries = historyAsc.map(getSessionBestE1RM);
-  const volumeSeries = historyAsc.map(getSessionBestSetVolume);
+  const e1rmSeries = historyAsc.map((s) => getSessionBestE1RM(s, volOpts));
+  const volumeSeries = historyAsc.map((s) => getSessionBestSetVolume(s, volOpts));
 
   const e1rmStale = sessionsSinceLastImprovement(e1rmSeries);
   const volumeStale = sessionsSinceLastImprovement(volumeSeries);
@@ -106,11 +133,18 @@ export const detectPlateau = (exerciseId, workouts = [], options = {}) => {
       ? Math.min(e1rmStale, volumeStale)
       : (stagnationType === 'e1rm' ? e1rmStale : volumeStale);
 
+  const confidence = getConfidence(isPlateau, exposuresChecked, lastImprovementSessionsAgo);
   return {
     isPlateau,
     exposuresChecked,
     lastImprovementSessionsAgo,
     stagnationType,
-    confidence: getConfidence(isPlateau, exposuresChecked, lastImprovementSessionsAgo)
+    confidence,
+    confidenceV2: getConfidenceV2(isPlateau, exposuresChecked, lastImprovementSessionsAgo),
+    e1rmBaseline: e1rmSeries.length ? Math.max(...e1rmSeries) : 0,
+    e1rmCurrent: e1rmSeries.length ? e1rmSeries[e1rmSeries.length - 1] : 0,
+    volumeBaseline: volumeSeries.length ? Math.max(...volumeSeries) : 0,
+    volumeCurrent: volumeSeries.length ? volumeSeries[volumeSeries.length - 1] : 0,
+    volumeSemantics: 'work-effective-kg'
   };
 };

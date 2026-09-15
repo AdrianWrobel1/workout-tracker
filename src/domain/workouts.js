@@ -2,6 +2,13 @@
  * Workout-related domain logic
  */
 import { isWorkSet, resolveSetType } from './workoutExtensions';
+import { calculate1RM as canonical1RM, calculateSetVolume, calculateWorkoutWorkVolume } from './calculations';
+import {
+  MUSCLE_AXES,
+  categoryToAxes,
+  resolveAttribution,
+  attributeAmount,
+} from './muscles';
 
 /**
  * Get previous sets from template's last workout snapshot (for prev/suggestions per template).
@@ -103,26 +110,33 @@ export const getMonthLabel = (offset = 0) => {
 };
 
 // Prepare clean workout data for summary (without UI)
-export const prepareCleanWorkoutData = (workout, exercisesDB = []) => {
-  let totalVolume = 0;
+// CANONICAL: work-sets only, bodyweight-aware (same as Session/History/Stats).
+// Total delegates to calculateWorkoutWorkVolume so Finish can never diverge
+// from Session Detail for the same workout. userWeight defaults to null to
+// preserve legacy base-kg behavior when bodyweight context is unavailable.
+export const prepareCleanWorkoutData = (workout, exercisesDB = [], userWeight = null) => {
+  const totalVolume = calculateWorkoutWorkVolume(workout, exercisesDB, userWeight);
   let completedSets = 0;
-  const volumePerMuscle = {};
-  
+  // Stable 7-axis shape (missing = 0, never undefined); unknown → nothing.
+  const volumePerMuscle = Object.fromEntries(MUSCLE_AXES.map((axis) => [axis, 0]));
+  const exerciseMap = new Map((Array.isArray(exercisesDB) ? exercisesDB : []).map((e) => [e?.id, e]));
+
   (workout.exercises || []).forEach(ex => {
-    const exDef = exercisesDB.find(e => e.id === ex.exerciseId);
-    const muscles = (exDef?.muscles && exDef.muscles.length > 0) ? exDef.muscles : [ex.category || 'Other'];
-    
+    const exDef = exerciseMap.get(ex.exerciseId) || {};
+    const usesBodyweight = Boolean(exDef?.usesBodyweight);
+    // Canonical attribution (weighted exposure per axis; unknown → nothing).
+    // Raw category strings never leak in as muscle keys anymore.
+    const resolution = resolveAttribution(ex, exerciseMap);
+
     (ex.sets || []).forEach(s => {
       if (isWorkSet(s)) {
-        const kg = Number(s.kg) || 0;
-        const reps = Number(s.reps) || 0;
-        const volume = kg * reps;
-        totalVolume += volume;
+        const volume = calculateSetVolume(s, { usesBodyweight, userWeight });
         completedSets += 1;
-        
-        muscles.forEach(muscle => {
-          volumePerMuscle[muscle] = (volumePerMuscle[muscle] || 0) + volume;
-        });
+
+        const attributed = attributeAmount(resolution, volume);
+        for (const [muscle, value] of Object.entries(attributed)) {
+          volumePerMuscle[muscle] = (volumePerMuscle[muscle] || 0) + value;
+        }
       }
     });
   });
@@ -139,14 +153,20 @@ export const prepareCleanWorkoutData = (workout, exercisesDB = []) => {
 };
 
 // Compare workout to previous workout
-export const compareWorkoutToPrevious = (currentWorkout, allWorkouts) => {
+// CANONICAL: optional { exercisesDB, userWeight } makes the comparison
+// bodyweight-aware (same as Session/History/Stats). Omitted → legacy base-kg
+// for backward compatibility (existing callers/tests with 2 args unchanged).
+export const compareWorkoutToPrevious = (currentWorkout, allWorkouts, opts = {}) => {
   const filtered = allWorkouts.filter(w => new Date(w.date) < new Date(currentWorkout.date)).sort((a, b) => new Date(b.date) - new Date(a.date));
   if (filtered.length === 0) return null;
-  
+
   const prevWorkout = filtered[0];
-  
+  const exercisesDB = Array.isArray(opts?.exercisesDB) ? opts.exercisesDB : null;
+  const userWeight = opts?.userWeight ?? null;
+
   // Calculate volume for both
   const getVolume = (w) => {
+    if (exercisesDB) return calculateWorkoutWorkVolume(w, exercisesDB, userWeight);
     let vol = 0;
     (w.exercises || []).forEach(ex => {
       (ex.sets || []).forEach(s => {
@@ -234,7 +254,7 @@ const getBestSetByEstimated1RM = (workout) => {
       const kg = Number(set.kg) || 0;
       const reps = Number(set.reps) || 0;
       if (kg <= 0 || reps <= 0) return;
-      const estimated1RM = Math.round(kg * (1 + reps / 30));
+      const estimated1RM = canonical1RM(kg, reps);
       if (!best || estimated1RM > best.estimated1RM) {
         best = {
           exerciseId: ex.exerciseId || null,
@@ -757,51 +777,23 @@ export const generateCoachLens = (
   };
 };
 
-// Map category names to actual muscle groups
-export const mapCategoryToMuscles = (category) => {
-  if (!category) return ['Other'];
-  
-  const cat = category.toLowerCase().trim();
-  
-  // Multi-muscle categories
-  if (cat.includes('push')) return ['Chest', 'Shoulders', 'Triceps'];
-  if (cat.includes('pull')) return ['Back', 'Biceps'];
-  if (cat.includes('legs') || cat.includes('leg')) return ['Legs'];
-  if (cat.includes('chest') || cat.includes('pec')) return ['Chest'];
-  if (cat.includes('back') || cat.includes('lat')) return ['Back'];
-  if (cat.includes('shoulder') || cat.includes('delt')) return ['Shoulders'];
-  if (cat.includes('bicep')) return ['Biceps'];
-  if (cat.includes('tricep') || cat.includes('trice')) return ['Triceps'];
-  if (cat.includes('cores') || cat.includes('abs') || cat.includes('ab')) return ['Core'];
-  
-  return ['Other'];
-};
+// Map category names to actual muscle groups.
+// Thin compat wrapper over the canonical taxonomy (domain/muscles):
+// same contract as before, with the Core fix ('Core' → Core, not Other).
+export const mapCategoryToMuscles = (category) => categoryToAxes(category);
 
-// Calculate muscle distribution for radar - includes COMPLETED sets only
+// Calculate muscle distribution for radar - includes COMPLETED sets only.
+// Canonical weighted exposure per axis (primary 1.0, secondary 0.5).
+// Unknown exercises are excluded honestly — never smeared across all axes.
 export const calculateMuscleDistribution = (workout, exercisesDB = []) => {
-  const muscleVolumes = {
-    'Chest': 0,
-    'Back': 0,
-    'Legs': 0,
-    'Shoulders': 0,
-    'Biceps': 0,
-    'Triceps': 0,
-    'Core': 0
-  };
-  
-  const axes = ['Chest', 'Back', 'Legs', 'Shoulders', 'Biceps', 'Triceps', 'Core'];
-  
+  const muscleVolumes = Object.fromEntries(MUSCLE_AXES.map((axis) => [axis, 0]));
+
+  const exerciseMap = new Map((Array.isArray(exercisesDB) ? exercisesDB : []).map((e) => [e?.id, e]));
+
   (workout.exercises || []).forEach(ex => {
-    const exDef = exercisesDB.find(e => e.id === ex.exerciseId) || {};
-    
-    // Determine muscles for this exercise
-    let muscles = [];
-    if (exDef.muscles && exDef.muscles.length > 0) {
-      muscles = exDef.muscles;
-    } else {
-      muscles = mapCategoryToMuscles(ex.category);
-    }
-    
+    // Canonical attribution for this exercise (no screen-specific logic).
+    const resolution = resolveAttribution(ex, exerciseMap);
+
     // Calculate volume for this exercise (completed sets only, exclude warmups)
     let exVolume = 0;
     (ex.sets || []).forEach(s => {
@@ -811,33 +803,21 @@ export const calculateMuscleDistribution = (workout, exercisesDB = []) => {
         exVolume += kg * reps;
       }
     });
-    
-    // Add volume to each mapped muscle
-    // Filter to valid axes only
-    const validMuscles = muscles.filter(m => axes.includes(m));
-    
-    if (validMuscles.length > 0) {
-      // If we have valid muscles, distribute to them
-      validMuscles.forEach(muscle => {
-        muscleVolumes[muscle] += exVolume;
-      });
-    } else if (muscles.length > 0) {
-      // Fallback: if muscles array has items but none are valid (e.g., 'Other'),
-      // distribute evenly across all axes to ensure radar always has data
-      const distribution = exVolume / axes.length;
-      axes.forEach(axis => {
-        muscleVolumes[axis] += distribution;
-      });
+
+    // Attribute weighted volume to each resolved muscle (unknown → nothing).
+    const attributed = attributeAmount(resolution, exVolume);
+    for (const [muscle, value] of Object.entries(attributed)) {
+      if (muscleVolumes[muscle] !== undefined) muscleVolumes[muscle] += value;
     }
   });
-  
+
   // Normalize to 0-1 range
   const max = Math.max(...Object.values(muscleVolumes), 1);
   const normalized = {};
-  axes.forEach(axis => {
+  MUSCLE_AXES.forEach(axis => {
     normalized[axis] = muscleVolumes[axis] / max;
   });
-  
+
   return normalized;
 };
 
@@ -1071,7 +1051,7 @@ export const extractKeyMetrics = (currentWorkout, allWorkouts = [], exercisesDB 
         if (isWorkSet(s)) {
           const kg = Number(s.kg) || 0;
           const reps = Number(s.reps) || 0;
-          const est1RM = Math.round(kg * (1 + reps / 30));
+          const est1RM = canonical1RM(kg, reps);
           if (est1RM > max1RM) max1RM = est1RM;
         }
       });
@@ -1091,7 +1071,7 @@ export const extractKeyMetrics = (currentWorkout, allWorkouts = [], exercisesDB 
             if (isWorkSet(s)) {
               const kg = Number(s.kg) || 0;
               const reps = Number(s.reps) || 0;
-              const est1RM = Math.round(kg * (1 + reps / 30));
+              const est1RM = canonical1RM(kg, reps);
               if (est1RM > prevMax1RM) prevMax1RM = est1RM;
             }
           });

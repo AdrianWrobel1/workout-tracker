@@ -1,46 +1,67 @@
 import React from 'react';
-import { Edit2, Trash2, Play } from 'lucide-react';
+import { Edit2, Trash2, Play, Copy } from 'lucide-react';
 
 /**
- * Memoized template card component
- * Only re-renders if template data actually changes
+ * Memoized template card component (Training 3.0 visual language).
+ * Only re-renders if template data actually changes.
+ *
+ * Start semantics (unchanged): `onSelect` is the legacy start/select entry
+ * used by SelectTemplateView. `onStart` is the explicit start entry used by
+ * TemplatesView so the blueprint list offers PLAN → START without routing
+ * through a second screen. When both are provided, `onStart` wins.
  */
 export const TemplateCard = React.memo(({
   template,
   onSelect,
+  onStart,
   onEdit,
-  onDelete
+  onDelete,
+  onDuplicate
 }) => {
+  const exercises = template?.exercises ?? [];
+  const totalSets = exercises.reduce((n, ex) => n + ((ex?.sets ?? []).length), 0);
+  const plansCount = Array.isArray(template?.plans) ? template.plans.length : 0;
+  const startHandler = onStart ?? onSelect;
+
   return (
-    <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 hover:from-slate-800/60 hover:to-slate-900/60 hover:border-slate-600/50 p-4 rounded-xl text-left flex items-start justify-between transition-all group ui-card-mount-anim ui-template-card-lift">
+    <div className="ui-surface-secondary p-4 text-left transition-all group ui-card-mount-anim ui-template-card-lift">
       <button
-        onClick={() => onSelect && onSelect(template)}
-        className="flex-1 text-left hover:opacity-80 transition"
+        onClick={() => startHandler && startHandler(template)}
+        className="w-full text-left hover:opacity-90 transition rounded-lg"
+        aria-label={startHandler ? `Start workout from ${template.name}` : template.name}
       >
-        <h3 className="font-black text-lg text-white group-hover:accent-text transition mb-1">{template.name}</h3>
-        <p className="text-xs text-slate-500 font-semibold">{template.exercises.length} exercises</p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {template.exercises.slice(0, 3).map((ex, i) => (
-            <span key={`${template.id}-${ex.exerciseId}-${i}`} className="text-[11px] bg-slate-800/60 px-2.5 py-1 rounded-full text-slate-400 font-semibold">
-              {ex.name}
-            </span>
-          ))}
-          {template.exercises.length > 3 && (
-            <span className="text-[11px] text-slate-600 px-2.5 py-1 font-semibold">+{template.exercises.length - 3}</span>
-          )}
-        </div>
+        <h3 className="ui-card-title text-base truncate group-hover:accent-text transition">{template.name}</h3>
+        <p className="ui-secondary mt-1">
+          {exercises.length} exercise{exercises.length === 1 ? '' : 's'}
+          {' · '}{totalSets} set{totalSets === 1 ? '' : 's'}
+          {plansCount > 0 && ` · ${plansCount} plan${plansCount === 1 ? '' : 's'}`}
+        </p>
+        {exercises.length > 0 && (
+          <div className="mt-2.5 flex flex-wrap gap-1.5" aria-hidden="true">
+            {exercises.slice(0, 3).map((ex, i) => (
+              <span key={`${template.id}-${ex.exerciseId ?? ex.name}-${i}`} className="ui-surface-sub text-[11px] px-2.5 py-1 font-semibold text-slate-300 truncate max-w-[140px]">
+                {ex.name}
+              </span>
+            ))}
+            {exercises.length > 3 && (
+              <span className="text-[11px] text-slate-500 px-2 py-1 font-semibold">+{exercises.length - 3}</span>
+            )}
+          </div>
+        )}
       </button>
-      <div className="flex gap-2 ml-3">
-        {onSelect && (
+      <div className="mt-3 flex gap-2">
+        {startHandler && (
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onSelect(template);
+              startHandler(template);
             }}
-            className="p-2 bg-green-600/20 hover:bg-green-600/30 border border-green-500/30 rounded-lg text-green-400 transition"
-            title="Use Template"
+            className="ui-cta-primary flex-1 min-h-[44px] px-3 font-bold text-sm flex items-center justify-center gap-2 ui-press"
+            title="Start workout from this template"
+            aria-label={`Start workout from ${template.name}`}
           >
-            <Play size={16} />
+            <Play size={16} aria-hidden="true" />
+            <span>Start</span>
           </button>
         )}
         {onEdit && (
@@ -49,10 +70,24 @@ export const TemplateCard = React.memo(({
               e.stopPropagation();
               onEdit(template);
             }}
-            className="p-2 accent-bg-light hover:opacity-80 accent-border-light rounded-lg accent-text transition"
+            className="ui-action-secondary min-w-[44px] min-h-[44px] flex items-center justify-center accent-text"
             title="Edit"
+            aria-label={`Edit template ${template.name}`}
           >
-            <Edit2 size={16} />
+            <Edit2 size={16} aria-hidden="true" />
+          </button>
+        )}
+        {onDuplicate && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDuplicate(template);
+            }}
+            className="ui-action-secondary min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-300"
+            title="Duplicate template"
+            aria-label={`Duplicate template ${template.name}`}
+          >
+            <Copy size={16} aria-hidden="true" />
           </button>
         )}
         {onDelete && (
@@ -61,23 +96,33 @@ export const TemplateCard = React.memo(({
               e.stopPropagation();
               onDelete(template.id);
             }}
-            className="p-2 bg-red-600/20 hover:bg-red-600/30 border border-red-500/30 rounded-lg text-red-400 transition"
+            className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-[12px] bg-red-500/10 border border-red-500/30 text-red-300 hover:bg-red-500/20 transition ui-press"
             title="Delete"
+            aria-label={`Delete template ${template.name}`}
           >
-            <Trash2 size={16} />
+            <Trash2 size={16} aria-hidden="true" />
           </button>
         )}
       </div>
     </div>
   );
 }, (prevProps, nextProps) => {
-  // Re-render only if template data changed
-  return (
-    prevProps.template.id === nextProps.template.id &&
-    prevProps.template.name === nextProps.template.name &&
-    prevProps.template.exercises?.length === nextProps.template.exercises?.length
-  );
+  // Re-render when identity, name, order or set config changes (order-only
+  // edits must repaint — length alone is not enough).
+  if (prevProps.template.id !== nextProps.template.id) return false;
+  if (prevProps.template.name !== nextProps.template.name) return false;
+  const a = prevProps.template.exercises || [];
+  const b = nextProps.template.exercises || [];
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) {
+    if ((a[i]?.exerciseId ?? a[i]?.name) !== (b[i]?.exerciseId ?? b[i]?.name)) return false;
+    if ((a[i]?.sets || []).length !== (b[i]?.sets || []).length) return false;
+    if ((a[i]?.supersetId || null) !== (b[i]?.supersetId || null)) return false;
+  }
+  const pa = Array.isArray(prevProps.template.plans) ? prevProps.template.plans.length : 0;
+  const pb = Array.isArray(nextProps.template.plans) ? nextProps.template.plans.length : 0;
+  if (pa !== pb) return false;
+  return true;
 });
 
 TemplateCard.displayName = 'TemplateCard';
-

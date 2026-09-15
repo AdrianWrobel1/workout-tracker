@@ -1,0 +1,308 @@
+/* ==========================================================================
+ * UI 3.0 FOUNDATION — shared visual tokens & primitives
+ * --------------------------------------------------------------------------
+ * SHARED CONTRACT for parallel UI 3.0 work (Statistics / History / Detail /
+ * Active Workout phases). These classes are ADDITIVE: they introduce the
+ * common language, they do not rename or remove anything that exists.
+ *
+ * Rules for consumers:
+ *  - Prefer these utilities over ad-hoc Tailwind values for type, surfaces
+ *    and section rhythm. Page-specific tokens do NOT belong here.
+ *  - `--accent` (user-selected, set on :root from localStorage) stays the
+ *    single source of accent. Never hardcode an accent hue in components.
+ *  - Motion: reuse the existing `--anim-duration` / `--anim-ease` tokens and
+ *    the `ui-*` keyframes in index.css. This file adds NO new animations.
+ *  - Surfaces intentionally avoid gradients: hierarchy comes from
+ *    background depth + a single intentional border, not card overload.
+ * ======================================================================== */
+
+:root {
+  /* Spacing rhythm (4pt base, deliberately small scale) */
+  --ui-space-1: 4px;
+  --ui-space-2: 8px;
+  --ui-space-3: 12px;
+  --ui-space-4: 16px;
+  --ui-space-5: 20px;
+  --ui-space-6: 24px;
+  --ui-space-8: 32px;
+
+  /* Page rhythm: comfortable on 320px, not wasteful on desktop */
+  --ui-page-px: 16px;
+  --ui-section-gap: 20px;
+
+  /* Radius */
+  --ui-radius-sm: 8px;
+  --ui-radius-md: 12px;
+  --ui-radius-lg: 16px;
+  --ui-radius-xl: 20px;
+  --ui-radius-pill: 9999px;
+}
+
+/* --- Typography -----------------------------------------------------------
+ * DISPLAY:     screen hero statement (Exercises header, Home greeting)
+ * PAGE TITLE:  primary screen value (e.g. "3 / 4")
+ * SECTION TITLE: named blocks ("Last Sessions")
+ * CARD TITLE:  row / card names
+ * BODY:        default readable text
+ * SECONDARY:   supporting info — readable, never competing
+ * MICRO:       eyebrows / kickers only (never body copy)
+ */
+.ui-display {
+  font-size: 28px;
+  line-height: 1.1;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  color: #fff;
+}
+.ui-page-title {
+  font-size: 22px;
+  line-height: 1.15;
+  font-weight: 800;
+  letter-spacing: -0.005em;
+  color: #fff;
+}
+.ui-section-title {
+  font-size: 17px;
+  line-height: 1.3;
+  font-weight: 700;
+  color: #fff;
+}
+.ui-card-title {
+  font-size: 14px;
+  line-height: 1.35;
+  font-weight: 700;
+  color: #fff;
+}
+.ui-body {
+  font-size: 14px;
+  line-height: 1.5;
+  font-weight: 500;
+  color: #e2e8f0;
+}
+.ui-secondary {
+  font-size: 13px;
+  line-height: 1.45;
+  font-weight: 500;
+  color: #94a3b8;
+}
+.ui-micro {
+  font-size: 11px;
+  line-height: 1.4;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+.ui-metric {
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  color: #fff;
+}
+
+/* --- Surfaces ---------------------------------------------------------------
+ * PRIMARY:   page / sheet background (rarely needed, app-content owns it)
+ * SECONDARY: default resting container (replaces per-card gradients)
+ * SUB:       quiet inset (meters, previews, nested rows)
+ * INTERACTIVE: hoverable / tappable rows
+ */
+.ui-surface-secondary {
+  background-color: rgba(30, 41, 59, 0.45);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: var(--ui-radius-lg);
+}
+.ui-surface-sub {
+  background-color: rgba(15, 23, 42, 0.55);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  border-radius: var(--ui-radius-md);
+}
+.ui-surface-interactive {
+  background-color: rgba(30, 41, 59, 0.45);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: var(--ui-radius-md);
+  transition:
+    background-color var(--anim-duration) var(--anim-ease),
+    border-color var(--anim-duration) var(--anim-ease),
+    transform 140ms var(--anim-ease);
+}
+button.ui-surface-interactive:hover,
+a.ui-surface-interactive:hover {
+  background-color: rgba(51, 65, 85, 0.5);
+  border-color: rgba(148, 163, 184, 0.28);
+}
+button.ui-surface-interactive:active,
+a.ui-surface-interactive:active {
+  transform: scale(0.985);
+}
+
+/* Primary CTA: solid user accent (no gradient, no oversized glow) */
+.ui-cta-primary {
+  background-color: var(--accent);
+  color: #fff;
+  border: 1px solid color-mix(in srgb, var(--accent) 60%, white 8%);
+  border-radius: var(--ui-radius-lg);
+  box-shadow: 0 8px 24px -8px color-mix(in srgb, var(--accent) 55%, transparent);
+  transition:
+    filter var(--anim-duration) var(--anim-ease),
+    transform 140ms var(--anim-ease);
+}
+.ui-cta-primary:hover {
+  filter: brightness(1.08);
+}
+.ui-cta-primary:active {
+  transform: scale(0.98);
+}
+
+/* Quiet secondary action */
+.ui-action-secondary {
+  background-color: rgba(30, 41, 59, 0.45);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  color: #e2e8f0;
+  border-radius: var(--ui-radius-md);
+  transition:
+    background-color var(--anim-duration) var(--anim-ease),
+    border-color var(--anim-duration) var(--anim-ease),
+    transform 140ms var(--anim-ease);
+}
+.ui-action-secondary:hover {
+  background-color: rgba(51, 65, 85, 0.5);
+  border-color: rgba(148, 163, 184, 0.28);
+}
+.ui-action-secondary:active {
+  transform: scale(0.97);
+}
+
+/* Section rhythm + divider */
+.ui-section {
+  margin-top: var(--ui-section-gap);
+}
+.ui-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--ui-space-3);
+  margin-bottom: var(--ui-space-3);
+}
+.ui-divider {
+  height: 1px;
+  background-color: rgba(148, 163, 184, 0.12);
+  border: 0;
+}
+
+/* Active-entity marker that never relies on color alone: accent pill + text */
+.ui-active-pill {
+  background-color: color-mix(in srgb, var(--accent) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 38%, transparent);
+  color: #fff;
+  border-radius: var(--ui-radius-pill);
+}
+
+/* Finish-workout CTA (semantic success). Expected by ActiveWorkoutView;
+ * the ready-state breathe animation (ui-finish-ready) lives in index.css. */
+.ui-finish-primary {
+  background-color: #059669;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--ui-radius-md);
+  box-shadow: 0 8px 24px -8px rgba(5, 150, 105, 0.55);
+  transition:
+    filter var(--anim-duration) var(--anim-ease),
+    transform 140ms var(--anim-ease);
+}
+.ui-finish-primary:hover {
+  filter: brightness(1.08);
+}
+.ui-finish-primary:active {
+  transform: scale(0.98);
+}
+
+/* Numbered step badge for ordered blueprint rows (Templates editor). */
+.ui-step-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--ui-radius-pill);
+  font-size: 11px;
+  font-weight: 800;
+  color: #fff;
+  background-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  flex-shrink: 0;
+}
+
+/* List-container entrance. Reuses the existing card-mount keyframes from
+ * index.css — no new motion invented. */
+.ui-exercises-list-enter {
+  animation: ui-card-mount calc(var(--anim-duration) * 0.9) var(--anim-ease) both;
+}
+
+/* --- Training 3.0 additions (presentation only, no motion) -----------------
+ * Solid, calm counterparts to legacy gradient buttons. Finish stays emerald
+ * (completion) so Start (accent) and Finish never compete. Danger stays
+ * visually separate from ordinary settings. Step badges give template
+ * ordering an explicit text cue (never color alone).
+ */
+.ui-finish-primary {
+  background-color: #059669;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--ui-radius-lg);
+  box-shadow: 0 8px 24px -8px rgba(5, 150, 105, 0.55);
+  transition:
+    filter var(--anim-duration) var(--anim-ease),
+    transform 140ms var(--anim-ease);
+}
+.ui-finish-primary:hover {
+  filter: brightness(1.08);
+}
+.ui-finish-primary:active {
+  transform: scale(0.98);
+}
+
+.ui-danger-card {
+  background-color: rgba(127, 29, 29, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.32);
+  border-radius: var(--ui-radius-lg);
+}
+
+.ui-step-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: var(--ui-radius-pill);
+  background-color: rgba(148, 163, 184, 0.14);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  color: #e2e8f0;
+  font-size: 11px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Fallback for browsers without color-mix */
+@supports not (background-color: color-mix(in srgb, red 50%, blue)) {
+  .ui-cta-primary {
+    border-color: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 8px 24px -8px rgba(79, 70, 229, 0.55);
+  }
+  .ui-active-pill {
+    background-color: rgba(79, 70, 229, 0.18);
+    border-color: rgba(79, 70, 229, 0.38);
+  }
+  .ui-step-badge {
+    background-color: rgba(79, 70, 229, 0.3);
+    border-color: rgba(79, 70, 229, 0.45);
+  }
+}
+
+/* Reduced motion: foundation adds no animation, but guarantee stillness */
+@media (prefers-reduced-motion: reduce) {
+  .ui-surface-interactive,
+  .ui-cta-primary,
+  .ui-action-secondary {
+    transition: none;
+  }
+}

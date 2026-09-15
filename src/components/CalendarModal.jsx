@@ -41,12 +41,12 @@ export const CalendarModal = ({ workouts = [], onClose, onSelectDate }) => {
             const dateObj = new Date(date.getFullYear(), date.getMonth(), day);
             const dateStr = isoLocal(dateObj);
             const isToday = dateStr === today;
-            const hasWorkout = workouts.some(w => w.date === dateStr);
+            const hasWorkout = workouts.some(w => w?.date === dateStr);
 
             return (
               <button
                 key={i}
-                onClick={() => { onSelectDate(dateStr); onClose(); }}
+                onClick={() => { if (!hasWorkout) return; onSelectDate(dateStr); onClose(); }}
                 className={`h-10 rounded-lg text-sm font-bold transition ${
                   isToday
                     ? 'bg-gradient-to-br from-accent to-accent text-white shadow-lg shadow-accent/50'

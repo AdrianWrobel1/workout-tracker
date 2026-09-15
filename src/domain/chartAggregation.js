@@ -2,8 +2,19 @@
  * P5 FIX: Centralized chart aggregation functions
  * Deduplicates aggregation logic that was previously split between UnifiedChart.jsx and profileCharts.js
  * All metric aggregations (daily, weekly, monthly) now go through a single source of truth
+ *
+ * CANONICAL NOTES:
+ * - Only work sets count (isWorkSet: completed, non-warmup).
+ * - 1RM uses the canonical `calculate1RM` (Epley); volume uses effective kg
+ *   (bodyweight-aware). Daily volume is a SUM like weekly/monthly (a previous
+ *   MAX-of-sets revision under-reported multi-set days).
  */
 import { isWorkSet } from './workoutExtensions';
+import { calculate1RM } from './calculations';
+
+// Skip placeholder sets with no training output. Bodyweight sets (kg=0 with
+// userWeight) DO count — the guard runs on effective kg, not base kg.
+const hasTrainingOutput = (totalKg, reps) => totalKg !== 0 && reps !== 0;
 
 export const aggregateDaily = (workouts, metric, exerciseId, userWeight, exercisesDB) => {
   const days = {};
@@ -37,14 +48,14 @@ export const aggregateDaily = (workouts, metric, exerciseId, userWeight, exercis
         completed.forEach(set => {
           const kg = Number(set.kg) || 0;
           const reps = Number(set.reps) || 0;
-          
-          if (kg === 0) return;
-          
+
           const exDef = exercisesDB.find(e => e.id === ex.exerciseId) || {};
           const totalKg = kg + ((exDef.usesBodyweight && userWeight) ? Number(userWeight) : 0);
-          
+
+          if (!hasTrainingOutput(totalKg, reps)) return;
+
           if (metric === 'weight') {
-            days[key].values.push(Math.round(totalKg * (1 + reps / 30))); // 1RM estimate
+            days[key].values.push(calculate1RM(totalKg, reps)); // 1RM estimate
           } else if (metric === 'volume') {
             days[key].values.push(totalKg * reps);
           }
@@ -53,7 +64,7 @@ export const aggregateDaily = (workouts, metric, exerciseId, userWeight, exercis
     });
   });
   
-  // Convert to array, sorted by date
+      // Convert to array, sorted by date
   return Object.entries(days)
     .map(([date, data]) => {
       let value = 0;
@@ -62,7 +73,7 @@ export const aggregateDaily = (workouts, metric, exerciseId, userWeight, exercis
       } else if (metric === 'workouts') {
         value = data.workoutCount; // Count of workouts
       } else {
-        value = data.values.length > 0 ? (metric === 'sets' ? data.values.reduce((a, b) => a + b, 0) : Math.max(...data.values)) : 0; // Sum for sets, max for weight
+        value = data.values.length > 0 ? (metric === 'weight' ? Math.max(...data.values) : data.values.reduce((a, b) => a + b, 0)) : 0; // Max for weight, sum for volume/sets
       }
       return {
         label: formatDateShort(date),
@@ -105,14 +116,14 @@ export const aggregateWeekly = (workouts, metric, exerciseId, userWeight, exerci
         completed.forEach(set => {
           const kg = Number(set.kg) || 0;
           const reps = Number(set.reps) || 0;
-          
-          if (kg === 0) return;
-          
+
           const exDef = exercisesDB.find(e => e.id === ex.exerciseId) || {};
           const totalKg = kg + ((exDef.usesBodyweight && userWeight) ? Number(userWeight) : 0);
-          
+
+          if (!hasTrainingOutput(totalKg, reps)) return;
+
           if (metric === 'weight') {
-            weeks[key].values.push(Math.round(totalKg * (1 + reps / 30)));
+            weeks[key].values.push(calculate1RM(totalKg, reps));
           } else if (metric === 'volume') {
             weeks[key].values.push(totalKg * reps);
           }
@@ -175,14 +186,14 @@ export const aggregateMonthly = (workouts, metric, exerciseId, userWeight, exerc
         completed.forEach(set => {
           const kg = Number(set.kg) || 0;
           const reps = Number(set.reps) || 0;
-          
-          if (kg === 0) return;
-          
+
           const exDef = exercisesDB.find(e => e.id === ex.exerciseId) || {};
           const totalKg = kg + ((exDef.usesBodyweight && userWeight) ? Number(userWeight) : 0);
-          
+
+          if (!hasTrainingOutput(totalKg, reps)) return;
+
           if (metric === 'weight') {
-            months[key].values.push(Math.round(totalKg * (1 + reps / 30)));
+            months[key].values.push(calculate1RM(totalKg, reps));
           } else if (metric === 'volume') {
             months[key].values.push(totalKg * reps);
           }

@@ -10,7 +10,7 @@
  */
 
 const DB_NAME = 'WorkoutTrackerDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 // Object store names
 const STORES = {
@@ -18,6 +18,10 @@ const STORES = {
   EXERCISES: 'exercises',
   TEMPLATES: 'templates',
   SETTINGS: 'settings',
+  // Planned (scheduled) workouts: future intentions, never history.
+  // Added in v2 — onupgradeneeded creates only missing stores, so v1
+  // databases upgrade without touching existing data.
+  SCHEDULED: 'scheduledWorkouts',
   RECORDS_INDEX: 'recordsIndex', // Cache for PR detection (exerciseId -> records)
   REVERSE_INDEXES: 'reverseIndexes' // Exercise -> Set of workout IDs for fast queries
 };
@@ -66,6 +70,11 @@ class StorageService {
 
           if (!db.objectStoreNames.contains(STORES.TEMPLATES)) {
             db.createObjectStore(STORES.TEMPLATES, { keyPath: 'id' });
+          }
+
+          if (!db.objectStoreNames.contains(STORES.SCHEDULED)) {
+            const schStore = db.createObjectStore(STORES.SCHEDULED, { keyPath: 'id' });
+            schStore.createIndex('dateKey', 'dateKey', { unique: false });
           }
 
           if (!db.objectStoreNames.contains(STORES.SETTINGS)) {

@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { GripVertical, MoreVertical, Link2, Edit2, Flame, Zap, Trash, Link, Minus } from 'lucide-react';
 import {
@@ -21,6 +21,9 @@ import { CSS } from '@dnd-kit/utilities';
 import { ActiveWorkoutExerciseCard } from './ActiveWorkoutExerciseCard';
 import { PlanGuidanceDisplay } from './PlanGuidanceDisplay';
 import { getPreviousSets } from '../domain/workouts';
+import { resolveRecommendation } from '../domain/progressionAdapter';
+import { isWarmupSet } from '../domain/workoutExtensions';
+import { getCurrentSetIndex, getExerciseProgress, describeProgressionState } from '../domain/activeWorkoutView';
 
 /**
  * Single sortable exercise item
@@ -55,6 +58,7 @@ function SortableExerciseItem({
   onRemoveSuperset,
   currentTemplate,
   currentPlan,
+  onApplyRecommendation,
 }) {
   const {
     attributes,
@@ -124,6 +128,37 @@ function SortableExerciseItem({
   };
 
   const previousSets = getPreviousSets(exercise.exerciseId, workouts, activeWorkoutStartTime, templateLastSnapshot);
+
+  // Progression recommendation (display only — never overwrites actuals).
+  // Computed from persisted history + exercise policy via the canonical
+  // adapter; null for OFF/legacy exercises (legacy placeholders unchanged).
+  const recommendation = useMemo(() => {
+    const dbExercise = exercisesDB?.find(e => e.id === exercise.exerciseId) || null;
+    if (!dbExercise?.progression || dbExercise.progression.mode === 'off') return null;
+    return resolveRecommendation({ exercise: dbExercise, workouts });
+  }, [exercisesDB, exercise.exerciseId, workouts]);
+
+  const hasEmptyPrescriptionSlot = (exercise.sets || []).some(
+    s => s && !s.completed && !isWarmupSet(s) && (!(Number(s.kg) > 0) || !(Number(s.reps) > 0))
+  );
+  const showRecommendation = recommendation?.source === 'progression' && recommendation.prescription;
+  const progressionBadge = showRecommendation ? describeProgressionState(recommendation.state) : null;
+
+  // Derived execution position (pure read, never stored): which set is next
+  // and how far through this exercise the user is.
+  const currentSetIndex = getCurrentSetIndex(exercise);
+  const exerciseProgress = getExerciseProgress(exercise);
+  const nextSet = currentSetIndex >= 0 ? exercise.sets[currentSetIndex] : null;
+  const nextSetHint = (() => {
+    if (!nextSet) return null;
+    if (Number(nextSet.kg) > 0 && Number(nextSet.reps) > 0) return `${nextSet.kg} kg × ${nextSet.reps}`;
+    const suggestedKg = Number(nextSet.suggestedKg) || 0;
+    const suggestedReps = Number(nextSet.suggestedReps) || 0;
+    if (suggestedKg > 0 || suggestedReps > 0) return `suggested ${suggestedKg} kg × ${suggestedReps}`;
+    const prevForNext = previousSets?.[currentSetIndex];
+    if (prevForNext) return `last time ${prevForNext.kg} kg × ${prevForNext.reps}`;
+    return null;
+  })();
   
   // Auto-scroll on new set added
   const prevSetCountRef = useRef(exercise.sets.length);
@@ -191,7 +226,7 @@ function SortableExerciseItem({
       ref={setNodeRef}
       style={style}
       data-exercise-index={exIndex}
-      className={`relative ${menuOpenIndex === exIndex ? 'z-[60] shadow-2xl' : 'z-0'} bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-4 transition-all duration-200 ease-out ui-exercise-card-stagger ui-list-item-lift ui-active-exercise-card ${
+      className={`relative ${menuOpenIndex === exIndex ? 'z-[60] shadow-2xl' : 'z-0'} ui-surface-secondary p-4 transition-all duration-200 ease-out ui-exercise-card-stagger ui-list-item-lift ui-active-exercise-card ${
         isDragging ? 'ui-drag-active ring-2 ring-blue-500/70' : ''
       } ${isOver ? 'bg-blue-500/15 border-blue-500/50 ring-2 ring-blue-500/30 scale-[1.01]' : ''} ${supersetColor ? `border-l-4 ${supersetColor.border}` : ''} ${exercise.supersetId ? 'ui-superset-active' : ''}` }
     >
@@ -210,24 +245,39 @@ function SortableExerciseItem({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               {exercise.supersetId && (
-                <div className={`p-1 rounded ${supersetColor.bg} flex-shrink-0`}>
+                <div className={`p-1 rounded ${supersetColor.bg} flex-shrink-0`} aria-hidden="true">
                   <Link2 size={16} className={supersetColor.accent} />
                 </div>
               )}
-              <h3 className={`text-lg font-black text-white transition-all duration-200 ${exerciseSwapPulse ? 'ui-exercise-swap' : ''}`}>{exercise.name}</h3>
+              <h3 className={`ui-card-title text-base truncate transition-all duration-200 ${exerciseSwapPulse ? 'ui-exercise-swap' : ''}`}>{exercise.name}</h3>
               <button
                 onClick={handleEditExerciseNote}
-                className={`p-1 hover:bg-accent/20 rounded accent-text hover:opacity-80 transition flex-shrink-0 ui-note-focus-trigger ${noteFocusPulse ? 'ui-note-focus-highlight' : ''}` }
+                aria-label={`Edit note for ${exercise.name}`}
+                className={`p-1.5 hover:bg-accent/20 rounded accent-text hover:opacity-80 transition flex-shrink-0 ui-note-focus-trigger min-w-[32px] min-h-[32px] flex items-center justify-center ${noteFocusPulse ? 'ui-note-focus-highlight' : ''}` }
                 title="Edit exercise note"
               >
-                <Edit2 size={13} />
+                <Edit2 size={13} aria-hidden="true" />
               </button>
             </div>
-            <p className="text-xs text-slate-400 mt-1 font-semibold">{exercise.category}</p>
+            <p className="ui-micro mt-1">{exercise.category}</p>
+            {/* Execution position: answers "what set am I on / what comes
+                next" with text, never color alone. */}
+            <p className="ui-secondary mt-1 font-bold !text-slate-300" role="status">
+              {exerciseProgress.total === 0 ? (
+                <span>No sets yet — add one below</span>
+              ) : exerciseProgress.isComplete ? (
+                <span>All {exerciseProgress.total} sets done ✓</span>
+              ) : (
+                <span>
+                  Set {exerciseProgress.currentSetNumber} of {exerciseProgress.total}
+                  {nextSetHint ? <span className="text-slate-400 font-semibold"> · next: {nextSetHint}</span> : null}
+                </span>
+              )}
+            </p>
             {currentPlan && (
-              <div className="mt-2 inline-flex items-center gap-1 text-[10px] font-semibold text-blue-100 bg-blue-700/25 border border-blue-500/40 px-2 py-1 rounded">
-                <span className="text-blue-200">📋 Plan:</span>
-                <span>{currentPlan.name}</span>
+              <div className="mt-2 inline-flex items-center gap-1.5 text-[10px] font-bold text-blue-100 bg-blue-700/25 border border-blue-500/40 px-2 py-1 rounded-full">
+                <span className="text-blue-300 tracking-wider">PLAN</span>
+                <span className="truncate max-w-[160px]">{currentPlan.name}</span>
               </div>
             )}
             {(() => {
@@ -239,8 +289,8 @@ function SortableExerciseItem({
               );
             })()}
             {exercise.planNotes && currentTemplate && (
-              <div className="mt-2 text-xs bg-blue-900/30 border border-blue-600/40 text-blue-300 px-2 py-1 rounded font-medium">
-                📌 {exercise.planNotes}
+              <div className="mt-2 text-xs bg-blue-900/30 border border-blue-600/40 text-blue-200 px-2 py-1 rounded font-medium">
+                <span className="font-bold tracking-wider text-[10px] text-blue-300">COACH NOTE · </span>{exercise.planNotes}
               </div>
             )}
           </div>
@@ -461,10 +511,40 @@ function SortableExerciseItem({
           />
         </div>
       )}
+      {showRecommendation && (
+        <div className="mb-2 ui-surface-sub !border-emerald-500/30 px-3 py-2">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs font-bold text-emerald-200">
+              {progressionBadge && (
+                <span
+                  className="inline-flex items-center gap-1 mr-1.5 px-1.5 py-0.5 rounded-full border border-emerald-500/50 bg-emerald-600/20 text-emerald-100 text-[10px] font-black tracking-wide"
+                  aria-label={`Progression status: ${progressionBadge.label}`}
+                >
+                  <span aria-hidden="true">{progressionBadge.icon}</span>
+                  <span>{progressionBadge.label}</span>
+                </span>
+              )}
+              Next target: {recommendation.prescriptionText}
+            </p>
+            {hasEmptyPrescriptionSlot && onApplyRecommendation && (
+              <button
+                type="button"
+                onClick={() => onApplyRecommendation(exIndex)}
+                className="shrink-0 px-3 py-1.5 min-h-[36px] rounded-lg bg-emerald-600/30 border border-emerald-500/50 text-emerald-100 text-xs font-black hover:bg-emerald-600/50 transition"
+                aria-label={`Use recommended ${recommendation.prescriptionText}`}
+              >
+                Use
+              </button>
+            )}
+          </div>
+          <p className="ui-secondary !text-[11px] mt-0.5">Why: {recommendation.whyText}</p>
+        </div>
+      )}
       <ActiveWorkoutExerciseCard
         exercise={exercise}
         exerciseIndex={exIndex}
         previousSets={previousSets}
+        currentSetIndex={currentSetIndex}
         onUpdateSet={onUpdateSet}
         onToggleSet={onToggleSet}
         onAddSet={onAddSet}
@@ -513,6 +593,7 @@ export function SortableExerciseList({
   onRemoveSuperset,
   currentTemplate,
   currentPlan,
+  onApplyRecommendation,
 }) {
   // Configure sensors: PointerSensor (desktop), TouchSensor (mobile)
   // Delay touch sensor activation to prevent accidental triggers
@@ -590,6 +671,7 @@ export function SortableExerciseList({
               onRemoveSuperset={onRemoveSuperset}
               currentTemplate={currentTemplate}
               currentPlan={currentPlan}
+              onApplyRecommendation={onApplyRecommendation}
             />
           ))}
         </div>

@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Medal, Plus, Trash2, X } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { Medal, Plus, Trash2, X, Search } from 'lucide-react';
 import { formatMonth, calculateTotalVolume } from '../domain/calculations';
-import { getExerciseRecords } from '../domain/exercises';
+import { getHistoryModel, relativeDay } from '../domain/history';
 import { WorkoutCard } from '../components/WorkoutCard';
 import { VirtualList } from '../components/VirtualList';
+import { AnalyticsEmpty } from '../components/analyticsUI';
 
 const TAGS = ['#cut', '#power', '#volume', '#sleep-bad', '#bulk', '#stress', '#sick'];
 
@@ -13,6 +14,7 @@ const HistoryViewInner = ({
   onDeleteWorkout,
   onEditWorkout,
   exercisesDB = [],
+  userWeight = null,
   filter = 'all',
   onFilterChange,
   scrollToWorkoutDate,
@@ -24,12 +26,16 @@ const HistoryViewInner = ({
   const [editingId, setEditingId] = useState(null);
   const [editData, setEditData] = useState(null);
   const [selectedTags, setSelectedTags] = useState([]);
+  const [query, setQuery] = useState('');
   const [showNewExercise, setShowNewExercise] = useState(false);
   const [useExerciseDB, setUseExerciseDB] = useState(false);
   const [newExercise, setNewExercise] = useState({ exerciseId: null, name: '', category: '', sets: [{ kg: 0, reps: 0, completed: false }] });
   const [activeRecordFlashId, setActiveRecordFlashId] = useState(null);
   const [listTransitionOn, setListTransitionOn] = useState(false);
   const scrollContainerRef = useRef(null);
+  // Frozen at mount: "today" cutoffs stay stable across re-renders (and
+  // satisfy react-hooks/purity — no impure clock reads during render).
+  const [now] = useState(() => Date.now());
 
   useEffect(() => {
     scrollContainerRef.current = document.querySelector('.app-content');
@@ -58,7 +64,7 @@ const HistoryViewInner = ({
       clearTimeout(start);
       clearTimeout(timer);
     };
-  }, [filter, selectedTags]);
+  }, [filter, selectedTags, query]);
 
   useEffect(() => {
     if (!scrollToWorkoutDate || !onScrollToWorkoutDone) return;
@@ -69,59 +75,36 @@ const HistoryViewInner = ({
     return () => clearTimeout(t);
   }, [scrollToWorkoutDate, onScrollToWorkoutDone]);
 
-  const prWorkoutIds = useMemo(() => {
-    const ids = new Set();
-    const fromCache = getRecords || (() => null);
-    (workouts || []).forEach(w => {
-      const hasPr = (w.exercises || []).some(ex => {
-        if (!ex.exerciseId) return false;
-        const rec = fromCache(ex.exerciseId) ?? getExerciseRecords(ex.exerciseId, workouts);
-        const best = rec?.best1RM || 0;
-        const maxInWorkout = Math.max(0, ...(ex.sets || []).filter(s => s?.completed).map(s => {
-          const kg = Number(s.kg) || 0;
-          const reps = Number(s.reps) || 0;
-          return kg && reps ? Math.round(kg * (1 + reps / 30)) : 0;
-        }));
-        return best > 0 && maxInWorkout >= best;
-      });
-      if (hasPr) ids.add(w.id);
-    });
-    return ids;
-  }, [workouts, getRecords]);
+  // Canonical list model: future exclusion, newest-first ordering with
+  // dateless records last, local month grouping, PR/heavy/light over work
+  // volume, tag + text discovery. See domain/history.js.
+  const model = useMemo(() => getHistoryModel({
+    workouts,
+    filter,
+    tags: selectedTags,
+    query,
+    now,
+    getRecords,
+    exercisesDB,
+    userWeight,
+  }), [workouts, filter, selectedTags, query, now, getRecords, exercisesDB, userWeight]);
 
-  const heavyCutoff = useMemo(() => {
-    const vols = (workouts || []).map(w => (w.exercises || []).reduce((sum, ex) => sum + calculateTotalVolume(ex.sets || []), 0)).sort((a, b) => a - b);
-    if (vols.length === 0) return 0;
-    const idx = Math.floor(vols.length * 0.7);
-    return vols[idx] || 0;
+  const byId = useMemo(() => {
+    const map = new Map();
+    (workouts || []).forEach(w => { if (w?.id != null) map.set(w.id, w); });
+    return map;
   }, [workouts]);
 
-  const { filteredWorkouts, groups, sortedKeys } = useMemo(() => {
-    let result = [...(workouts || [])];
-    if (filter === 'pr') result = result.filter(w => prWorkoutIds.has(w.id));
-    if (filter === 'heavy') {
-      result = result.filter(w => {
-        const vol = (w.exercises || []).reduce((sum, ex) => sum + calculateTotalVolume(ex.sets || []), 0);
-        return vol >= heavyCutoff && heavyCutoff > 0;
-      });
-    }
-    if (filter === 'light') {
-      result = result.filter(w => {
-        const vol = (w.exercises || []).reduce((sum, ex) => sum + calculateTotalVolume(ex.sets || []), 0);
-        return heavyCutoff > 0 ? vol > 0 && vol < heavyCutoff * 0.3 : vol > 0 && vol < 1000;
-      });
-    }
-    if (selectedTags.length > 0) result = result.filter(w => selectedTags.some(tag => (w.tags || []).includes(tag)));
-    result.sort((a, b) => new Date(b.date) - new Date(a.date));
+  const prPreviewIds = useMemo(() => {
+    const ids = new Set();
+    model.items.forEach(p => { if (p.hasStoredPR) ids.add(p.id); });
+    return ids;
+  }, [model]);
 
-    const byMonth = {};
-    result.forEach(w => {
-      const key = new Date(w.date).toISOString().slice(0, 7);
-      if (!byMonth[key]) byMonth[key] = [];
-      byMonth[key].push(w);
-    });
-    return { filteredWorkouts: result, groups: byMonth, sortedKeys: Object.keys(byMonth).sort((a, b) => b.localeCompare(a)) };
-  }, [workouts, filter, prWorkoutIds, heavyCutoff, selectedTags]);
+  const virtualItems = useMemo(
+    () => model.items.map(p => byId.get(p.id)).filter(Boolean),
+    [model, byId]
+  );
 
   const resetEditorHelpers = () => {
     setShowNewExercise(false);
@@ -129,11 +112,15 @@ const HistoryViewInner = ({
     setNewExercise({ exerciseId: null, name: '', category: '', sets: [{ kg: 0, reps: 0, completed: false }] });
   };
 
-  const handleEditStart = (workout) => {
+  const handleEditStart = useCallback((workout) => {
     setEditingId(workout.id);
     setEditData(JSON.parse(JSON.stringify(workout)));
     resetEditorHelpers();
-  };
+  }, []);
+
+  const handleDelete = useCallback((id) => {
+    if (onDeleteWorkout) onDeleteWorkout(id);
+  }, [onDeleteWorkout]);
 
   const handleEditSave = () => {
     if (!editData || !onEditWorkout) return;
@@ -145,13 +132,23 @@ const HistoryViewInner = ({
     setTimeout(() => document.querySelector(`[data-workout-id="${idToScroll}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' }), 100);
   };
 
-  const handleEditCancel = () => {
+  const handleEditCancel = useCallback(() => {
     const idToScroll = editingId;
     setEditingId(null);
     setEditData(null);
     resetEditorHelpers();
     setTimeout(() => document.querySelector(`[data-workout-id="${idToScroll}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' }), 100);
-  };
+  }, [editingId]);
+
+  // Escape closes the edit sheet (it is a modal dialog).
+  useEffect(() => {
+    if (!editingId) return;
+    const onKey = (e) => {
+      if (e.key === 'Escape') handleEditCancel();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [editingId, handleEditCancel]);
 
   const updateEdit = (updater) => {
     if (!editData) return;
@@ -196,63 +193,95 @@ const HistoryViewInner = ({
     return { exerciseCount, setCount, totalVolume, prCount };
   }, [editData]);
 
-  const handleOpenWorkoutFromHistory = (workout) => {
-    if (!onViewWorkoutDetail) return;
-    if (prWorkoutIds.has(workout.id)) {
+  const handleOpenWorkoutFromHistory = useCallback((workout) => {
+    if (!onViewWorkoutDetail || !workout) return;
+    if (prPreviewIds.has(workout.id)) {
       setActiveRecordFlashId(workout.id);
       setTimeout(() => setActiveRecordFlashId(null), 420);
-      setTimeout(() => onViewWorkoutDetail(workout.date), 120);
+      setTimeout(() => onViewWorkoutDetail(workout.date, workout.id), 120);
       return;
     }
-    onViewWorkoutDetail(workout.date);
-  };
+    onViewWorkoutDetail(workout.date, workout.id);
+  }, [onViewWorkoutDetail, prPreviewIds]);
 
-  const groupedCards = sortedKeys.map(key => (
-    <div key={key}>
-      <div className="mb-4">
-        <h2 className="text-sm font-black text-slate-300 tracking-widest">{formatMonth(key + '-01')}</h2>
-        <div className="h-0.5 bg-gradient-to-r from-blue-500/50 to-transparent mt-2 rounded-full" />
+  const renderCard = useCallback((workout) => (
+    <WorkoutCard
+      workout={workout}
+      onViewDetail={handleOpenWorkoutFromHistory}
+      onEdit={handleEditStart}
+      onDelete={handleDelete}
+      showActions={true}
+      exercisesDB={exercisesDB}
+      userWeight={userWeight}
+      relative={relativeDay(workout.date, now)}
+      getRecordsFn={(exerciseId, exercise) => ({ prCount: (exercise.sets || []).filter(s => s.isBest1RM || s.isBestSetVolume || s.isHeaviestWeight).length })}
+    />
+  ), [handleOpenWorkoutFromHistory, handleEditStart, handleDelete, exercisesDB, userWeight, now]);
+
+  const groupedCards = model.groups.map(group => (
+    <section key={group.monthKey} aria-label={group.monthKey === 'unknown' ? 'Unknown date' : formatMonth(group.monthKey + '-01')}>
+      <div className="mb-3">
+        <h2 className="text-sm font-black text-slate-300 uppercase tracking-widest">{group.monthKey === 'unknown' ? 'Unknown date' : formatMonth(group.monthKey + '-01')}</h2>
+        <div className="h-0.5 bg-slate-700/50 mt-2 rounded-full" aria-hidden="true" />
       </div>
       <div className="space-y-3">
-        {groups[key].map(workout => (
-      <div className={`bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-4 transition-all ui-card-mount-anim hover:border-slate-600/70 hover:from-slate-800/60 hover:to-slate-900/60 ${activeRecordFlashId === workout.id ? 'ui-record-click' : ''} ui-list-item-stagger` }>
-            <WorkoutCard
-              workout={workout}
-              onViewDetail={() => handleOpenWorkoutFromHistory(workout)}
-              onEdit={() => handleEditStart(workout)}
-              onDelete={() => onDeleteWorkout && onDeleteWorkout(workout.id)}
-              showActions={true}
-              exercisesDB={exercisesDB}
-              getRecordsFn={(exerciseId, exercise) => ({ prCount: (exercise.sets || []).filter(s => s.isBest1RM || s.isBestSetVolume || s.isHeaviestWeight).length })}
-            />
+        {group.items.map(preview => {
+          const workout = byId.get(preview.id);
+          if (!workout) return null;
+          return (
+      <div key={preview.id} data-workout-id={workout.id} data-workout-date={workout.date} className={`${activeRecordFlashId === workout.id ? 'ui-record-click rounded-xl' : ''} ui-list-item-stagger` }>
+            {renderCard(workout)}
           </div>
-        ))}
+          );
+        })}
       </div>
-    </div>
+    </section>
   ));
 
   const current = editData;
+  const isFiltering = (filter || 'all') !== 'all' || selectedTags.length > 0 || query.trim() !== '';
 
   return (
     <div className="bg-black text-white pb-16">
-      <div className="bg-gradient-to-b from-black to-black/80 border-b border-white/10 p-4 sticky top-0 z-20">
+      <div className="bg-black/95 backdrop-blur border-b border-white/10 p-4 sticky top-0 z-20 shadow-2xl">
         <h1 className="text-4xl font-black">HISTORY</h1>
-        <p className="text-xs text-slate-400 mt-2 font-semibold tracking-widest">YOUR WORKOUT LOG</p>
+        <p className="text-xs text-slate-400 mt-2 font-semibold tracking-widest">YOUR TRAINING LOG</p>
 
-        <div className="flex gap-2 mt-4 overflow-x-auto pb-2 no-scrollbar">
+        <div className="mt-3 relative">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" aria-hidden="true" />
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search workouts or exercises…"
+            aria-label="Search workouts"
+            className="touch-input w-full bg-slate-800/60 border border-slate-700/50 text-white rounded-xl pl-9 pr-8 text-sm font-semibold placeholder:text-slate-500 focus:outline-none focus:border-slate-500"
+          />
+          {query && (
+            <button
+              onClick={() => setQuery('')}
+              aria-label="Clear search"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-slate-500 hover:text-slate-300 rounded-lg"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        <div className="flex gap-2 mt-3 overflow-x-auto pb-1 no-scrollbar" role="group" aria-label="History filters">
           {[{ id: 'all', label: 'All' }, { id: 'pr', label: 'PR' }, { id: 'heavy', label: 'Heavy' }, { id: 'light', label: 'Light' }].map(item => (
-            <button key={item.id} onClick={() => onFilterChange && onFilterChange(item.id)} className={`text-xs font-bold px-4 py-2 rounded-full transition-all whitespace-nowrap ${(filter || 'all') === item.id ? 'accent-bg text-white shadow-lg shadow-accent/50' : 'bg-slate-800/50 border border-slate-700/50 text-slate-400 hover:text-slate-300'}`}>
+            <button key={item.id} onClick={() => onFilterChange && onFilterChange(item.id)} aria-pressed={(filter || 'all') === item.id} className={`text-xs font-bold px-4 min-h-[44px] rounded-full transition-all whitespace-nowrap ${(filter || 'all') === item.id ? 'accent-bg text-white shadow-lg shadow-accent/50' : 'bg-slate-800/50 border border-slate-700/50 text-slate-400 hover:text-slate-300'}`}>
               {item.label}
             </button>
           ))}
         </div>
 
-        <div className="mt-4">
-          <p className="text-xs text-slate-400 font-semibold tracking-widest mb-2">FILTER BY TAGS</p>
+        <div className="mt-3">
+          <h2 className="text-[11px] text-slate-500 font-bold uppercase tracking-widest mb-2">Filter by tags</h2>
           <div className="flex flex-wrap gap-2">
-            <button onClick={() => setSelectedTags([])} className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${selectedTags.length === 0 ? 'accent-bg text-white shadow-lg shadow-accent/30' : 'bg-slate-800/50 border border-slate-700/50 text-slate-400 hover:text-slate-300'}`}>All</button>
+            <button onClick={() => setSelectedTags([])} aria-pressed={selectedTags.length === 0} className={`px-4 min-h-[44px] rounded-full text-xs font-bold transition-all ${selectedTags.length === 0 ? 'accent-bg text-white shadow-lg shadow-accent/30' : 'bg-slate-800/50 border border-slate-700/50 text-slate-400 hover:text-slate-300'}`}>All</button>
             {TAGS.map(tag => (
-              <button key={tag} onClick={() => setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])} className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${selectedTags.includes(tag) ? 'accent-bg text-white shadow-lg shadow-accent/30' : 'bg-slate-800/50 border border-slate-700/50 text-slate-400 hover:text-slate-300'}`}>
+              <button key={tag} onClick={() => setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])} aria-pressed={selectedTags.includes(tag)} className={`px-4 min-h-[44px] rounded-full text-xs font-bold transition-all ${selectedTags.includes(tag) ? 'accent-bg text-white shadow-lg shadow-accent/30' : 'bg-slate-800/50 border border-slate-700/50 text-slate-400 hover:text-slate-300'}`}>
                 {tag}
               </button>
             ))}
@@ -260,21 +289,26 @@ const HistoryViewInner = ({
         </div>
       </div>
 
-      <div className={"p-4 space-y-6 " + (listTransitionOn ? "ui-history-crossfade" : "")}>
-        {filteredWorkouts.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-slate-400 text-sm font-semibold">{(filter || 'all') === 'all' ? 'No workouts yet' : 'No workouts match this filter'}</p>
-            <p className="text-slate-600 text-xs mt-2">{(filter || 'all') === 'all' ? 'Start your first workout to see it here' : 'Try a different filter'}</p>
-          </div>
-        ) : filteredWorkouts.length > 50 ? (
+      <div className={"p-4 space-y-6 max-w-3xl w-full mx-auto " + (listTransitionOn ? "ui-history-crossfade" : "")}>
+        {model.excludedFuture > 0 && (
+          <p className="text-[11px] text-slate-500 font-semibold" role="status">
+            {model.excludedFuture} upcoming {model.excludedFuture === 1 ? 'workout' : 'workouts'} hidden — history shows completed sessions only.
+          </p>
+        )}
+        {model.items.length === 0 ? (
+          <AnalyticsEmpty
+            title={!isFiltering ? 'No workouts yet' : 'No workouts match this filter'}
+            hint={!isFiltering ? 'Start your first workout to see it here' : 'Try a different search or filter'}
+          />
+        ) : model.items.length > 50 ? (
           <VirtualList
-            items={filteredWorkouts}
-            itemHeight={320}
+            items={virtualItems}
+            itemHeight={380}
             containerHeight={window.innerHeight - 250}
             keyExtractor={(item) => item.id}
             renderItem={(workout) => (
               <div key={workout.id} data-workout-id={workout.id} data-workout-date={workout.date} className="mb-3">
-                <WorkoutCard workout={workout} onViewDetail={() => handleOpenWorkoutFromHistory(workout)} onEdit={() => handleEditStart(workout)} onDelete={() => onDeleteWorkout && onDeleteWorkout(workout.id)} exercisesDB={exercisesDB} hasPR={false} />
+                {renderCard(workout)}
               </div>
             )}
           />
@@ -282,7 +316,7 @@ const HistoryViewInner = ({
       </div>
 
       {editingId && current && (
-        <div className="fixed inset-x-0 top-0 z-50 bg-black/85 backdrop-blur-sm" style={{ height: 'calc(100vh - 4rem)' }}>
+        <div className="fixed inset-x-0 top-0 z-50 bg-black/85 backdrop-blur-sm" style={{ height: 'calc(100vh - 4rem)' }} role="dialog" aria-modal="true" aria-label={`Edit ${current.name || 'workout'}`} onMouseDown={(e) => { if (e.target === e.currentTarget) handleEditCancel(); }}>
           <div className="h-full w-full sm:max-w-3xl sm:mx-auto sm:my-4 sm:h-[calc(100%-2rem)] bg-gradient-to-br from-slate-900/98 to-black border border-slate-700/60 sm:rounded-2xl flex flex-col shadow-2xl">
             <div className="p-4 border-b border-slate-700/50 bg-slate-950/90">
               <div className="flex items-center justify-between">
@@ -306,9 +340,9 @@ const HistoryViewInner = ({
 
             <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-24">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <input type="text" value={current.name} onChange={(e) => setEditData({ ...current, name: e.target.value })} className="touch-input w-full bg-slate-800/60 border border-slate-600/50 text-white rounded-xl font-semibold" placeholder="Workout name" />
-                <input type="date" value={current.date || ''} onChange={(e) => setEditData({ ...current, date: e.target.value })} className="touch-input w-full bg-slate-800/60 border border-slate-600/50 text-white rounded-xl font-semibold" />
-                <input type="number" inputMode="decimal" value={current.duration || 0} onChange={(e) => setEditData({ ...current, duration: Number(e.target.value) || 0 })} className="touch-input w-full bg-slate-800/60 border border-slate-600/50 text-white rounded-xl font-semibold" placeholder="Duration (min)" />
+                <input type="text" aria-label="Workout name" value={current.name} onChange={(e) => setEditData({ ...current, name: e.target.value })} className="touch-input w-full bg-slate-800/60 border border-slate-600/50 text-white rounded-xl font-semibold" placeholder="Workout name" />
+                <input type="date" aria-label="Workout date" value={current.date || ''} onChange={(e) => setEditData({ ...current, date: e.target.value })} className="touch-input w-full bg-slate-800/60 border border-slate-600/50 text-white rounded-xl font-semibold" />
+                <input type="number" aria-label="Duration in minutes" inputMode="decimal" value={current.duration || 0} onChange={(e) => setEditData({ ...current, duration: Number(e.target.value) || 0 })} className="touch-input w-full bg-slate-800/60 border border-slate-600/50 text-white rounded-xl font-semibold" placeholder="Duration (min)" />
               </div>
 
               {(current.exercises || []).map((ex, exIdx) => (
@@ -321,10 +355,10 @@ const HistoryViewInner = ({
                       </div>
                       <p className="text-xs text-slate-500 mt-1">{ex.category || 'Other'}</p>
                     </div>
-                    <div className="flex gap-2">
-                      <button onClick={() => updateEdit(updated => { updated.exercises[exIdx].sets.push({ kg: 0, reps: 0, completed: false }); })} className="p-2.5 sm:p-2 accent-bg-light accent-border-light rounded-lg transition accent-text active:scale-95" title="Add set"><Plus size={16} className="sm:hidden" /> <Plus size={14} className="hidden sm:block" /></button>
-                      <button onClick={() => updateEdit(updated => { updated.exercises = updated.exercises.filter((_, i) => i !== exIdx); })} className="p-2.5 sm:p-2 bg-red-600/20 border border-red-500/30 rounded-lg transition text-red-400 active:scale-95" title="Delete exercise"><Trash2 size={16} className="sm:hidden" /> <Trash2 size={14} className="hidden sm:block" /></button>
-                    </div>
+                      <div className="flex gap-2">
+                        <button onClick={() => updateEdit(updated => { updated.exercises[exIdx].sets.push({ kg: 0, reps: 0, completed: false }); })} aria-label={`Add set to ${ex.name}`} className="p-2.5 sm:p-2 accent-bg-light accent-border-light rounded-lg transition accent-text active:scale-95" title="Add set"><Plus size={16} className="sm:hidden" /> <Plus size={14} className="hidden sm:block" /></button>
+                        <button onClick={() => updateEdit(updated => { updated.exercises = updated.exercises.filter((_, i) => i !== exIdx); })} aria-label={`Delete ${ex.name}`} className="p-2.5 sm:p-2 bg-red-600/20 border border-red-500/30 rounded-lg transition text-red-400 active:scale-95" title="Delete exercise"><Trash2 size={16} className="sm:hidden" /> <Trash2 size={14} className="hidden sm:block" /></button>
+                      </div>
                   </div>
 
                   {(ex.sets || []).map((set, setIdx) => (
@@ -342,8 +376,8 @@ const HistoryViewInner = ({
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-2">
-                        <input type="number" inputMode="decimal" value={set.kg} onChange={(e) => updateEdit(updated => { updated.exercises[exIdx].sets[setIdx].kg = Number(e.target.value) || 0; })} className="touch-input w-full bg-slate-800/60 border border-slate-600/50 text-white rounded-lg font-bold ui-keypad-input" placeholder="kg" />
-                        <input type="number" inputMode="decimal" value={set.reps} onChange={(e) => updateEdit(updated => { updated.exercises[exIdx].sets[setIdx].reps = Number(e.target.value) || 0; })} className="touch-input w-full bg-slate-800/60 border border-slate-600/50 text-white rounded-lg font-bold ui-keypad-input" placeholder="reps" />
+                        <input type="number" aria-label={`Set ${setIdx + 1} weight in kilograms`} inputMode="decimal" value={set.kg} onChange={(e) => updateEdit(updated => { updated.exercises[exIdx].sets[setIdx].kg = Number(e.target.value) || 0; })} className="touch-input w-full bg-slate-800/60 border border-slate-600/50 text-white rounded-lg font-bold ui-keypad-input" placeholder="kg" />
+                        <input type="number" aria-label={`Set ${setIdx + 1} reps`} inputMode="decimal" value={set.reps} onChange={(e) => updateEdit(updated => { updated.exercises[exIdx].sets[setIdx].reps = Number(e.target.value) || 0; })} className="touch-input w-full bg-slate-800/60 border border-slate-600/50 text-white rounded-lg font-bold ui-keypad-input" placeholder="reps" />
                       </div>
                     </div>
                   ))}
@@ -383,7 +417,7 @@ const HistoryViewInner = ({
                 )}
               </div>
 
-              <textarea value={current.note || ''} onChange={(e) => setEditData({ ...current, note: e.target.value })} className="touch-input w-full bg-slate-800/60 border border-slate-600/50 text-white rounded-xl resize-none" placeholder="Workout notes..." rows={4} />
+              <textarea aria-label="Workout notes" value={current.note || ''} onChange={(e) => setEditData({ ...current, note: e.target.value })} className="touch-input w-full bg-slate-800/60 border border-slate-600/50 text-white rounded-xl resize-none" placeholder="Workout notes..." rows={4} />
 
               <div className="flex flex-wrap gap-2">
                 {TAGS.map(tag => (
@@ -405,11 +439,3 @@ const HistoryViewInner = ({
 };
 
 export const HistoryView = React.memo(HistoryViewInner);
-
-
-
-
-
-
-
-

@@ -38,9 +38,59 @@ export const normalizeWorkoutExerciseForStorage = (exercise = {}) => {
     priority: exercise.priority ?? 3,
     nonNegotiable: exercise.nonNegotiable ?? false,
     estimatedSetSec: exercise.estimatedSetSec ?? null,
-    targetMuscles: Array.isArray(exercise.targetMuscles) ? exercise.targetMuscles : undefined,
+    // ISOLATION: copy the array — never share the template's reference.
+    targetMuscles: Array.isArray(exercise.targetMuscles) ? [...exercise.targetMuscles] : undefined,
+    // ISOLATION: copy nested config objects so template ↔ active never alias.
+    progression: exercise.progression && typeof exercise.progression === 'object'
+      ? { ...exercise.progression }
+      : exercise.progression,
     sets: normalizeSetsForStorage(exercise.sets || [])
   };
+};
+
+/**
+ * Deep-clone template exercises for TEMPLATE → CLONE → ACTIVE WORKOUT.
+ * JSON round-trip is intentional: templates are JSON-serializable (IndexedDB)
+ * and every nested structure (sets, targetMuscles, progression/rest config,
+ * planNotes, superset links) must become an independent working copy.
+ * Falls back to a structural per-level copy when serialization fails.
+ */
+export const cloneTemplateExercisesForActive = (exercises = []) => {
+  const list = Array.isArray(exercises) ? exercises : [];
+  try {
+    return JSON.parse(JSON.stringify(list));
+  } catch {
+    return list.map((exercise) => ({
+      ...exercise,
+      targetMuscles: Array.isArray(exercise.targetMuscles) ? [...exercise.targetMuscles] : exercise.targetMuscles,
+      progression: exercise?.progression && typeof exercise.progression === 'object'
+        ? { ...exercise.progression }
+        : exercise?.progression,
+      sets: Array.isArray(exercise?.sets) ? exercise.sets.map((set) => ({ ...set })) : []
+    }));
+  }
+};
+
+/**
+ * Duplicate a whole template as an independent blueprint.
+ * New id, "(Copy)" suffix, execution memory cleared (snapshots are history,
+ * not blueprint). Deep-cloned so nested arrays/objects never alias.
+ */
+export const duplicateTemplate = (template, generateIdFn) => {
+  if (!template || typeof template !== 'object') return null;
+  let clone;
+  try {
+    clone = JSON.parse(JSON.stringify(template));
+  } catch {
+    clone = { ...template, exercises: cloneTemplateExercisesForActive(template.exercises) };
+  }
+  const newId = typeof generateIdFn === 'function' ? generateIdFn() : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  clone.id = newId;
+  const baseName = typeof clone.name === 'string' && clone.name.trim() ? clone.name.trim() : 'Template';
+  clone.name = `${baseName} (Copy)`;
+  clone.lastWorkoutSnapshot = null;
+  clone.templatePrevious = {};
+  return clone;
 };
 
 export const getSetTimeWeight = (setType = 'work') => {

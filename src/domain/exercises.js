@@ -146,11 +146,19 @@ export const getLastSet = (exerciseId, workouts) => {
 };
 
 // Compute exercise trend: ↑ progres, → stagnacja, ↓ regres (over last 4 weeks)
-export const getExerciseTrend = (exerciseId, workouts) => {
+// Deterministic when `nowOrOpts` provides `now`; legacy wall-clock when omitted.
+// Accepts getExerciseTrend(id, workouts) or getExerciseTrend(id, workouts, now)
+// or getExerciseTrend(id, workouts, { now }). Coaching V2 MUST pass now.
+export const getExerciseTrend = (exerciseId, workouts, nowOrOpts = null) => {
   const history = getExerciseHistory(exerciseId, workouts);
   if (history.length < 2) return '→'; // not enough data
-  
-  const now = new Date();
+
+  const rawNow = nowOrOpts instanceof Date ? nowOrOpts
+    : typeof nowOrOpts === 'number' ? new Date(nowOrOpts)
+    : nowOrOpts?.now ?? null;
+  const now = rawNow instanceof Date && Number.isFinite(rawNow.getTime())
+    ? rawNow
+    : (typeof rawNow === 'number' && Number.isFinite(rawNow) ? new Date(rawNow) : new Date());
   const fourWeeksAgo = new Date(now.getTime() - 28 * 24 * 60 * 60 * 1000);
   
   // Split into recent and older

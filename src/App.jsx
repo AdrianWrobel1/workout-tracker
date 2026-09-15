@@ -4,15 +4,46 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { calculate1RM } from './domain/calculations';
 import { getExerciseRecords, getLastCompletedSets, suggestNextWeight, checkSetRecords } from './domain/exercises';
 import { prepareCleanWorkoutData, compareWorkoutToPrevious, generateSessionFeedback, calculateMuscleDistribution, detectPRsInWorkout, buildLastWorkoutSnapshot, generateCoachLens, calculateMasteryLevel, calculateMomentum, detectAnomalies } from './domain/workouts';
-import { normalizeSetForStorage, normalizeWorkoutExerciseForStorage, isWarmupSet, resolveSetType } from './domain/workoutExtensions';
-import { calculateReadiness, calculateBlockProgress, optimizeSession, calculateMuscleBalance } from './analytics';
+import { normalizeSetForStorage, normalizeWorkoutExerciseForStorage, isWarmupSet, resolveSetType, cloneTemplateExercisesForActive, duplicateTemplate as duplicateTemplateValue } from './domain/workoutExtensions';
+import { shouldAutoStartRest, normalizeRestDuration, resolveRestForWorkoutSet, sanitizeExerciseRestForStorage, DEFAULT_REST_SEC } from './domain/restTimer';
+import { sanitizeProgressionForStorage } from './domain/progression';
+import { sanitizeMusclesForStorage } from './domain/muscles';
+import { resolveRecommendation } from './domain/progressionAdapter';
+import {
+  updateSetField as applySetField,
+  toggleSetCompletion as applyToggleSet,
+  addSet as applyAddSet,
+  addWarmupSet as applyAddWarmupSet,
+  deleteSet as applyDeleteSet,
+  setSetType as applySetType,
+  deleteExercise as applyDeleteExercise,
+  reorderExercises as applyReorderExercises,
+  createSuperset as applyCreateSuperset,
+  removeSuperset as applyRemoveSuperset,
+  buildCompletedWorkout
+} from './domain/workoutActions';
+import { isWorkoutPersisted } from './domain/activeWorkoutView';
+import { generateId } from './domain/ids';
+import {
+  createScheduledFromTemplate,
+  createScheduledCustom,
+  updateScheduledWorkout,
+  markScheduledCompleted,
+  deleteScheduledWorkout,
+  normalizeScheduledList,
+  buildActiveBlueprintFromScheduled,
+  getUpcomingPlans,
+} from './domain/scheduledWorkouts';
+import { buildSessionReturn, resolveSessionBackTarget } from './domain/sessionDetail';
+import { validateImportPayload, isValidWorkout, isValidTemplate, isValidExercise, normalizeImportedWorkout, normalizeImportedExercise, mergeById } from './services/importExport';
+import { calculateReadiness, calculateBlockProgress, optimizeSession, calculateMuscleBalance, muscleStats } from './analytics';
 
 // HOOKS
 import { useDebouncedLocalStorage, useDebouncedLocalStorageManual } from './hooks/useLocalStorage';
 import { useIndexedDBStore, useIndexedDBSetting, useIndexedDBDirect } from './hooks/useIndexedDB';
 import { useRecordsIndex } from './hooks/useRecordsIndex';
 import { useModals } from './contexts/ModalContext';
-import { useWorkouts, useUI, useSettings } from './contexts/index.js';
+import { useWorkouts, useUI, useSettings, useRestTimer } from './contexts/index.js';
 import { SmartPlanProvider } from './contexts/SmartPlanContext.jsx';
 import { TemplatesProvider } from './contexts/TemplatesContext.jsx';
 
@@ -21,13 +52,14 @@ import { storage, STORES } from './services/storageService';
 
 // COMPONENTS
 import { MiniWorkoutBar } from './components/MiniWorkoutBar';
+import { RestTimerBar } from './components/RestTimerBar';
 import { UndoToast } from './components/UndoToast';
 import { HiddenWorkoutBadge } from './components/HiddenWorkoutBadge';
 import { BottomNav } from './components/BottomNav';
-import { CalendarModal } from './components/CalendarModal';
 import { ExerciseSelectorModal } from './components/ExerciseSelectorModal';
 import { CustomKeypad } from './components/CustomKeypad';
 import { PRBanner } from './components/PRBanner';
+import { MuscleBodyMap } from './components/MuscleBodyMap';
 
 // VIEWS
 import { HomeView } from './views/HomeView';
@@ -41,7 +73,7 @@ import { HistoryView } from './views/HistoryView';
 import { WorkoutDetailView } from './views/WorkoutDetailView';
 import { ProfileView } from './views/ProfileView';
 import { ProfileStatisticsView } from './views/ProfileStatisticsView';
-import { ProfileCalendarView } from './views/ProfileCalendarView';
+import { PlanningCalendarView } from './views/PlanningCalendarView';
 import { SettingsView } from './views/SettingsView';
 import { MonthlyProgressView } from './views/MonthlyProgressView';
 import { ExportDataView } from './views/ExportDataView';
@@ -83,6 +115,7 @@ export default function App() {
     workouts, setWorkouts,
     templates, setTemplates,
     exercisesDB, setExercisesDB,
+    scheduledWorkouts, setScheduledWorkouts,
     activeWorkout, setActiveWorkout,
     workoutTimer, setWorkoutTimer,
     isWorkoutMinimized, setIsWorkoutMinimized,
@@ -124,10 +157,15 @@ export default function App() {
     reduceAnimations, setReduceAnimations,
     activePRBanner, setActivePRBanner,
     prBannerVisible, setPRBannerVisible,
+    restDurationSec, setRestDurationSec,
+    restAutoStart, setRestAutoStart,
+    restSoundEnabled, setRestSoundEnabled,
   } = useSettings();
 
+  const { startRest, skipRest } = useRestTimer();
+
   // --- CONTEXT ---
-  const { showCalendar, closeCalendar, openCalendar, showExerciseSelector, closeExerciseSelector, openExerciseSelector, showExportModal, closeExportModal } = useModals();
+  const { showExerciseSelector, closeExerciseSelector, openExerciseSelector, showExportModal, closeExportModal } = useModals();
 
   // --- HOOKS ---
   const { recordsIndex, updateRecordForExercise, updateRecordsForExercises, rebuildIndex, getRecords, clearCache } = useRecordsIndex();
@@ -136,6 +174,8 @@ export default function App() {
   const [summaryVisible, setSummaryVisible] = useState(false);
   const [toast, setToast] = useState(null);
   const [returnTo, setReturnTo] = useState(null);
+  const [selectedWorkoutId, setSelectedWorkoutId] = useState(null);
+  const [openSessionAfterSave, setOpenSessionAfterSave] = useState(false);
   const [selectedExerciseIndex, setSelectedExerciseIndex] = useState(null);
   const [historyScrollPosition, setHistoryScrollPosition] = useState(null);
   const [hasHydratedPersistence, setHasHydratedPersistence] = useState(false);
@@ -148,6 +188,9 @@ export default function App() {
   const undoTimeoutRef = useRef(null);
   const autosaveRequestRef = useRef(0);
   const prBannerTimeoutRef = useRef(null);
+  // Guards the finish-save path: rapid double-taps on Save must persist the
+  // workout exactly once (same id → single history entry).
+  const saveInFlightRef = useRef(false);
   const activeTabRef = useRef(activeTab);
   const activeWorkoutRef = useRef(activeWorkout);
 
@@ -200,6 +243,15 @@ export default function App() {
         // Exclude activeWorkout from list so it never gets overwritten by list persistence
         setWorkouts((workouts || []).filter(w => w.id !== 'activeWorkout'));
         setTemplates(templates || []);
+        // Planned workouts: separate store (v2 schema). Pre-v2 databases
+        // have no such store — fall back to an empty schedule, never crash.
+        try {
+          const scheduled = await storage.getAllFromStore(STORES.SCHEDULED);
+          setScheduledWorkouts(normalizeScheduledList(scheduled || []));
+        } catch (scheduleErr) {
+          console.warn('Scheduled workouts unavailable, starting empty:', scheduleErr);
+          setScheduledWorkouts([]);
+        }
 
         // Load settings
         const goal = await storage.getSetting('weeklyGoal', 4);
@@ -209,6 +261,9 @@ export default function App() {
         const enableHaptic = await storage.getSetting('enableHapticFeedback', false);
         const notes = await storage.getSetting('trainingNotes', '');
         const reduceMotion = await storage.getSetting('reduceAnimations', false);
+        const restDuration = await storage.getSetting('restDurationSec', DEFAULT_REST_SEC);
+        const restAuto = await storage.getSetting('restAutoStart', true);
+        const restSound = await storage.getSetting('restSoundEnabled', true);
         // display prefs
         setWeeklyGoal(parseInt(goal) || 4);
         setDefaultStatsRange(statsRange || '3months');
@@ -217,6 +272,9 @@ export default function App() {
         setEnableHapticFeedback(enableHaptic !== null ? enableHaptic : false);
         setTrainingNotes(typeof notes === 'string' ? notes : '');
         setReduceAnimations(Boolean(reduceMotion));
+        setRestDurationSec(Number(restDuration) || DEFAULT_REST_SEC);
+        setRestAutoStart(restAuto !== null ? Boolean(restAuto) : true);
+        setRestSoundEnabled(restSound !== null ? Boolean(restSound) : true);
 
         // Load active workout if within 24h
         const activeWO = await storage.get(STORES.WORKOUTS, 'activeWorkout');
@@ -245,14 +303,24 @@ export default function App() {
   // Save Data (debounced). Workouts use incremental put/delete in handlers, not full setMany.
   useIndexedDBStore(STORES.EXERCISES, exercisesDB, 200, { skipSave: !hasHydratedPersistence });
   useIndexedDBStore(STORES.TEMPLATES, templates, 200, { skipSave: !hasHydratedPersistence });
+  // Planned-workout persistence rides the same debounced IndexedDB hook —
+  // no second storage system. Single-record writes below are belt-and-braces
+  // for schedule mutations; the hook converges the rest.
+  useIndexedDBStore(STORES.SCHEDULED, scheduledWorkouts, 200, { skipSave: !hasHydratedPersistence });
   
   // Persist settings (smaller payloads, can use settings API)
+  // weeklyGoal is included: it is loaded on hydration, so it must also be
+  // saved or user changes (and imported values) are silently lost on reload.
+  useIndexedDBSetting('weeklyGoal', weeklyGoal, 300, { skipSave: !hasHydratedPersistence });
   useIndexedDBSetting('userWeight', userWeight, 300, { skipSave: !hasHydratedPersistence });
   useIndexedDBSetting('defaultStatsRange', defaultStatsRange, 300, { skipSave: !hasHydratedPersistence });
   useIndexedDBSetting('trainingNotes', trainingNotes, 500, { skipSave: !hasHydratedPersistence });
   useIndexedDBSetting('enablePerformanceAlerts', enablePerformanceAlerts, 500, { skipSave: !hasHydratedPersistence });
   useIndexedDBSetting('enableHapticFeedback', enableHapticFeedback, 500, { skipSave: !hasHydratedPersistence });
   useIndexedDBSetting('reduceAnimations', reduceAnimations, 500, { skipSave: !hasHydratedPersistence });
+  useIndexedDBSetting('restDurationSec', restDurationSec, 500, { skipSave: !hasHydratedPersistence });
+  useIndexedDBSetting('restAutoStart', restAutoStart, 500, { skipSave: !hasHydratedPersistence });
+  useIndexedDBSetting('restSoundEnabled', restSoundEnabled, 500, { skipSave: !hasHydratedPersistence });
 
   // activeWorkout requires immediate async save (no debounce for critical data)
   const { saveAsync } = useIndexedDBDirect();
@@ -364,6 +432,12 @@ export default function App() {
     return calculateBlockProgress(activeTemplateForProgress, workouts, { strictTemplateIdMatch: true });
   }, [activeTemplateForProgress, workouts]);
 
+  // Small Home preview of what's next — launcher only, never a calendar.
+  const upcomingPlans = useMemo(
+    () => getUpcomingPlans(scheduledWorkouts, { limit: 3 }),
+    [scheduledWorkouts]
+  );
+
   // Fallback auto-close for PR banner (prevents stuck banner states)
   useEffect(() => {
     if (prBannerTimeoutRef.current) {
@@ -400,13 +474,40 @@ export default function App() {
   }, [pendingSummary]);
 
   const handleSaveExercise = useCallback((exercise) => {
+    // Sanitize the optional per-exercise rest override: a valid `restSec`
+    // persists as part of the exercise record (existing IndexedDB store, no
+    // schema change); absent/malformed values are dropped so the exercise
+    // inherits the global default. History is untouched — this only affects
+    // future rest timers.
+    // The optional `progression` config is sanitized the same additive way:
+    // valid config persists on the record, absent/malformed means OFF
+    // (legacy behavior preserved, no migration, history untouched).
+    // Muscle metadata is normalized into the canonical V2 shape
+    // (primary/secondary/detail + synced muscles[]) the same additive way:
+    // known exercises gain audited attribution, free-text tokens are
+    // alias-normalized, and invalid tokens are dropped so the read-time
+    // category fallback applies. History is untouched.
+    const clean = sanitizeMusclesForStorage(sanitizeProgressionForStorage(sanitizeExerciseRestForStorage(exercise)));
     let newExerciseId;
-    if (exercise.id) {
-      setExercisesDB(exercisesDB.map(e => e.id === exercise.id ? exercise : e));
-      newExerciseId = exercise.id;
+    if (clean.id) {
+      setExercisesDB(exercisesDB.map(e => e.id === clean.id ? clean : e));
+      newExerciseId = clean.id;
     } else {
-      newExerciseId = Date.now();
-      setExercisesDB([...exercisesDB, { ...exercise, id: newExerciseId }]);
+      newExerciseId = generateId();
+      setExercisesDB([...exercisesDB, { ...clean, id: newExerciseId }]);
+    }
+
+    // If exercise was created from the planner, deliver it through the
+    // draft backup (the calendar remounts and restores its in-progress
+    // draft + appends this exercise) and return to the calendar.
+    if (exerciseCreateSource === 'planned') {
+      const saved = clean.id ? clean : { ...clean, id: newExerciseId };
+      // Fresh token: the calendar applies each backup exactly once.
+      setPlannedDraftBackup(prev => ({ token: generateId(), draft: prev?.draft ?? null, pickedExercise: saved }));
+      setExerciseCreateSource(null);
+      setEditingExercise(null);
+      setView('calendar');
+      return;
     }
 
     // If exercise was created from activeWorkout, add it and return
@@ -441,7 +542,7 @@ export default function App() {
 
   // --- ACTIONS: WORKOUTS ---
 
-  const handleStartWorkout = useCallback((template) => {
+  const handleStartWorkout = useCallback((template, opts = {}) => {
     if (!template) return;
 
     // If there is already an active workout, ask user whether to go to it or start a new one
@@ -490,7 +591,12 @@ export default function App() {
         }
       : undefined;
 
-    const exercises = (sourceTemplate.exercises || []).map((exercise) => {
+    // TEMPLATE → CLONE → ACTIVE: deep-clone first so nested structures
+    // (sets, targetMuscles, progression/rest config, notes, superset links)
+    // never share references with the blueprint. Stale exerciseIds are kept
+    // as-is (graceful orphan) — resolution falls back to global defaults.
+    const clonedExercises = cloneTemplateExercisesForActive(sourceTemplate.exercises || []);
+    const exercises = clonedExercises.map((exercise) => {
       const dbExercise = exercise.exerciseId != null
         ? exercisesDB.find(item => item.id === exercise.exerciseId)
         : exercisesDB.find(item => item.name === exercise.name);
@@ -498,20 +604,38 @@ export default function App() {
       return normalizeWorkoutExerciseForStorage({
         ...exercise,
         exerciseId: exercise.exerciseId ?? dbExercise?.id ?? null,
+        // Explicit blueprint config contract (spread preserves the rest):
+        // name, category, supersetId, planNotes, priority, nonNegotiable,
+        // estimatedSetSec, targetMuscles (copied), progression (copied),
+        // sets[{kg,reps,setType,warmup,rir,tempo,pauseSec}] reset to open.
+        // Timer runtime is never copied (lives in RestTimerContext only).
+        // Plans/defaultPlanId/lastWorkoutSnapshot/templatePrevious stay on
+        // the template (guidance/memory, not working copy).
         sets: (exercise.sets || []).map(set => normalizeSetForStorage({
           ...set,
-          completed: false
+          completed: false,
+          // Active working copy never inherits template hints/PR flags.
+          suggestedKg: undefined,
+          suggestedReps: undefined,
+          isBest1RM: false,
+          isBestSetVolume: false,
+          isHeaviestWeight: false
         }))
       });
     });
 
     setActiveWorkout({
-      templateId: template.id,
+      // Planned-start override: when launching from a scheduled plan the
+      // stored templateId is the plan's source template (or null for custom
+      // plans) so template memory/snapshot updates still resolve correctly.
+      templateId: opts.templateId !== undefined ? opts.templateId : template.id,
       name: template.name,
       note: '',
       date: now.toISOString().split('T')[0],
       startTime: now.toISOString(),
       exercises,
+      // Linkage for completion fulfilment (stripped before history write).
+      ...(opts.plannedId != null ? { plannedId: opts.plannedId } : {}),
       ...(blockRef ? { blockRef } : {}),
       ...(optimizerMeta ? { optimizerMeta } : {}),
       templateSnapshot: JSON.parse(JSON.stringify(template))
@@ -579,17 +703,38 @@ export default function App() {
     return calculateMuscleDistribution(workout, exercisesDB);
   };
 
+  // Helper to show toast message (declared before finish so the
+  // finish guard can reuse it without a TDZ cycle).
+  const showToast = useCallback((message) => {
+    setToast(message);
+    setTimeout(() => setToast(null), 2000);
+  }, []);
+
   const handleFinishWorkout = useCallback(() => {
     if (!activeWorkout) return;
-    // Deep clone so detectPRsInWorkout does not mutate activeWorkout state
+    // Idempotency: a rapid double-tap on Finish must not build two summaries.
+    if (pendingSummary) return;
+    // A finish with zero completed sets would persist an empty session that
+    // inflates workout counts in History/Statistics with no training data.
+    // Warm-up-only sessions are still allowed (honest zeros, not emptiness).
+    const hasAnyCompletedSet = (activeWorkout.exercises || []).some((ex) =>
+      (ex.sets || []).some((s) => s?.completed)
+    );
+    if (!hasAnyCompletedSet) {
+      showToast('Complete at least one set to finish your workout');
+      return;
+    }
+    // The session is over — drop the transient rest timer (never persisted).
+    skipRest();
+    // Canonical durable builder: deep clone (PR detection mutates its input),
+    // collision-safe id, full ISO timestamp. Active workout is NOT cleared
+    // here — it stays autosaved until the user confirms Save, so a refresh
+    // between Finish and Save loses only the summary modal, not the data.
+    // The plan link (plannedId) is provenance for fulfilment only — it is
+    // stripped here so history records keep their canonical shape.
     const now = new Date();
-    const completedWorkout = JSON.parse(JSON.stringify({
-      ...activeWorkout,
-      id: Date.now(),
-      // use full ISO timestamp to avoid timezone parsing issues
-      date: now.toISOString(),
-      tags: []
-    }));
+    const { plannedId: linkedPlanId, ...finishedWorkout } = buildCompletedWorkout(activeWorkout, { now, id: generateId(), tags: [] });
+    const completedWorkout = finishedWorkout;
     const template = templates.find(t => t.id === activeWorkout.templateId);
     const baseTemplate = template || activeWorkout.templateSnapshot || null;
     const diff = baseTemplate ? computeTemplateDiff(baseTemplate, activeWorkout) : { changed: true, reasons: ['No template associated for this workout'] };
@@ -597,9 +742,10 @@ export default function App() {
     completedWorkout.duration = metrics.duration;
     const muscleTotals = computeMuscleTotals(completedWorkout);
     
-    // Prepare clean data and comparison
-    const cleanData = prepareCleanWorkoutData(completedWorkout, exercisesDB);
-    const comparison = compareWorkoutToPrevious(completedWorkout, workouts);
+    // Prepare clean data and comparison (canonical BW-aware so Finish
+    // can never diverge from Session/History/Statistics for one workout).
+    const cleanData = prepareCleanWorkoutData(completedWorkout, exercisesDB, userWeight);
+    const comparison = compareWorkoutToPrevious(completedWorkout, workouts, { exercisesDB, userWeight });
     const feedback = generateSessionFeedback(cleanData.totalVolume, cleanData.completedSets, comparison?.trend || 'flat');
     
     // Pre-calculate PR status (on clone; no mutation of activeWorkout)
@@ -615,7 +761,8 @@ export default function App() {
     setSelectedTags([]); // reset tag selection
     setPendingSummary({ 
       completedWorkout: { ...completedWorkout, prStatus, hasPR }, 
-      templateId: template?.id || null, 
+      templateId: template?.id || null,
+      plannedId: linkedPlanId ?? null,
       diff, 
       metrics: { ...metrics, muscleTotals },
       cleanData,
@@ -623,7 +770,7 @@ export default function App() {
       feedback,
       coachLens
     });
-  }, [activeWorkout, templates, workouts, exercisesDB, getExerciseRecords]);
+  }, [activeWorkout, pendingSummary, templates, workouts, exercisesDB, userWeight, getExerciseRecords, skipRest, showToast]);
   const handleMinimizeWorkout = useCallback(() => {
     setIsWorkoutMinimized(true);
     // when workout is minimised, return user to previous active tab/view
@@ -663,21 +810,9 @@ export default function App() {
 
   // Active Workout Modifications
   const handleUpdateSet = useCallback((exIndex, setIndex, field, value) => {
-    // FIXED: Deep copy to prevent shallow mutation
-    const updated = {
-      ...activeWorkout,
-      exercises: activeWorkout.exercises.map((ex, idx) => {
-        if (idx !== exIndex) return ex;
-        return {
-          ...ex,
-          sets: ex.sets.map((set, sidx) => {
-            if (sidx !== setIndex) return set;
-            return { ...set, [field]: value };
-          })
-        };
-      })
-    };
-    setActiveWorkout(updated);
+    if (!activeWorkout?.exercises?.[exIndex]?.sets?.[setIndex]) return;
+    // Canonical immutable update (single source: workoutActions.updateSetField)
+    let updated = applySetField(activeWorkout, exIndex, setIndex, field, value);
 
     // If this set is already completed, re-run PR detection to update flags
     const exId = updated.exercises[exIndex].exerciseId;
@@ -685,27 +820,35 @@ export default function App() {
     if (exId && isCompleted) {
       const kg = Number(updated.exercises[exIndex].sets[setIndex].kg) || 0;
       const reps = Number(updated.exercises[exIndex].sets[setIndex].reps) || 0;
-      
-      // P1 FIX: Re-run PR detection after edit to update set flags correctly
-      // Create temporary workout for PR detection
-      const tempWorkout = { ...updated };
-      const prStatus = detectPRsInWorkout(tempWorkout, workouts, calculate1RM, getExerciseRecords);
-      
-      // Apply PR flags back to the updated set
-      if (prStatus[exId]?.recordsPerSet?.[setIndex]) {
-        const recordTypes = prStatus[exId].recordsPerSet[setIndex];
-        updated.exercises[exIndex].sets[setIndex].isBest1RM = recordTypes.includes('best1RM');
-        updated.exercises[exIndex].sets[setIndex].isBestSetVolume = recordTypes.includes('bestSetVolume');
-        updated.exercises[exIndex].sets[setIndex].isHeaviestWeight = recordTypes.includes('heaviestWeight');
-      } else {
-        // Clear PR flags if no longer a record
-        updated.exercises[exIndex].sets[setIndex].isBest1RM = false;
-        updated.exercises[exIndex].sets[setIndex].isBestSetVolume = false;
-        updated.exercises[exIndex].sets[setIndex].isHeaviestWeight = false;
-      }
-      
+
+      // P1 FIX: Re-run PR detection after edit to update set flags correctly.
+      // detectPRsInWorkout mutates its input, so pass a throwaway deep clone.
+      const probe = JSON.parse(JSON.stringify(updated));
+      const prStatus = detectPRsInWorkout(probe, workouts, calculate1RM, getExerciseRecords);
+
+      // Fold PR flags into a NEW object (never mutate after setState).
+      const recordTypes = prStatus[exId]?.recordsPerSet?.[setIndex];
+      updated = {
+        ...updated,
+        exercises: updated.exercises.map((ex, idx) => {
+          if (idx !== exIndex) return ex;
+          return {
+            ...ex,
+            sets: ex.sets.map((set, sidx) => {
+              if (sidx !== setIndex) return set;
+              return {
+                ...set,
+                isBest1RM: recordTypes ? recordTypes.includes('best1RM') : false,
+                isBestSetVolume: recordTypes ? recordTypes.includes('bestSetVolume') : false,
+                isHeaviestWeight: recordTypes ? recordTypes.includes('heaviestWeight') : false
+              };
+            })
+          };
+        })
+      };
+
       setActiveWorkout(updated);
-      
+
       // Also update exercise default in DB if new 1RM
       const hist = getExerciseRecords(exId, workouts);
       const histBest = hist.best1RM || 0;
@@ -715,6 +858,8 @@ export default function App() {
         // subtle haptic for PR
         if (navigator.vibrate) navigator.vibrate(20);
       }
+    } else {
+      setActiveWorkout(updated);
     }
   }, [activeWorkout, workouts, exercisesDB]);
 
@@ -733,29 +878,26 @@ export default function App() {
 
   const handleKeypadDone = useCallback(() => {
     if (!activeInput || !activeWorkout) return;
-    
+
     const { exerciseIndex, setIndex, field } = activeInput;
     const value = keypadValue ? Number(keypadValue) : 0;
-    
-    // Update the set value
-    const updated = { ...activeWorkout };
-    updated.exercises[exerciseIndex].sets[setIndex][field] = value;
-    setActiveWorkout(updated);
-    
+
+    // Canonical immutable update (no shallow nested mutation)
+    setActiveWorkout(applySetField(activeWorkout, exerciseIndex, setIndex, field, value));
+
     handleCloseKeypad();
   }, [activeInput, activeWorkout, keypadValue, handleCloseKeypad]);
 
   const handleKeypadNext = useCallback(() => {
     if (!activeInput || !activeWorkout) return;
-    
+
     const { exerciseIndex, setIndex, field } = activeInput;
     const value = keypadValue ? Number(keypadValue) : 0;
-    
-    // Update the current field
-    const updated = { ...activeWorkout };
-    updated.exercises[exerciseIndex].sets[setIndex][field] = value;
+
+    // Canonical immutable update (no shallow nested mutation)
+    const updated = applySetField(activeWorkout, exerciseIndex, setIndex, field, value);
     setActiveWorkout(updated);
-    
+
     // Move to next field: kg -> reps -> done
     if (field === 'kg') {
       const nextValue = updated.exercises[exerciseIndex].sets[setIndex].reps || '';
@@ -767,78 +909,29 @@ export default function App() {
     }
   }, [activeInput, activeWorkout, keypadValue, handleCloseKeypad]);
 
-  // Helper to show toast message
-  const showToast = useCallback((message) => {
-    setToast(message);
-    setTimeout(() => setToast(null), 2000);
-  }, []);
-
   const handleToggleSet = useCallback((exIndex, setIndex) => {
-    // FIXED: Deep copy to prevent shallow mutation
-    const updated = {
-      ...activeWorkout,
-      exercises: activeWorkout.exercises.map((ex, idx) => {
-        if (idx !== exIndex) return ex;
-        return {
-          ...ex,
-          sets: ex.sets.map((set, sidx) => {
-            if (sidx !== setIndex) return set;
-            
-            // Toggle completion
-            const newVal = !set.completed;
-            
-            let updatedSet = { ...set, completed: newVal };
-            
-            // If trying to complete a set
-            if (newVal && !set.completed) {
-              const kg = Number(set.kg) || 0;
-              const reps = Number(set.reps) || 0;
-              const suggestedKg = Number(set.suggestedKg) || 0;
-              const suggestedReps = Number(set.suggestedReps) || 0;
-              
-              // Check if there are no values
-              if (kg === 0 && reps === 0 && suggestedKg === 0 && suggestedReps === 0) {
-                showToast('Please enter kg and reps');
-                return set; // Don't change completion
-              }
-              
-              // Auto-fill with suggested values if user didn't enter anything
-              if (kg === 0 && reps === 0 && (suggestedKg > 0 || suggestedReps > 0)) {
-                updatedSet.kg = suggestedKg;
-                updatedSet.reps = suggestedReps;
-              } else if (kg === 0 || reps === 0) {
-                // Fill in suggested if one is missing
-                if (kg === 0) updatedSet.kg = suggestedKg;
-                if (reps === 0) updatedSet.reps = suggestedReps;
-              }
-            }
-            
-            // If unchecking, remove medal flags
-            if (!newVal) {
-              updatedSet.isBest1RM = false;
-              updatedSet.isBestSetVolume = false;
-              updatedSet.isHeaviestWeight = false;
-            }
-            
-            return updatedSet;
-          })
-        };
-      })
-    };
-    
-    setActiveWorkout(updated);
+    if (!activeWorkout?.exercises?.[exIndex]?.sets?.[setIndex]) return;
+    // Canonical immutable toggle (auto-fill + toast handled inside).
+    const { workout: toggled, toast: validationToast } = applyToggleSet(activeWorkout, exIndex, setIndex);
+    if (validationToast) {
+      showToast(validationToast);
+      return;
+    }
 
-    // When marking completed, check for PRs and update default exercises
-    const set = updated.exercises[exIndex].sets[setIndex];
+    let finalWorkout = toggled;
+
+    // When marking completed, check for PRs and update default exercises.
+    // All flag writes are folded into finalWorkout BEFORE setState (single set).
+    const set = finalWorkout.exercises[exIndex].sets[setIndex];
     if (set.completed) {
-      const exId = updated.exercises[exIndex].exerciseId;
-      const exerciseName = updated.exercises[exIndex].name;
+      const exId = finalWorkout.exercises[exIndex].exerciseId;
+      const exerciseName = finalWorkout.exercises[exIndex].name;
       if (exId) {
         const kg = Number(set.kg) || 0;
         const reps = Number(set.reps) || 0;
         if (kg > 0 && reps > 0 && !isWarmupSet(set)) {
           const this1RM = calculate1RM(kg, reps);
-          
+
           // Use cache if available, fallback to calculation
           const hist = getRecords(exId) || getExerciseRecords(exId, workouts);
           const histBest = hist?.best1RM || 0;
@@ -850,24 +943,38 @@ export default function App() {
           if (enablePerformanceAlerts) {
             const prRecords = checkSetRecords(kg, reps, hist, calculate1RM);
             if (prRecords.isBest1RM || prRecords.isBestSetVolume || prRecords.isHeaviestWeight) {
-              // Mark the set with PR flags
+              // Mark the set with PR flags (new object, not post-set mutation)
+              finalWorkout = {
+                ...finalWorkout,
+                exercises: finalWorkout.exercises.map((ex, idx) => {
+                  if (idx !== exIndex) return ex;
+                  return {
+                    ...ex,
+                    sets: ex.sets.map((s, sidx) => (
+                      sidx !== setIndex ? s : {
+                        ...s,
+                        isBest1RM: prRecords.isBest1RM,
+                        isBestSetVolume: prRecords.isBestSetVolume,
+                        isHeaviestWeight: prRecords.isHeaviestWeight
+                      }
+                    ))
+                  };
+                })
+              };
+
+              // Trigger PR banner display
               const recordTypes = [];
               if (prRecords.isHeaviestWeight) recordTypes.push('heaviestWeight');
               if (prRecords.isBestSetVolume) recordTypes.push('bestSetVolume');
               if (prRecords.isBest1RM) recordTypes.push('best1RM');
-              
-              set.isBest1RM = prRecords.isBest1RM;
-              set.isBestSetVolume = prRecords.isBestSetVolume;
-              set.isHeaviestWeight = prRecords.isHeaviestWeight;
-              
-              // Trigger PR banner display
+
               setActivePRBanner({
                 exerciseName,
                 recordTypes,
                 eventId: Date.now() + Math.random()
               });
               setPRBannerVisible(true);
-              
+
               // Optional haptic feedback
               if (enableHapticFeedback && navigator.vibrate) {
                 navigator.vibrate([20, 10, 20]);
@@ -876,9 +983,41 @@ export default function App() {
           }
         }
       }
+    }
 
-      // If part of superset, auto-scroll to next exercise in superset
-      if (activeWorkout.exercises[exIndex].supersetId) {
+    // Common commit: complete AND un-complete persist + repaint.
+    // Completion-only side effects stay guarded: PR above (in-branch),
+    // rest below (shouldAutoStartRest edge) and superset scroll (gated).
+    setActiveWorkout(finalWorkout);
+
+    // Rest timer: react to a fresh valid work-set completion only.
+    // Rejected completions early-returned above; warmups, edits and
+    // un-completions are filtered by shouldAutoStartRest. Guarded so a
+    // timer failure can never break workout logging.
+    // Effective duration: per-exercise `restSec` override → global default →
+    // safe fallback (resolveRestForWorkoutSet never throws and never mutates).
+    try {
+      const prevSet = activeWorkout.exercises[exIndex]?.sets?.[setIndex] ?? null;
+      const nextSet = finalWorkout.exercises[exIndex]?.sets?.[setIndex] ?? null;
+      if (shouldAutoStartRest({ prevSet, nextSet, toast: null, autoStartEnabled: restAutoStart })) {
+        const effectiveRestSec = resolveRestForWorkoutSet({
+          workout: finalWorkout,
+          exIndex,
+          exercisesDB,
+          globalRestSec: restDurationSec
+        });
+        const completedExerciseId = finalWorkout.exercises[exIndex]?.exerciseId;
+        const source = completedExerciseId !== undefined && completedExerciseId !== null
+          ? `${exIndex}:${setIndex}:ex:${completedExerciseId}`
+          : `${exIndex}:${setIndex}`;
+        startRest(effectiveRestSec, source);
+      }
+    } catch (err) {
+      console.error('Rest timer auto-start failed:', err);
+    }
+
+      // If part of superset, auto-scroll to next exercise in superset (complete-only, preserved).
+      if (set.completed && activeWorkout.exercises[exIndex].supersetId) {
         const supersetId = activeWorkout.exercises[exIndex].supersetId;
         let nextExIndex = -1;
         
@@ -910,106 +1049,53 @@ export default function App() {
           }, 100);
         }
       }
-    }
-  }, [activeWorkout, workouts, exercisesDB, enablePerformanceAlerts, enableHapticFeedback, showToast]);
+  }, [activeWorkout, workouts, exercisesDB, enablePerformanceAlerts, enableHapticFeedback, showToast, startRest, restDurationSec, restAutoStart]);
+
+  // Apply a progression recommendation into empty prescription slots only.
+  // Manual user input always wins: completed sets, warmups and any set with
+  // user-entered values are left untouched. Canonical immutable updates.
+  const handleApplyRecommendation = useCallback((exIndex) => {
+    const entry = activeWorkout?.exercises?.[exIndex];
+    if (!entry || !activeWorkout) return;
+    const dbExercise = exercisesDB.find(e => e.id === entry.exerciseId) || null;
+    const tpl = activeWorkout?.templateId ? templates.find(t => t.id === activeWorkout.templateId) : null;
+    const templatePrevious = tpl?.templatePrevious?.[entry.exerciseId] ?? null;
+    const rec = resolveRecommendation({ exercise: dbExercise || { id: entry.exerciseId }, workouts, templatePrevious });
+    if (!rec || !(rec.suggestedKg > 0 || rec.suggestedReps > 0)) return;
+    let updated = activeWorkout;
+    (entry.sets || []).forEach((s, setIndex) => {
+      if (!s || s.completed || isWarmupSet(s)) return;
+      if (!(Number(s.kg) > 0)) updated = applySetField(updated, exIndex, setIndex, 'kg', rec.suggestedKg);
+      if (!(Number(s.reps) > 0)) updated = applySetField(updated, exIndex, setIndex, 'reps', rec.suggestedReps);
+    });
+    if (updated !== activeWorkout) setActiveWorkout(updated);
+  }, [activeWorkout, workouts, exercisesDB, templates]);
 
   const handleAddSet = useCallback((exIndex) => {
     if (!activeWorkout) return;
-    const updated = {
-      ...activeWorkout,
-      exercises: activeWorkout.exercises.map((exercise, idx) => {
-        if (idx !== exIndex) return exercise;
-        const lastSet = exercise.sets.at(-1) || { kg: 0, reps: 0, completed: false };
-        const nextSet = normalizeSetForStorage({
-          ...lastSet,
-          completed: false,
-          isBest1RM: false,
-          isBestSetVolume: false,
-          isHeaviestWeight: false
-        });
-        return {
-          ...exercise,
-          sets: [...exercise.sets, nextSet]
-        };
-      })
-    };
-    setActiveWorkout(updated);
+    setActiveWorkout(applyAddSet(activeWorkout, exIndex));
   }, [activeWorkout]);
 
   const handleAddWarmupSet = useCallback((exIndex) => {
     if (!activeWorkout) return;
-    const updated = {
-      ...activeWorkout,
-      exercises: activeWorkout.exercises.map((exercise, idx) => {
-        if (idx !== exIndex) return exercise;
-        const firstSet = exercise.sets[0] || { kg: 0, reps: 0 };
-        const warmupSet = normalizeSetForStorage({
-          ...firstSet,
-          completed: false,
-          isBest1RM: false,
-          isBestSetVolume: false,
-          isHeaviestWeight: false
-        }, 'warmup');
-        return {
-          ...exercise,
-          sets: [warmupSet, ...(exercise.sets || [])]
-        };
-      })
-    };
-    setActiveWorkout(updated);
+    setActiveWorkout(applyAddWarmupSet(activeWorkout, exIndex));
   }, [activeWorkout]);
 
   const handleDeleteSet = useCallback((exIndex, setIndex) => {
     if (!activeWorkout?.exercises?.[exIndex]?.sets?.[setIndex]) return;
-    const updated = {
-      ...activeWorkout,
-      exercises: activeWorkout.exercises.map((exercise, idx) => {
-        if (idx !== exIndex) return exercise;
-        return {
-          ...exercise,
-          sets: exercise.sets.filter((_, sidx) => sidx !== setIndex)
-        };
-      })
-    };
-    setActiveWorkout(updated);
+    setActiveWorkout(applyDeleteSet(activeWorkout, exIndex, setIndex));
   }, [activeWorkout]);
 
   const handleToggleWarmup = useCallback((exIndex, setIndex) => {
     if (!activeWorkout?.exercises?.[exIndex]?.sets?.[setIndex]) return;
-    const updated = {
-      ...activeWorkout,
-      exercises: activeWorkout.exercises.map((exercise, idx) => {
-        if (idx !== exIndex) return exercise;
-        return {
-          ...exercise,
-          sets: exercise.sets.map((set, sidx) => {
-            if (sidx !== setIndex) return set;
-            const toggledType = isWarmupSet(set) ? 'work' : 'warmup';
-            return normalizeSetForStorage(set, toggledType);
-          })
-        };
-      })
-    };
-    setActiveWorkout(updated);
+    const toggledType = isWarmupSet(activeWorkout.exercises[exIndex].sets[setIndex]) ? 'work' : 'warmup';
+    setActiveWorkout(applySetType(activeWorkout, exIndex, setIndex, toggledType));
   }, [activeWorkout]);
 
   const handleSetSetType = useCallback((exIndex, setIndex, nextType) => {
     if (!activeWorkout?.exercises?.[exIndex]?.sets?.[setIndex]) return;
     if (!nextType) return;
-    const updated = {
-      ...activeWorkout,
-      exercises: activeWorkout.exercises.map((exercise, idx) => {
-        if (idx !== exIndex) return exercise;
-        return {
-          ...exercise,
-          sets: exercise.sets.map((set, sidx) => {
-            if (sidx !== setIndex) return set;
-            return normalizeSetForStorage(set, nextType);
-          })
-        };
-      })
-    };
-    setActiveWorkout(updated);
+    setActiveWorkout(applySetType(activeWorkout, exIndex, setIndex, nextType));
   }, [activeWorkout]);
 
   const handleAddNote = useCallback(() => {
@@ -1029,48 +1115,48 @@ export default function App() {
   }, [activeWorkout, exercisesDB]);
 
   const handleDeleteExercise = useCallback((exIndex) => {
+    if (!activeWorkout?.exercises?.[exIndex]) return;
     if (confirm('Delete this exercise?')) {
-      const updated = { ...activeWorkout };
-      const deletedSupersetId = updated.exercises[exIndex].supersetId;
-      updated.exercises.splice(exIndex, 1);
-      
-      // If we deleted from a superset, remove superset from remaining exercises
-      if (deletedSupersetId) {
-        updated.exercises = updated.exercises.map(ex => 
-          ex.supersetId === deletedSupersetId ? { ...ex, supersetId: null } : ex
-        );
-      }
-      
-      setActiveWorkout(updated);
+      // Canonical immutable delete (no splice on state-derived array).
+      setActiveWorkout(applyDeleteExercise(activeWorkout, exIndex));
     }
   }, [activeWorkout]);
 
   const handleReorderExercises = useCallback((newOrder) => {
-    const updated = { ...activeWorkout };
-    updated.exercises = newOrder;
-    setActiveWorkout(updated);
+    if (!activeWorkout || !Array.isArray(newOrder)) return;
+    setActiveWorkout(applyReorderExercises(activeWorkout, newOrder));
   }, [activeWorkout]);
 
   const handleReplaceExercise = useCallback((exIndex, newExercise) => {
     // Check for template-specific previous sets first
     let lastSets = [];
     let suggested = null;
-    
+    let templatePrevious = null;
+
     // For active workouts from a template, prefer template-specific sets
     if (activeWorkout?.templateId) {
       const template = templates.find(t => t.id === activeWorkout.templateId);
-      const templatePrevious = template?.templatePrevious?.[newExercise.id];
+      templatePrevious = template?.templatePrevious?.[newExercise.id] ?? null;
       if (templatePrevious?.sets && templatePrevious.sets.length > 0) {
         lastSets = templatePrevious.sets;
       }
     }
-    
+
     // Fall back to global previous if no template-specific sets found
     if (lastSets.length === 0) {
       lastSets = getLastCompletedSets(newExercise.id, workouts);
     }
-    
-    suggested = suggestNextWeight(lastSets);
+
+    // Single precedence chain lives in the adapter (templatePrevious >
+    // progression > legacy). Callers pass memory IN, never branch around it.
+    // DB record carries the progression policy; falls back to the passed
+    // exercise object.
+    const dbRecord = exercisesDB.find(e => e.id === newExercise.id) || newExercise;
+    const recommendation = resolveRecommendation({ exercise: dbRecord, workouts, templatePrevious });
+    suggested = recommendation &&
+      (recommendation.suggestedKg > 0 || recommendation.suggestedReps > 0)
+      ? { suggestedKg: recommendation.suggestedKg, suggestedReps: recommendation.suggestedReps }
+      : suggestNextWeight(lastSets);
     
     // Build sets with auto-memory
     let sets;
@@ -1109,30 +1195,19 @@ export default function App() {
     };
     setActiveWorkout(updated);
     closeExerciseSelector();
-  }, [activeWorkout, workouts, templates, closeExerciseSelector]);
+  }, [activeWorkout, workouts, templates, exercisesDB, closeExerciseSelector]);
 
   // --- SUPERSET HANDLERS ---
 
   const handleCreateSuperset = useCallback((exIndex1, exIndex2) => {
-    const updated = { ...activeWorkout };
-    const supersetId = `superset_${Date.now()}`;
-    updated.exercises[exIndex1].supersetId = supersetId;
-    updated.exercises[exIndex2].supersetId = supersetId;
-    setActiveWorkout(updated);
+    if (!activeWorkout) return;
+    // Canonical immutable link with collision-safe id (legacy: Date.now()).
+    setActiveWorkout(applyCreateSuperset(activeWorkout, exIndex1, exIndex2));
   }, [activeWorkout]);
 
   const handleRemoveSuperset = useCallback((exIndex) => {
-    const updated = { ...activeWorkout };
-    const supersetId = updated.exercises[exIndex].supersetId;
-    
-    if (supersetId) {
-      // Remove superset from all exercises with this ID
-      updated.exercises = updated.exercises.map(ex => 
-        ex.supersetId === supersetId ? { ...ex, supersetId: null } : ex
-      );
-    }
-    
-    setActiveWorkout(updated);
+    if (!activeWorkout?.exercises?.[exIndex]) return;
+    setActiveWorkout(applyRemoveSuperset(activeWorkout, exIndex));
   }, [activeWorkout]);
 
   const handleToggleFavorite = useCallback((exerciseId) => {
@@ -1143,27 +1218,189 @@ export default function App() {
 
   // --- ACTIONS: TEMPLATES ---
 
+  // Blueprint storage: templates hold TARGETS/config only — never runtime.
+  // Strips suggested hints + PR flags that may ride along via spreads.
   const normalizeTemplateForStorage = useCallback((template = {}) => ({
     ...template,
     exercises: (template.exercises || []).map(exercise => normalizeWorkoutExerciseForStorage({
       ...exercise,
-      sets: (exercise.sets || []).map(set => normalizeSetForStorage({
-        ...set,
-        completed: false
-      }))
+      sets: (exercise.sets || []).map(set => {
+        const { suggestedKg: _sk, suggestedReps: _sr, isBest1RM: _b1, isBestSetVolume: _bv, isHeaviestWeight: _hw, ...rest } = set || {};
+        return normalizeSetForStorage({
+          ...rest,
+          completed: false
+        });
+      })
     }))
   }), []);
 
   const handleSaveTemplate = useCallback(() => {
-    if (!editingTemplate.name.trim()) return;
-    const normalizedTemplate = normalizeTemplateForStorage(editingTemplate);
-    if (editingTemplate.id) {
-      setTemplates(prev => prev.map(t => t.id === editingTemplate.id ? normalizedTemplate : t));
-    } else {
-      setTemplates([...templates, { ...normalizedTemplate, id: Date.now() }]);
-    }
+    if (!editingTemplate || typeof editingTemplate.name !== 'string' || !editingTemplate.name.trim()) return;
+    if (!Array.isArray(editingTemplate.exercises)) return;
+    // Idempotent create: pre-assign the id so a rapid double-tap maps
+    // instead of pushing twice. Functional update avoids stale-closure races.
+    const id = editingTemplate.id || generateId();
+    const normalizedTemplate = { ...normalizeTemplateForStorage(editingTemplate), id };
+    setTemplates(prev => {
+      const list = Array.isArray(prev) ? prev : [];
+      if (list.some(t => t && t.id === id)) {
+        return list.map(t => (t && t.id === id ? normalizedTemplate : t));
+      }
+      return [...list, normalizedTemplate];
+    });
     setEditingTemplate(null);
-  }, [editingTemplate, templates, normalizeTemplateForStorage]);
+  }, [editingTemplate, normalizeTemplateForStorage]);
+
+  // --- ACTIONS: PLANNED WORKOUTS (schedule layer) ---
+  // Every mutation below is a thin shell over the pure domain in
+  // `src/domain/scheduledWorkouts.js`, the existing start path
+  // (handleStartWorkout) and the canonical template pipeline
+  // (normalizeTemplateForStorage + templates store) — no second systems.
+
+  // PLANNED → ACTIVE: the snapshot becomes a blueprint for the EXISTING
+  // start engine (conflict confirms, optimizer, cloning, timer reset).
+  // The plan itself is never touched — the working copy is independent.
+  const handleStartPlannedWorkout = useCallback((planId) => {
+    const plan = scheduledWorkouts.find(p => p && p.id === planId);
+    if (!plan) {
+      showToast('Planned workout not found');
+      return;
+    }
+    if (plan.status === 'completed') {
+      showToast('This plan is already completed');
+      return;
+    }
+    const blueprint = buildActiveBlueprintFromScheduled(plan);
+    if (!blueprint || blueprint.exercises.length === 0) {
+      showToast('Planned workout has no exercises');
+      return;
+    }
+    handleStartWorkout(
+      {
+        id: plan.templateId || `planned-${plan.id}`,
+        name: blueprint.name,
+        exercises: blueprint.exercises,
+      },
+      { plannedId: plan.id, templateId: plan.templateId ?? null }
+    );
+  }, [scheduledWorkouts, handleStartWorkout, showToast]);
+
+  // TEMPLATE → snapshot → PLANNED. Reads the template only.
+  const handleScheduleFromTemplate = useCallback((templateId, dateKey) => {
+    const tpl = templates.find(t => t && t.id === templateId);
+    if (!tpl) {
+      showToast('Template not found');
+      return { ok: false, error: 'Template not found.' };
+    }
+    const plan = createScheduledFromTemplate(tpl, dateKey, { id: generateId() });
+    if (!plan) {
+      showToast('Could not schedule for this date');
+      return { ok: false, error: 'Could not schedule for this date.' };
+    }
+    setScheduledWorkouts(prev => [...(Array.isArray(prev) ? prev : []), plan]);
+    storage.set(STORES.SCHEDULED, plan).catch((err) => {
+      console.error('Error persisting scheduled workout:', err);
+    });
+    return { ok: true, id: plan.id };
+  }, [templates, showToast]);
+
+  // CREATE NEW (+ optional SAVE AS TEMPLATE) and plan EDIT (planId set).
+  const handleSaveCustomPlan = useCallback(({ planId = null, name, dateKey, exercises, saveAsTemplate = false }) => {
+    let templateId = null;
+    let templateName = null;
+    if (planId == null && saveAsTemplate) {
+      const tpl = {
+        ...normalizeTemplateForStorage({ id: generateId(), name, exercises: exercises || [] }),
+      };
+      if (!tpl.name?.trim() || !Array.isArray(tpl.exercises) || tpl.exercises.length === 0) {
+        return { ok: false, error: 'Add a name and at least one exercise.' };
+      }
+      setTemplates(prev => [...(Array.isArray(prev) ? prev : []), tpl]);
+      storage.set(STORES.TEMPLATES, tpl).catch((err) => {
+        console.error('Error persisting template from planner:', err);
+      });
+      templateId = tpl.id;
+      templateName = tpl.name;
+    }
+    if (planId != null) {
+      const existing = scheduledWorkouts.find(p => p && p.id === planId);
+      if (!existing) return { ok: false, error: 'Planned workout not found.' };
+      const next = updateScheduledWorkout(scheduledWorkouts, planId, { name, dateKey, exercises });
+      const updated = next.find(p => p && p.id === planId);
+      if (!updated || updated.dateKey !== (typeof dateKey === 'string' ? dateKey.trim() : updated.dateKey)) {
+        return { ok: false, error: 'Pick a valid date.' };
+      }
+      setScheduledWorkouts(next);
+      storage.set(STORES.SCHEDULED, updated).catch((err) => {
+        console.error('Error persisting scheduled workout edit:', err);
+      });
+      setPlannedDraftBackup(null);
+      return { ok: true, id: planId };
+    }
+    const plan = createScheduledCustom(
+      { name, exercises, dateKey, templateId, templateName },
+      { id: generateId() }
+    );
+    if (!plan) return { ok: false, error: 'Add a name, a valid date and at least one exercise.' };
+    setScheduledWorkouts(prev => [...(Array.isArray(prev) ? prev : []), plan]);
+    storage.set(STORES.SCHEDULED, plan).catch((err) => {
+      console.error('Error persisting scheduled workout:', err);
+    });
+    setPlannedDraftBackup(null);
+    return { ok: true, id: plan.id };
+  }, [scheduledWorkouts, normalizeTemplateForStorage]);
+
+  // DELETE removes only the planned event (confirm matches existing
+  // destructive-action pattern). Templates/history/exercises untouched.
+  const handleDeletePlan = useCallback((planId) => {
+    const plan = scheduledWorkouts.find(p => p && p.id === planId);
+    if (!plan) return;
+    if (!confirm(`Delete planned "${plan.name}"? Templates and history are kept.`)) return;
+    storage.delete(STORES.SCHEDULED, planId).catch((err) => {
+      console.error('Error deleting scheduled workout:', err);
+    });
+    setScheduledWorkouts(prev => deleteScheduledWorkout(prev, planId));
+  }, [scheduledWorkouts]);
+
+  // Completion linkage: a saved session fulfils its plan (marked + linked),
+  // history stays canonical — the plan is never written into `workouts`.
+  const fulfillLinkedPlan = useCallback((plannedId, completedWorkoutId) => {
+    if (plannedId == null) return;
+    const plan = scheduledWorkouts.find(p => p && p.id === plannedId);
+    if (!plan || plan.status === 'completed') return;
+    const marked = {
+      ...plan,
+      status: 'completed',
+      completedWorkoutId: completedWorkoutId ?? null,
+      updatedAt: new Date().toISOString(),
+    };
+    storage.set(STORES.SCHEDULED, marked).catch((err) => {
+      console.error('Error persisting plan fulfilment:', err);
+    });
+    setScheduledWorkouts(prev => markScheduledCompleted(prev, plannedId, completedWorkoutId));
+  }, [scheduledWorkouts]);
+
+  // Exercise-picker bridge for the planner: the global selector modal stays
+  // the single picker; the picked exercise is delivered via the draft backup
+  // so planner context survives modal AND create-exercise navigation.
+  const [plannedDraftBackup, setPlannedDraftBackup] = useState(null);
+  const handleRequestExercisePick = useCallback((draftSnapshot) => {
+    setPlannedDraftBackup({ token: generateId(), draft: draftSnapshot ?? null, pickedExercise: null });
+    setSelectorMode('planned');
+    openExerciseSelector();
+  }, [openExerciseSelector, setSelectorMode]);
+
+  // DUPLICATE TEMPLATE: independent blueprint copy (deep clone + new id).
+  // Execution memory (snapshots) is cleared — the copy starts without history.
+  const handleDuplicateTemplate = useCallback((templateOrId) => {
+    const source = typeof templateOrId === 'object' && templateOrId !== null
+      ? templateOrId
+      : templates.find(t => t && t.id === templateOrId);
+    if (!source) return;
+    const copy = duplicateTemplateValue(source, generateId);
+    if (!copy) return;
+    setTemplates(prev => [...(Array.isArray(prev) ? prev : []), copy]);
+  }, [templates]);
 
   // --- SELECTOR LOGIC ---
 
@@ -1171,22 +1408,28 @@ export default function App() {
     // Check for template-specific previous sets first
     let lastSets = [];
     let suggested = null;
-    
+    let templatePrevious = null;
+
     // For active workouts from a template, prefer template-specific sets
     if (selectorMode === 'activeWorkout' && activeWorkout?.templateId) {
       const template = templates.find(t => t.id === activeWorkout.templateId);
-      const templatePrevious = template?.templatePrevious?.[exercise.id];
+      templatePrevious = template?.templatePrevious?.[exercise.id] ?? null;
       if (templatePrevious?.sets && templatePrevious.sets.length > 0) {
         lastSets = templatePrevious.sets;
       }
     }
-    
+
     // Fall back to global previous if no template-specific sets found
     if (lastSets.length === 0) {
       lastSets = getLastCompletedSets(exercise.id, workouts);
     }
-    
-    suggested = suggestNextWeight(lastSets);
+    // Single precedence chain lives in the adapter (templatePrevious >
+    // progression > legacy). No caller-level bypass: memory goes IN.
+    const recommendation = resolveRecommendation({ exercise, workouts, templatePrevious });
+    suggested = recommendation &&
+      (recommendation.suggestedKg > 0 || recommendation.suggestedReps > 0)
+      ? { suggestedKg: recommendation.suggestedKg, suggestedReps: recommendation.suggestedReps }
+      : suggestNextWeight(lastSets);
     
     // Build sets with suggested values as placeholder hints
     let sets;
@@ -1228,6 +1471,8 @@ export default function App() {
     });
 
     if (selectorMode === 'template') {
+      // Blueprint targets: keep set config (type/warmup/rir/tempo/pause),
+      // drop hints/PR runtime (never stored on templates).
       setEditingTemplate({
         ...editingTemplate,
         exercises: [...(editingTemplate.exercises || []), {
@@ -1236,7 +1481,10 @@ export default function App() {
             kg: Number(set.kg) || 0,
             reps: Number(set.reps) || 0,
             warmup: Boolean(set.warmup),
-            setType: set.setType || (set.warmup ? 'warmup' : 'work')
+            setType: set.setType || (set.warmup ? 'warmup' : 'work'),
+            rir: set.rir ?? null,
+            tempo: set.tempo ?? null,
+            pauseSec: set.pauseSec ?? null
           }))
         }]
       });
@@ -1354,121 +1602,100 @@ export default function App() {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Validation schema
-    const isValidWorkout = (w) => {
-      return w && typeof w === 'object' &&
-        w.id && w.date && Array.isArray(w.exercises) &&
-        w.exercises.every(ex => ex.exerciseId && ex.name && Array.isArray(ex.sets) &&
-          ex.sets.every(s => typeof s.kg === 'number' && typeof s.reps === 'number')
-        );
-    };
-
-    const isValidTemplate = (t) => {
-      return t && typeof t === 'object' &&
-        t.id && t.name && Array.isArray(t.exercises);
-    };
-
-    const isValidExercise = (ex) => {
-      return ex && typeof ex === 'object' &&
-        ex.id && ex.name && typeof ex.category === 'string';
-    };
-
     const reader = new FileReader();
     reader.onload = (event) => {
-      try {
-        const data = JSON.parse(event.target.result);
+      (async () => {
+        try {
+          const data = JSON.parse(event.target.result);
 
-        if (!data || typeof data !== 'object') {
-          alert('Invalid JSON structure');
-          return;
-        }
-
-        if (data.workouts) {
-          if (!Array.isArray(data.workouts)) {
-            alert('Workouts must be an array');
+          // PARSE → VALIDATE (flat backup shape and service export shape)
+          const { ok, errors, normalized } = validateImportPayload(data);
+          if (!ok) {
+            alert(`Import rejected: ${errors.join('; ')}`);
             return;
           }
-          const validWorkouts = data.workouts.filter(w => {
+          const source = normalized;
+
+          const validWorkouts = source.workouts.filter(w => {
             if (!isValidWorkout(w)) {
               console.warn('Invalid workout skipped:', w);
               return false;
             }
             return true;
           });
-          if (validWorkouts.length > 0) {
-            setWorkouts(prev => {
-              const existingIds = new Set(prev.map(w => w.id));
-              const newOnes = validWorkouts.filter(w => !existingIds.has(w.id));
-              return [...newOnes, ...prev];
-            });
-          }
-        }
-
-        if (data.templates) {
-          if (!Array.isArray(data.templates)) {
-            console.warn('Templates must be an array');
-          } else {
-            const validTemplates = data.templates.filter(t => {
-              if (!isValidTemplate(t)) {
-                console.warn('Invalid template skipped:', t);
-                return false;
-              }
-              return true;
-            });
-            if (validTemplates.length > 0) {
-              setTemplates(prev => {
-                const existingIds = new Set(prev.map(t => t.id));
-                const newOnes = validTemplates.filter(t => !existingIds.has(t.id));
-                return [...prev, ...newOnes];
-              });
+          const validTemplates = source.templates.filter(t => {
+            if (!isValidTemplate(t)) {
+              console.warn('Invalid template skipped:', t);
+              return false;
             }
-          }
-        }
-
-        if (data.exercisesDB) {
-          if (!Array.isArray(data.exercisesDB)) {
-            console.warn('ExercisesDB must be an array');
-          } else {
-            const validExercises = data.exercisesDB.filter(ex => {
-              if (!isValidExercise(ex)) {
-                console.warn('Invalid exercise skipped:', ex);
-                return false;
-              }
-              return true;
-            });
-            if (validExercises.length > 0) {
-              setExercisesDB(prev => {
-                const existingIds = new Set(prev.map(e => e.id));
-                const newOnes = validExercises.filter(e => !existingIds.has(e.id));
-                return [...prev, ...newOnes];
-              });
+            return true;
+          });
+          const validExercises = source.exercisesDB.filter(ex => {
+            if (!isValidExercise(ex)) {
+              console.warn('Invalid exercise skipped:', ex);
+              return false;
             }
-          }
-        }
+            return true;
+          });
 
-        if (data.weeklyGoal && !weeklyGoal && typeof data.weeklyGoal === 'number') {
-          setWeeklyGoal(data.weeklyGoal);
-        }
+          // NORMALIZE (setType/warmup flags, numeric coercion, defaults).
+          // Exercises keep a valid `restSec` override; absent/malformed
+          // values are dropped so old backups inherit the global default.
+          const normalizedWorkouts = validWorkouts.map(normalizeImportedWorkout);
+          const normalizedExercises = validExercises.map(normalizeImportedExercise);
 
-        // Rebuild PR cache after import (do it async after state updates settle)
-        setTimeout(() => {
-          // Need to use closure values which will be stale, so we recalculate from storage
-          (async () => {
+          // RESOLVE CONFLICTS (deterministic: existing records win on id clash)
+          const workoutMerge = mergeById(workouts, normalizedWorkouts);
+          const templateMerge = mergeById(templates, validTemplates);
+          const exerciseMerge = mergeById(exercisesDB, normalizedExercises);
+
+          // WRITE + VERIFY — workouts have no auto-sync hook, so an explicit
+          // write is required (previously imported workouts were lost on reload).
+          if (workoutMerge.added.length > 0) {
             try {
-              const importedWorkouts = await storage.getAllFromStore(STORES.WORKOUTS);
-              const importedExercises = await storage.getAllFromStore(STORES.EXERCISES);
-              await rebuildIndex(importedWorkouts, importedExercises);
-            } catch (error) {
-              console.error('Error rebuilding PR cache after import:', error);
+              await storage.setMany(STORES.WORKOUTS, workoutMerge.added);
+            } catch (err) {
+              console.error('Import error: failed to persist workouts:', err);
+              alert('Import failed while saving workouts. Nothing was changed.');
+              return;
             }
-          })();
-        }, 0);
+            setWorkouts(workoutMerge.merged);
+          }
+          if (templateMerge.added.length > 0) setTemplates(templateMerge.merged);
+          if (exerciseMerge.added.length > 0) setExercisesDB(exerciseMerge.merged);
 
-        alert('Import completed (validated and merged)');
-      } catch (error) {
-        console.error('Import error:', error);
-        alert('Invalid JSON file or corrupted data');
-      }
+          // weeklyGoal: adopt from backup only when the user has none set,
+          // so a stale backup never silently clobbers an active goal.
+          // (Persistence of the goal itself is covered by the settings hook.)
+          // Supports both the flat backup shape and the service export shape.
+          const importedSettings = Array.isArray(data?.data?.settings) ? data.data.settings : [];
+          const importedGoal = typeof data.weeklyGoal === 'number'
+            ? data.weeklyGoal
+            : Number(importedSettings.find(s => s?.key === 'weeklyGoal')?.value) || null;
+          if (typeof importedGoal === 'number' && Number.isFinite(importedGoal) && !weeklyGoal) {
+            setWeeklyGoal(importedGoal);
+          }
+
+          // Rebuild PR cache from the merged in-memory lists (not a stale
+          // storage read — imported workouts were just written above).
+          try {
+            await rebuildIndex(workoutMerge.merged, exerciseMerge.merged);
+          } catch (error) {
+            console.error('Error rebuilding PR cache after import:', error);
+          }
+
+          // REPORT
+          alert(
+            `Import completed: ${workoutMerge.added.length} workouts, ` +
+            `${templateMerge.added.length} templates, ${exerciseMerge.added.length} exercises added ` +
+            `(${workoutMerge.skipped + templateMerge.skipped + exerciseMerge.skipped} duplicates skipped, ` +
+            `${source.workouts.length - validWorkouts.length + source.templates.length - validTemplates.length + source.exercisesDB.length - validExercises.length} invalid skipped)`
+          );
+        } catch (error) {
+          console.error('Import error:', error);
+          alert('Invalid JSON file or corrupted data');
+        }
+      })();
     };
 
     reader.onerror = () => {
@@ -1476,7 +1703,55 @@ export default function App() {
     };
 
     reader.readAsText(file);
-  }, [weeklyGoal]);
+    // Allow re-importing the same file twice in a row.
+    e.target.value = '';
+  }, [workouts, templates, exercisesDB, weeklyGoal, rebuildIndex, setWorkouts, setTemplates, setExercisesDB, setWeeklyGoal]);
+
+
+  // --- SINGLE DELETE FUNNEL (P0-E) ---
+  // Every workout delete (History, MonthlyProgress, ...) goes through here so
+  // persistence, PR-cache invalidation and undo stay consistent. Previously the
+  // monthly view only filtered in-memory state, so deletions resurrected on reload.
+  const handleDeleteWorkoutById = useCallback(async (id) => {
+    // Capture workout FIRST before state changes
+    const workoutToDelete = workouts.find(w => w.id === id);
+    if (!workoutToDelete) return;
+
+    // Persist first: if the record cannot be removed, keep everything visible.
+    try {
+      await storage.delete(STORES.WORKOUTS, id);
+    } catch (err) {
+      console.error('Error persisting workout deletion:', err);
+      showToast('Could not delete workout. Try again.');
+      return;
+    }
+
+    // Compute the filtered list for PR cache update
+    const newWorkouts = workouts.filter(w => w.id !== id);
+
+    // Use functional setState to ensure we always filter the latest state
+    setWorkouts(prev => prev.filter(w => w.id !== id));
+
+    setDeletedWorkout(workoutToDelete);
+
+    // Invalidate PR cache for exercises in deleted workout
+    const exerciseIds = (workoutToDelete.exercises || [])
+      .map(e => e.exerciseId)
+      .filter(Boolean);
+    if (exerciseIds.length > 0) {
+      updateRecordsForExercises(exerciseIds, newWorkouts).catch(err =>
+        console.error('Error updating records after delete:', err)
+      );
+    }
+
+    // Clear existing timeout
+    if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
+
+    // Set new timeout to clear undo option after 10 seconds
+    undoTimeoutRef.current = setTimeout(() => {
+      setDeletedWorkout(null);
+    }, 10000);
+  }, [workouts, setWorkouts, setDeletedWorkout, updateRecordsForExercises, showToast]);
 
 
   // --- NAVIGATION HANDLER ---
@@ -1493,13 +1768,19 @@ export default function App() {
 
     activeTabRef.current = tabId;
     setActiveTab(tabId);
+    // Tab switches abandon any detail chain (History→Session→Exercise,
+    // Statistics→Exercise): keeping a stale returnTo would send a later Back
+    // to the wrong origin. Fresh detail entries set their own returnTo.
+    setReturnTo(null);
     if (activeWorkout) setIsWorkoutMinimized(true);
     if (tabId === 'home') setView('home');
     else if (tabId === 'history') setView('history');
     else if (tabId === 'exercises') setView('exercises');
-    else if (tabId === 'profile') setView('profile');
+    // The profile tab lands directly on Statistics 2.0; the legacy profile
+    // hub stays reachable from the Statistics header (no longer the default).
+    else if (tabId === 'profile') { setView('profile'); setProfileSubview('statistics'); }
     else if (tabId === 'settings') setView('settings');
-  }, [activeWorkout, setActiveTab, setIsWorkoutMinimized, setView]);
+  }, [activeWorkout, setActiveTab, setIsWorkoutMinimized, setView, setProfileSubview, setReturnTo]);
 
   // Scroll to top when opening a detail/overlay view so user always starts at top of the sub-view
   useEffect(() => {
@@ -1513,14 +1794,13 @@ export default function App() {
   const showBottomNav = (view !== 'activeWorkout' || isWorkoutMinimized) && !(view === 'templates' && editingTemplate);
   const miniWorkoutBarVisible = Boolean(activeWorkout) && (view !== 'activeWorkout' || isWorkoutMinimized);
   const showMiniWorkoutBar = miniWorkoutBarVisible;
-
-  // debug helper: log scroll container metrics whenever content changes
-  useEffect(() => {
-    const container = document.querySelector('.app-content');
-    if (!container) return;
-    const { scrollHeight, clientHeight, offsetHeight } = container;
-    console.log('SCROLL DEBUG', { scrollHeight, clientHeight, offsetHeight });
-  }, [view, workouts, isWorkoutMinimized]);
+  // Floating rest bar stacks above the bottom nav and, when visible, the mini
+  // workout bar; in fullscreen active-workout it hugs the safe-area bottom.
+  const restBarBottomOffset = showMiniWorkoutBar
+    ? 'calc(168px + env(safe-area-inset-bottom))'
+    : showBottomNav
+      ? 'calc(76px + env(safe-area-inset-bottom))'
+      : 'calc(12px + env(safe-area-inset-bottom))';
 
   // --- RENDER ---
   return (
@@ -1535,8 +1815,8 @@ export default function App() {
         currentSession={activeWorkout}
         anomalyDetection={anomalyDetection}
       >
-        <div className="app-wrapper bg-zinc-900">
-        <div className={`app-content w-full max-w-md mx-auto bg-zinc-900 shadow-2xl ${view === 'history' ? 'history-view' : ''} ${showBottomNav ? 'pb-[calc(64px+env(safe-area-inset-bottom))]' : 'pb-safe'}`}>
+        <div className="app-wrapper bg-black">
+        <div className={`app-content w-full max-w-md mx-auto bg-zinc-900 shadow-2xl md:border-x md:border-white/5 ${view === 'history' ? 'history-view' : ''} ${showBottomNav ? 'pb-[calc(64px+env(safe-area-inset-bottom))]' : 'pb-safe'}`}>
 
           {/* VIEW ROUTING */}
           {view === 'home' && (
@@ -1566,9 +1846,10 @@ export default function App() {
                 onTrainingNotesChange={setTrainingNotes}
                 onStartWorkout={() => setView('selectTemplate')}
                 onManageTemplates={() => { setEditingTemplate(null); setView('templates'); }}
-                onOpenCalendar={openCalendar}
+                onOpenCalendar={() => { setReturnTo({ view: 'home' }); setView('calendar'); }}
+                upcomingPlans={upcomingPlans}
                 onViewHistory={() => handleTabChange('history')}
-                onViewWorkoutDetail={(date) => { setSelectedDate(date); setView('workoutDetail'); }}
+                onViewWorkoutDetail={(date) => { setSelectedDate(date); setSelectedWorkoutId(null); setReturnTo({ view: 'home' }); setView('workoutDetail'); }}
                 onOpenMonthlyProgress={(offset) => { setMonthOffset(offset); setView('monthlyProgress'); }}
               />
             )
@@ -1582,50 +1863,14 @@ export default function App() {
               onScrollToWorkoutDone={() => setScrollToWorkoutDate(null)}
               scrollPosition={historyScrollPosition}
               onSaveScrollPosition={setHistoryScrollPosition}
-              onViewWorkoutDetail={(date) => { setSelectedDate(date); setView('workoutDetail'); }}
-              onDeleteWorkout={async (id) => {
-                // Capture workout FIRST before state changes
-                const workoutToDelete = workouts.find(w => w.id === id);
-                if (workoutToDelete) {
-                  // Delete from storage using specific ID
-                  try {
-                    await storage.delete(STORES.WORKOUTS, id);
-                  } catch (err) {
-                    console.error('Error persisting workout deletion:', err);
-                  }
-                  
-                  // Compute the filtered list for PR cache update
-                  const newWorkouts = workouts.filter(w => w.id !== id);
-                  
-                  // Use functional setState to ensure we always filter the latest state
-                  setWorkouts(prev => prev.filter(w => w.id !== id));
-                  
-                  setDeletedWorkout(workoutToDelete);
-                  
-                  // Invalidate PR cache for exercises in deleted workout
-                  const exerciseIds = (workoutToDelete.exercises || [])
-                    .map(e => e.exerciseId)
-                    .filter(Boolean);
-                  if (exerciseIds.length > 0) {
-                    updateRecordsForExercises(exerciseIds, newWorkouts).catch(err =>
-                      console.error('Error updating records after delete:', err)
-                    );
-                  }
-                  
-                  // Clear existing timeout
-                  if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
-                  
-                  // Set new timeout to clear undo option after 10 seconds
-                  undoTimeoutRef.current = setTimeout(() => {
-                    setDeletedWorkout(null);
-                  }, 10000);
-                }
-              }}
+              onViewWorkoutDetail={(date, workoutId) => { setSelectedDate(date); setSelectedWorkoutId(workoutId ?? null); setReturnTo(null); setView('workoutDetail'); }}
+              onDeleteWorkout={handleDeleteWorkoutById}
               onEditWorkout={async (updatedWorkout) => {
                 try { await storage.set(STORES.WORKOUTS, updatedWorkout); } catch (err) { console.error('Error persisting workout edit:', err); }
                 setWorkouts(prev => prev.map(w => w.id === updatedWorkout.id ? updatedWorkout : w));
               }}
               exercisesDB={exercisesDB}
+              userWeight={userWeight}
               filter={historyFilter}
               onFilterChange={setHistoryFilter}
             />
@@ -1640,7 +1885,7 @@ export default function App() {
               }}
               onEditExercise={(ex) => { setEditingExercise(ex); setView('createExercise'); }}
               onDeleteExercise={handleDeleteExerciseFromDB}
-              onViewDetail={(id) => { setSelectedExerciseId(id); setView('exerciseDetail'); }}
+              onViewDetail={(id) => { setSelectedExerciseId(id); setReturnTo(null); setView('exerciseDetail'); }}
               onToggleFavorite={handleToggleFavorite}
             />
           )}
@@ -1650,11 +1895,15 @@ export default function App() {
               exercise={editingExercise}
               onChange={setEditingExercise}
               onSave={() => handleSaveExercise(editingExercise)}
+              globalRestSec={restDurationSec}
               onCancel={() => { 
                 setExerciseCreateSource(null);
                 setEditingExercise(null);
                 if (exerciseCreateSource === 'activeWorkout') {
                   setView('activeWorkout');
+                } else if (exerciseCreateSource === 'planned') {
+                  // Draft backup (if any) restores the in-progress plan.
+                  setView('calendar');
                 } else {
                   setView('exercises');
                 }
@@ -1667,32 +1916,64 @@ export default function App() {
               exerciseId={selectedExerciseId}
               workouts={workouts}
               exercisesDB={exercisesDB}
-              onBack={() => setView('exercises')}
+              userWeight={userWeight}
+              globalRestSec={restDurationSec}
+              onBack={() => {
+                // Session and Statistics deep-link here via returnTo;
+                // everywhere else keeps the legacy back-to-exercises behavior.
+                if (returnTo?.view === 'profileStatistics') {
+                  setReturnTo(returnTo.prev ?? null);
+                  setProfileSubview('statistics');
+                  setView('profile');
+                  return;
+                }
+                const sessionTarget = resolveSessionBackTarget(returnTo);
+                if (sessionTarget) {
+                  setSelectedDate(sessionTarget.date);
+                  setSelectedWorkoutId(sessionTarget.workoutId);
+                  setReturnTo(returnTo.prev ?? null);
+                  setView('workoutDetail');
+                  return;
+                }
+                setView('exercises');
+              }}
               onOpenWorkout={(date) => {
-                // set return context so we can come back to exercise detail
-                setReturnTo({ view: 'exerciseDetail', exerciseId: selectedExerciseId });
+                // set return context so we can come back to exercise detail,
+                // preserving whatever sits beneath (session or statistics).
+                setReturnTo({ view: 'exerciseDetail', exerciseId: selectedExerciseId, prev: returnTo });
                 setSelectedDate(date);
+                setSelectedWorkoutId(null);
                 setView('workoutDetail');
               }}
-              userWeight={userWeight}
             />
           )}
 
           {view === 'workoutDetail' && selectedDate && (
             <WorkoutDetailView
               selectedDate={selectedDate}
+              selectedWorkoutId={selectedWorkoutId}
               workouts={workouts}
               exercisesDB={exercisesDB}
+              userWeight={userWeight}
+              onOpenExercise={(exerciseId) => {
+                // Session → Exercise Detail, with a way back to this session.
+                // Preserve whatever sits beneath (statistics marker, prior
+                // session) so depth ≥ 2 chains unwind instead of being lost.
+                setReturnTo((prev) => ({ ...buildSessionReturn({ date: selectedDate, workoutId: selectedWorkoutId }), prev: prev ?? null }));
+                setSelectedExerciseId(exerciseId);
+                setView('exerciseDetail');
+              }}
               onBack={() => {
                 const dateToScroll = selectedDate;
                 if (returnTo) {
                   if (returnTo.view === 'exerciseDetail') {
                     setSelectedExerciseId(returnTo.exerciseId);
                     setView('exerciseDetail');
+                    setReturnTo(returnTo.prev ?? null);
                   } else {
+                    setReturnTo(null);
                     setView(returnTo.view || 'home');
                   }
-                  setReturnTo(null);
                 } else {
                   if (activeTab === 'history') {
                     setScrollToWorkoutDate(dateToScroll);
@@ -1700,6 +1981,7 @@ export default function App() {
                   } else setView('home');
                 }
                 setSelectedDate(null);
+                setSelectedWorkoutId(null);
               }}
             />
           )}
@@ -1724,6 +2006,7 @@ export default function App() {
               exercisesDB={exercisesDB}
               onCancel={async () => {
                 if (confirm('Cancel?')) {
+                  skipRest();
                   setActiveWorkout(null);
                   setWorkoutTimer(0);
                   setIsWorkoutMinimized(false);
@@ -1746,6 +2029,7 @@ export default function App() {
               onToggleWarmup={handleToggleWarmup}
               onSetSetType={handleSetSetType}
               onAddWarmupSet={handleAddWarmupSet}
+              onApplyRecommendation={handleApplyRecommendation}
               onOpenKeypad={handleOpenKeypad}
               onCreateSuperset={handleCreateSuperset}
               onRemoveSuperset={handleRemoveSuperset}
@@ -1763,10 +2047,13 @@ export default function App() {
             <TemplatesView
               templates={templates}
               editingTemplate={editingTemplate}
+              exercisesDB={exercisesDB}
               onClose={() => setView('home')}
               onCreateNew={() => setEditingTemplate({ name: '', exercises: [] })}
               onEdit={(t) => { setEditingTemplate(JSON.parse(JSON.stringify(t))); setView('templates'); }}
-              onDelete={(id) => setTemplates(prev => prev.filter(t => t.id !== id))}
+              onDelete={(id) => { if (confirm('Delete this template? History will remain.')) setTemplates(prev => prev.filter(t => t.id !== id)); }}
+              onDuplicate={handleDuplicateTemplate}
+              onStart={handleStartWorkout}
               onChange={setEditingTemplate}
               onSave={handleSaveTemplate}
               onAddExercise={() => { setSelectedExerciseIndex(null); setSelectorMode('template'); openExerciseSelector(); }}
@@ -1782,7 +2069,7 @@ export default function App() {
               onViewStatistics={() => setProfileSubview('statistics')}
               onViewExercises={() => setView('exercises')}
               onViewCalendar={() => setView('calendar')}
-              onWorkoutClick={(date) => { setSelectedDate(date); setView('workoutDetail'); }}
+              onWorkoutClick={(date) => { setSelectedDate(date); setSelectedWorkoutId(null); setReturnTo({ view: 'profile' }); setView('workoutDetail'); }}
               onOpenSettings={() => setView('settings')}
               defaultStatsRange={defaultStatsRange}
             />
@@ -1793,8 +2080,16 @@ export default function App() {
               workouts={workouts}
               exercisesDB={exercisesDB}
               userWeight={userWeight}
-              onBack={() => setProfileSubview('main')}
+              onOpenProfile={() => setProfileSubview('main')}
+              onOpenSettings={() => setView('settings')}
               defaultStatsRange={defaultStatsRange}
+              onOpenExercise={(id) => {
+                setSelectedExerciseId(id);
+                // Preserve whatever sits beneath so a chained return
+                // (e.g. session → exercise → workout → exercise) unwinds.
+                setReturnTo((prev) => ({ view: 'profileStatistics', prev: prev ?? null }));
+                setView('exerciseDetail');
+              }}
             />
           )}
 
@@ -1900,7 +2195,7 @@ export default function App() {
                         const kg = Number(set.kg) || 0;
                         const reps = Number(set.reps) || 0;
                         const estimated1RM = kg > 0 && reps > 0 && setType !== 'warmup'
-                          ? Math.round(kg * (1 + reps / 30))
+                          ? calculate1RM(kg, reps)
                           : null;
 
                         const extras = [];
@@ -1956,7 +2251,7 @@ export default function App() {
                         const reps = Number(set.reps) || 0;
                         const volume = kg * reps;
                         const estimated1RM = kg > 0 && reps > 0 && setType !== 'warmup'
-                          ? Math.round(kg * (1 + reps / 30))
+                          ? calculate1RM(kg, reps)
                           : '';
                         const isPR = Boolean(set.isBest1RM || set.isBestSetVolume || set.isHeaviestWeight);
 
@@ -2033,7 +2328,13 @@ export default function App() {
                   await storage.clear(STORES.WORKOUTS);
                   await storage.clear(STORES.EXERCISES);
                   await storage.clear(STORES.TEMPLATES);
+                  await storage.clear(STORES.SCHEDULED);
                   await storage.clear(STORES.SETTINGS);
+                  // P0-F: also drop derived caches (PR index, reverse index),
+                  // otherwise stale records rehydrate after reload.
+                  // Matches the recovery path in ErrorBoundary.
+                  await storage.clear(STORES.RECORDS_INDEX);
+                  await storage.clear(STORES.REVERSE_INDEXES);
                 } catch (err) {
                   console.error('Error clearing IndexedDB stores during reset:', err);
                 }
@@ -2075,6 +2376,12 @@ export default function App() {
               onEnableHapticFeedbackChange={setEnableHapticFeedback}
               reduceAnimations={reduceAnimations}
               onReduceAnimationsChange={setReduceAnimations}
+              restDurationSec={restDurationSec}
+              onRestDurationChange={(v) => setRestDurationSec(normalizeRestDuration(v, DEFAULT_REST_SEC))}
+              restAutoStart={restAutoStart}
+              onRestAutoStartChange={setRestAutoStart}
+              restSoundEnabled={restSoundEnabled}
+              onRestSoundEnabledChange={setRestSoundEnabled}
 
 
             />
@@ -2085,20 +2392,45 @@ export default function App() {
               workouts={workouts}
               monthOffset={monthOffset}
               onBack={() => setView('home')}
-              onViewWorkoutDetail={(date) => { setSelectedDate(date); setView('workoutDetail'); }}
+              onViewWorkoutDetail={(date) => { setSelectedDate(date); setSelectedWorkoutId(null); setReturnTo({ view: 'monthlyProgress' }); setView('workoutDetail'); }}
               onDeleteWorkout={(id) => {
                 if (confirm('Delete this workout?')) {
-                  setWorkouts(prev => prev.filter(w => w.id !== id));
+                  handleDeleteWorkoutById(id);
                 }
               }}
             />
           )}
 
           {view === 'calendar' && (
-            <ProfileCalendarView
+            <PlanningCalendarView
               workouts={workouts}
-              onBack={() => setView('profile')}
-              onViewWorkoutDetail={(date) => { setSelectedDate(date); setView('workoutDetail'); }}
+              scheduledWorkouts={scheduledWorkouts}
+              templates={templates}
+              exercisesDB={exercisesDB}
+              draftBackup={plannedDraftBackup}
+              onConsumeDraftBackup={() => setPlannedDraftBackup(null)}
+              onBack={() => {
+                // Home and Profile both land here; return to the real origin.
+                if (returnTo?.view) {
+                  const target = returnTo.view;
+                  setReturnTo(null);
+                  setView(target);
+                } else {
+                  setView('profile');
+                }
+              }}
+              onViewSession={(workoutId) => {
+                const target = workouts.find(w => w && w.id === workoutId);
+                setSelectedDate(target?.date ?? null);
+                setSelectedWorkoutId(workoutId);
+                setReturnTo({ view: 'calendar' });
+                setView('workoutDetail');
+              }}
+              onStartPlan={handleStartPlannedWorkout}
+              onScheduleFromTemplate={handleScheduleFromTemplate}
+              onSaveCustomPlan={handleSaveCustomPlan}
+              onDeletePlan={handleDeletePlan}
+              onRequestExercisePick={handleRequestExercisePick}
             />
           )}
 
@@ -2122,16 +2454,10 @@ export default function App() {
         </div>
       )}
 
+      <RestTimerBar bottomOffset={restBarBottomOffset} />
+
       {hiddenWorkout && (
         <HiddenWorkoutBadge workoutName={hiddenWorkout.name} onRestore={handleRestoreHiddenWorkout} />
-      )}
-
-      {showCalendar && (
-        <CalendarModal
-          workouts={workouts}
-          onClose={closeCalendar}
-          onSelectDate={(d) => { setSelectedDate(d); setView('workoutDetail'); }}
-        />
       )}
 
       {showExerciseSelector && (
@@ -2140,6 +2466,15 @@ export default function App() {
           mode={selectorMode}
           onClose={closeExerciseSelector}
           onSelectExercise={(ex) => {
+            // Planner picks stay on the calendar: the exercise travels via
+            // the draft backup (no navigation, no lost draft).
+            if (selectorMode === 'planned') {
+              // Fresh token per pick: the calendar applies each exactly once.
+              setPlannedDraftBackup(prev => ({ token: generateId(), draft: prev?.draft ?? null, pickedExercise: ex }));
+              closeExerciseSelector();
+              setSelectorMode(null);
+              return;
+            }
             if (selectorMode === 'activeWorkout' && selectedExerciseIndex !== null) {
               handleReplaceExercise(selectedExerciseIndex, ex);
               setSelectedExerciseIndex(null);
@@ -2148,7 +2483,7 @@ export default function App() {
             }
           }}
           onCreateNew={() => {
-            const source = selectorMode === 'activeWorkout' ? 'activeWorkout' : 'exercises';
+            const source = selectorMode === 'activeWorkout' ? 'activeWorkout' : selectorMode === 'planned' ? 'planned' : 'exercises';
             setEditingExercise({ name: '', category: 'Push', muscles: [], defaultSets: [{ kg: 0, reps: 0 }], usesBodyweight: false });
             setExerciseCreateSource(source);
             closeExerciseSelector();
@@ -2293,204 +2628,20 @@ export default function App() {
               </div>
             )}
 
-            {/* Radar chart - only if data exists */}
+            {/* Muscle Body Map — current workout only, never history */}
             {(() => {
-              const radarData = pendingSummary.cleanData.radarData || {};
-              const hasData = Object.values(radarData).some(v => v > 0);
-              if (!hasData) return null;
-              
+              const finishStats = muscleStats([pendingSummary.completedWorkout], { userWeight, exercisesDB });
+              if (!(finishStats.totalSets > 0)) return null;
               return (
                 <div className="mb-6">
-                  <p className="text-xs text-slate-400 font-semibold tracking-widest mb-4">MUSCLE DISTRIBUTION</p>
-                  <div className="flex justify-center bg-slate-800/20 rounded-xl p-6">
-                    <svg width="320" height="320" viewBox="0 0 320 320" className="drop-shadow-lg animate-fade-in">
-                      <defs>
-                        {/* Glow filter for polygon */}
-                        <filter id="radarPolygonGlow">
-                          <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-                          <feMerge>
-                            <feMergeNode in="coloredBlur"/>
-                            <feMergeNode in="SourceGraphic"/>
-                          </feMerge>
-                        </filter>
-                        
-                        {/* Glow filter for data points */}
-                        <filter id="radarPointGlow">
-                          <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
-                          <feMerge>
-                            <feMergeNode in="coloredBlur"/>
-                            <feMergeNode in="SourceGraphic"/>
-                          </feMerge>
-                        </filter>
-                      </defs>
-                      <g transform="translate(160,160)">
-                        {/* Concentric circles - subtle grid */}
-                        {[1, 2, 3].map((r, i) => (
-                          <circle 
-                            key={i} 
-                            r={i * 35} 
-                            fill="none" 
-                            stroke="#475569" 
-                            strokeWidth="0.5" 
-                            opacity="0.12"
-                          />
-                        ))}
-                        
-                        {/* Axes and labels */}
-                        {(() => {
-                          const groups = ['Chest', 'Back', 'Legs', 'Shoulders', 'Biceps', 'Triceps', 'Core'];
-                          const values = groups.map(g => radarData[g] || 0);
-                          
-                          // Normalized 0-1, scale to radius
-                          const points = values.map((v, i) => {
-                            const angle = (i / groups.length) * Math.PI * 2 - Math.PI / 2;
-                            const radius = v * 100;
-                            return `${Math.cos(angle) * radius},${Math.sin(angle) * radius}`;
-                          }).join(' ');
-                          
-                          // Get coordinates for data point markers
-                          const pointCoords = values.map((v, i) => {
-                            const angle = (i / groups.length) * Math.PI * 2 - Math.PI / 2;
-                            const radius = v * 100;
-                            return {
-                              x: Math.cos(angle) * radius,
-                              y: Math.sin(angle) * radius
-                            };
-                          });
-                          
-                          return (
-                            <>
-                              {/* Subtle axis lines (very faint) */}
-                              {groups.map((g, i) => {
-                                const angle = (i / groups.length) * Math.PI * 2 - Math.PI / 2;
-                                const x = Math.cos(angle) * 105;
-                                const y = Math.sin(angle) * 105;
-                                return (
-                                  <line 
-                                    key={`axis-${i}`}
-                                    x1={0} 
-                                    y1={0} 
-                                    x2={x} 
-                                    y2={y} 
-                                    stroke="#475569" 
-                                    strokeWidth="0.5" 
-                                    opacity="0.08"
-                                  />
-                                );
-                              })}
-                              
-                              {/* Data polygon with animation and glow */}
-                              <polygon 
-                                points={points} 
-                                fill="#06b6d4" 
-                                fillOpacity="0.28"
-                                stroke="#06b6d4" 
-                                strokeWidth="2"
-                                filter="url(#radarPolygonGlow)"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                style={{
-                                  animation: 'radarDraw 500ms ease-out forwards',
-                                  transformOrigin: '0 0'
-                                }}
-                              />
-                              
-                              {/* Data point markers */}
-                              {pointCoords.map((coord, i) => (
-                                <g key={`point-${i}`}>
-                                  {/* Outer glow circle */}
-                                  <circle 
-                                    cx={coord.x} 
-                                    cy={coord.y} 
-                                    r="5" 
-                                    fill="none" 
-                                    stroke="#06b6d4" 
-                                    strokeWidth="1" 
-                                    opacity="0.3"
-                                    style={{
-                                      animation: `radarPointPulse 2s ease-in-out infinite`,
-                                      animationDelay: `${i * 0.15}s`
-                                    }}
-                                  />
-                                  
-                                  {/* Center point */}
-                                  <circle
-                                    cx={coord.x}
-                                    cy={coord.y}
-                                    r="3.5"
-                                    fill="#06b6d4"
-                                    filter="url(#radarPointGlow)"
-                                    style={{
-                                      animation: `radarDraw 500ms ease-out forwards`,
-                                      animationDelay: `${i * 30}ms`
-                                    }}
-                                  />
-                                </g>
-                              ))}
-                              
-                              {/* Labels */}
-                              {groups.map((g, i) => {
-                                const angle = (i / groups.length) * Math.PI * 2 - Math.PI / 2;
-                                const x = Math.cos(angle) * 130;
-                                const y = Math.sin(angle) * 130;
-                                return (
-                                  <text 
-                                    key={`label-${i}`}
-                                    x={x} 
-                                    y={y}
-                                    fontSize="12" 
-                                    fill="#cbd5e1" 
-                                    fontWeight="600"
-                                    textAnchor={Math.abs(x) > 10 ? (x > 0 ? 'start' : 'end') : 'middle'}
-                                    dominantBaseline="middle"
-                                  >
-                                    {g}
-                                  </text>
-                                );
-                              })}
-                            </>
-                          );
-                        })()}
-                      </g>
-                    </svg>
-                    
-                    {/* CSS animations */}
-                    <style>{`
-                      @keyframes radarDraw {
-                        from {
-                          stroke-dasharray: 1000;
-                          stroke-dashoffset: 1000;
-                        }
-                        to {
-                          stroke-dasharray: 1000;
-                          stroke-dashoffset: 0;
-                        }
-                      }
-                      
-                      @keyframes radarPointPulse {
-                        0%, 100% {
-                          r: 5;
-                          opacity: 0.2;
-                        }
-                        50% {
-                          r: 7;
-                          opacity: 0.1;
-                        }
-                      }
-                      
-                      .animate-fade-in {
-                        animation: fadeIn 400ms ease-out;
-                      }
-                      
-                      @keyframes fadeIn {
-                        from {
-                          opacity: 0;
-                        }
-                        to {
-                          opacity: 1;
-                        }
-                      }
-                    `}</style>
+                  <p className="text-xs text-slate-400 font-semibold tracking-widest mb-4">MUSCLES TRAINED</p>
+                  <div className="bg-slate-800/20 rounded-xl p-4">
+                    <MuscleBodyMap
+                      setsByMuscle={finishStats.setsByMuscle}
+                      stats={finishStats}
+                      workouts={[pendingSummary.completedWorkout]}
+                      exercisesDB={exercisesDB}
+                    />
                   </div>
                 </div>
               );
@@ -2521,33 +2672,65 @@ export default function App() {
 
             {/* Action buttons */}
             <div className="p-4 sm:p-6 pt-0 flex flex-col gap-2 sticky bottom-0 bg-gradient-to-t from-slate-900/95 to-transparent border-t border-slate-700/30">
+              <label className="flex items-center gap-2.5 px-1 py-1 text-xs text-slate-400 font-semibold cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={openSessionAfterSave}
+                  onChange={(e) => setOpenSessionAfterSave(e.target.checked)}
+                  className="w-4 h-4 cursor-pointer rounded border-slate-600/50 accent-blue-600"
+                />
+                Open session detail after saving
+              </label>
               <button 
                 onClick={async () => {
+                  // Finish persists exactly once: ignore re-taps while a save
+                  // is in flight, and close quietly if this id already saved.
+                  if (saveInFlightRef.current) return;
+                  if (isWorkoutPersisted(workouts, pendingSummary.completedWorkout.id)) {
+                    setPendingSummary(null);
+                    setSelectedTags([]);
+                    return;
+                  }
+                  saveInFlightRef.current = true;
+                  try {
                   const workoutWithTags = { ...pendingSummary.completedWorkout, tags: selectedTags };
-                  
-                  // Save just the new workout (more efficient than saving entire array)
+
+                  // P0-A: verify durable persistence BEFORE clearing active state.
+                  // If the workout itself cannot be saved, keep everything and
+                  // tell the user — never imply a save that did not happen.
                   try {
                     await storage.set(STORES.WORKOUTS, workoutWithTags);
                   } catch (err) {
                     console.error('Error saving workout:', err);
+                    showToast('Could not save workout — your active workout is kept. Try again.');
+                    return;
                   }
-                  
+
                   // Update state for immediate UI feedback
                   const newWorkouts = [workoutWithTags, ...workouts];
                   setWorkouts(newWorkouts);
+
+                  // Fulfil the plan this session was started from (if any).
+                  fulfillLinkedPlan(pendingSummary.plannedId, workoutWithTags.id);
                   
                   // Update PR cache for all exercises in this workout (use new list for cache)
                   const exerciseIds = (workoutWithTags.exercises || []).map(e => e.exerciseId).filter(Boolean);
                   await updateRecordsForExercises(exerciseIds, newWorkouts);
 
                   // Update template lastWorkoutSnapshot (prev per template: Pull A vs Pull B)
+                  // Secondary write: a snapshot failure must not lose the workout.
                   if (pendingSummary.templateId) {
                     const snapshot = buildLastWorkoutSnapshot(workoutWithTags);
                     const ti = templates.findIndex(t => t.id === pendingSummary.templateId);
                     if (ti !== -1 && snapshot) {
                       const updatedTemplate = { ...templates[ti], lastWorkoutSnapshot: snapshot };
-                      try { await storage.set(STORES.TEMPLATES, updatedTemplate); } catch (err) { console.error('Error saving template snapshot:', err); }
-                      setTemplates(prev => prev.map(t => t.id === updatedTemplate.id ? updatedTemplate : t));
+                      try {
+                        await storage.set(STORES.TEMPLATES, updatedTemplate);
+                        setTemplates(prev => prev.map(t => t.id === updatedTemplate.id ? updatedTemplate : t));
+                      } catch (err) {
+                        console.error('Error saving template snapshot:', err);
+                        showToast('Workout saved, but template snapshot was not updated.');
+                      }
                     }
                   }
 
@@ -2556,8 +2739,20 @@ export default function App() {
                   try { await storage.delete(STORES.WORKOUTS, 'activeWorkout'); } catch (err) { console.error('Error clearing active workout snapshot:', err); }
                   setPendingSummary(null);
                   setSelectedTags([]);
-                  handleTabChange('history');
-                  setScrollToWorkoutDate(workoutWithTags.date);
+                  if (openSessionAfterSave) {
+                    setSelectedDate(workoutWithTags.date);
+                    setSelectedWorkoutId(workoutWithTags.id);
+                    setReturnTo(null);
+                    setActiveTab('history');
+                    setView('workoutDetail');
+                  } else {
+                    handleTabChange('history');
+                    setScrollToWorkoutDate(workoutWithTags.date);
+                  }
+                  setOpenSessionAfterSave(false);
+                  } finally {
+                    saveInFlightRef.current = false;
+                  }
                 }}
                 className="w-full px-4 py-3 rounded-lg bg-gradient-to-r from-accent to-accent hover:opacity-90 text-white font-bold text-sm transition-all duration-200 ease-out ui-press shadow-lg shadow-accent/30"
               >
@@ -2567,34 +2762,60 @@ export default function App() {
               {pendingSummary.templateId && (
                 <button 
                   onClick={async () => {
+                    if (saveInFlightRef.current) return;
+                    if (isWorkoutPersisted(workouts, pendingSummary.completedWorkout.id)) {
+                      setPendingSummary(null);
+                      setSelectedTags([]);
+                      return;
+                    }
+                    saveInFlightRef.current = true;
+                    try {
                     const workoutWithTags = { ...pendingSummary.completedWorkout, tags: selectedTags };
-                    
-                    // Update state for immediate UI feedback
-                    const newWorkouts = [workoutWithTags, ...workouts];
-                    
-                    // Save just the new workout (more efficient)
+
+                    // P0-A: verify durable persistence BEFORE clearing active state.
                     try {
                       await storage.set(STORES.WORKOUTS, workoutWithTags);
                     } catch (err) {
                       console.error('Error saving workout:', err);
+                      showToast('Could not save workout — your active workout is kept. Try again.');
+                      return;
                     }
+
+                    // Update state for immediate UI feedback
+                    const newWorkouts = [workoutWithTags, ...workouts];
                     
                     if (pendingSummary.templateId) {
                       const ti = templates.findIndex(t => t.id === pendingSummary.templateId);
                       if (ti !== -1) {
                         const newTemplate = { ...templates[ti] };
+                        // CONFIG PRESERVATION: copy the full blueprint-relevant
+                        // config back (order, setType/warmup, rir/tempo/pause,
+                        // superset links, notes, muscle targets, progression).
+                        // Only kg/reps reset to 0 (targets re-hinted from
+                        // execution structure); history itself is untouched.
                         newTemplate.exercises = (pendingSummary.completedWorkout.exercises || []).map(ex => normalizeWorkoutExerciseForStorage({
+                          ...ex,
                           name: ex.name,
                           exerciseId: ex.exerciseId ?? null,
                           category: ex.category,
                           priority: ex.priority ?? 3,
                           nonNegotiable: Boolean(ex.nonNegotiable),
                           estimatedSetSec: ex.estimatedSetSec ?? null,
+                          targetMuscles: Array.isArray(ex.targetMuscles) ? [...ex.targetMuscles] : ex.targetMuscles,
+                          progression: ex.progression && typeof ex.progression === 'object' ? { ...ex.progression } : ex.progression,
+                          supersetId: ex.supersetId ?? null,
+                          planNotes: ex.planNotes ?? '',
                           sets: (ex.sets || []).map(set => normalizeSetForStorage({
+                            ...set,
                             kg: 0,
                             reps: 0,
-                            completed: false
-                          }, isWarmupSet(set) ? 'warmup' : 'work'))
+                            completed: false,
+                            suggestedKg: undefined,
+                            suggestedReps: undefined,
+                            isBest1RM: false,
+                            isBestSetVolume: false,
+                            isHeaviestWeight: false
+                          }, resolveSetType(set)))
                         }));
                         newTemplate.lastWorkoutSnapshot = buildLastWorkoutSnapshot(workoutWithTags);
                         
@@ -2614,8 +2835,14 @@ export default function App() {
                         
                         const updated = [...templates];
                         updated[ti] = newTemplate;
-                        try { await storage.set(STORES.TEMPLATES, newTemplate); } catch (err) { console.error('Error updating template:', err); }
-                        setTemplates(updated);
+                        // Secondary write: template failure must not lose the workout.
+                        try {
+                          await storage.set(STORES.TEMPLATES, newTemplate);
+                          setTemplates(updated);
+                        } catch (err) {
+                          console.error('Error updating template:', err);
+                          showToast('Workout saved, but template update failed.');
+                        }
                       }
                     }
                     
@@ -2624,13 +2851,27 @@ export default function App() {
                     await updateRecordsForExercises(exerciseIds, newWorkouts);
 
                     setWorkouts(newWorkouts);
+                    // Fulfil the plan this session was started from (if any).
+                    fulfillLinkedPlan(pendingSummary.plannedId, workoutWithTags.id);
                     setActiveWorkout(null);
                     setWorkoutTimer(0);
                     try { await storage.delete(STORES.WORKOUTS, 'activeWorkout'); } catch (err) { console.error('Error clearing active workout snapshot:', err); }
                     setPendingSummary(null);
                     setSelectedTags([]);
-                    handleTabChange('history');
-                    setScrollToWorkoutDate(workoutWithTags.date);
+                    if (openSessionAfterSave) {
+                      setSelectedDate(workoutWithTags.date);
+                      setSelectedWorkoutId(workoutWithTags.id);
+                      setReturnTo(null);
+                      setActiveTab('history');
+                      setView('workoutDetail');
+                    } else {
+                      handleTabChange('history');
+                      setScrollToWorkoutDate(workoutWithTags.date);
+                    }
+                    setOpenSessionAfterSave(false);
+                    } finally {
+                      saveInFlightRef.current = false;
+                    }
                   }}
                   className="w-full px-4 py-3 rounded-lg bg-slate-800/60 hover:bg-slate-700/60 border border-slate-600/50 text-slate-300 hover:text-white font-semibold text-sm transition-all"
                 >

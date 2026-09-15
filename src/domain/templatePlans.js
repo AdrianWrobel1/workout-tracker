@@ -63,9 +63,17 @@ const presetPlans = {
   }
 };
 
-export const createPlan = (name, intensityLevel, percentageMin, percentageMax, repRange, rirTarget) => {
+export const createPlan = (name, intensityLevel, percentageMin, percentageMax, repRange, rirTarget, idFn = null) => {
+  let id;
+  try {
+    if (typeof idFn === 'function') id = idFn();
+    else if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') id = crypto.randomUUID();
+    else id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  } catch {
+    id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  }
   return {
-    id: Date.now().toString(),
+    id,
     name,
     intensityLevel,
     percentageRange: { min: percentageMin, max: percentageMax },

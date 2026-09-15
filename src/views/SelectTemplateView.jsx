@@ -6,30 +6,35 @@ export const SelectTemplateView = ({ templates, onClose, onSelectTemplate, onEdi
   return (
     <div className="bg-black text-white">
       {/* Header */}
-      <div className="bg-gradient-to-b from-black to-black/80 border-b border-white/10 p-4 sticky top-0 z-20 shadow-2xl">
-        <div className="flex items-center justify-between gap-4">
-          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg transition">
-            <X size={20} />
+      <div className="bg-black/95 backdrop-blur border-b border-white/10 p-4 sticky top-0 z-20">
+        <div className="flex items-center gap-3 max-w-2xl mx-auto">
+          <button onClick={onClose} aria-label="Close start workout" className="p-2 hover:bg-white/10 rounded-lg transition min-w-[44px] min-h-[44px] flex items-center justify-center">
+            <X size={20} aria-hidden="true" />
           </button>
-          <h1 className="text-3xl font-black flex-1">START WORKOUT</h1>
+          <div className="flex-1 min-w-0">
+            <p className="ui-micro">Blueprint → working copy</p>
+            <h1 className="ui-display mt-0.5">Start workout</h1>
+          </div>
         </div>
       </div>
 
-      <div className="p-4 space-y-3 pb-16">
+      <div className="p-4 space-y-3 pb-16 max-w-2xl mx-auto">
+        <p className="ui-secondary">Starting clones the template. Your live sets never edit the blueprint.</p>
         {/* Empty Workout Option */}
         <button
           onClick={() => onSelectTemplate({ id: 'empty', name: 'Empty Workout', exercises: [] })}
-          className="w-full bg-gradient-to-br from-slate-800/50 to-slate-900/50 border-2 border-dashed border-slate-700/50 hover:border-slate-600/50 p-5 rounded-xl text-left transition-all group ui-fade-scale-anim"
+          className="ui-surface-interactive w-full p-5 text-left border-dashed ui-press"
+          style={{ borderStyle: 'dashed' }}
         >
-          <h3 className="font-black text-lg text-slate-300 group-hover:accent-text transition">Empty Workout</h3>
-          <p className="text-sm text-slate-500 mt-1">Start from scratch</p>
+          <h3 className="ui-card-title">Empty Workout</h3>
+          <p className="ui-secondary mt-1">Start from scratch</p>
         </button>
 
         {/* Template List */}
         {templates.length === 0 ? (
-          <div className="text-center py-12 px-4">
-            <p className="text-slate-400 text-sm font-semibold">No templates yet</p>
-            <p className="text-slate-600 text-xs mt-2">Create a template to quickly start workouts</p>
+          <div className="ui-surface-secondary text-center py-12 px-4">
+            <p className="ui-card-title">No templates yet</p>
+            <p className="ui-secondary mt-1.5">Create a template to quickly start workouts</p>
           </div>
         ) : (
           templates.map(template => (
@@ -46,5 +51,3 @@ export const SelectTemplateView = ({ templates, onClose, onSelectTemplate, onEdi
     </div>
   );
 };
-
-

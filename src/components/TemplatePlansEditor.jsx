@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Plus, Trash2 } from 'lucide-react';
 import { presetPlans, createPlan } from '../domain/templatePlans';
+import { generateId } from '../domain/ids';
 
 export const TemplatePlansEditor = ({ template, onClose, onSave }) => {
   const [plans, setPlans] = useState(template.plans || []);
   const [showPresets, setShowPresets] = useState(false);
-  const [editingIndex, setEditingIndex] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     intensityLevel: 'moderate',
@@ -15,11 +15,17 @@ export const TemplatePlansEditor = ({ template, onClose, onSave }) => {
     rirTarget: 2
   });
 
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
   const handleAddPlan = (preset = null) => {
     if (preset) {
       const newPlan = {
-        id: Date.now().toString(),
         ...preset,
+        id: generateId(),
         createdAt: new Date().toISOString()
       };
       setPlans([...plans, newPlan]);
@@ -31,7 +37,8 @@ export const TemplatePlansEditor = ({ template, onClose, onSave }) => {
         formData.percentageMin,
         formData.percentageMax,
         formData.repRange,
-        formData.rirTarget
+        formData.rirTarget,
+        generateId
       );
       setPlans([...plans, newPlan]);
       resetForm();
@@ -61,16 +68,6 @@ export const TemplatePlansEditor = ({ template, onClose, onSave }) => {
     onSave(updatedTemplate);
   };
 
-  const getIntensityColor = (level) => {
-    const colors = {
-      light: 'bg-green-900/30 border-green-700/30',
-      moderate: 'bg-blue-900/30 border-blue-700/30',
-      high: 'bg-orange-900/30 border-orange-700/30',
-      veryhigh: 'bg-red-900/30 border-red-700/30'
-    };
-    return colors[level] || 'bg-slate-900/30 border-slate-700/30';
-  };
-
   const getIntensityLabel = (level) => {
     const labels = {
       light: 'Light',
@@ -82,16 +79,20 @@ export const TemplatePlansEditor = ({ template, onClose, onSave }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-      <div className="bg-slate-900 border border-slate-700 rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 ui-backdrop-in">
+      <div role="dialog" aria-modal="true" aria-label="Template plans editor" className="bg-[#0b1220] border border-white/10 rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl ui-sheet-rise-anim">
         {/* Header */}
-        <div className="sticky top-0 bg-slate-900 border-b border-slate-700 p-4 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-white">Template Plans</h2>
+        <div className="sticky top-0 bg-[#0b1220]/95 backdrop-blur border-b border-white/10 p-4 flex items-center gap-3">
+          <div className="flex-1 min-w-0">
+            <p className="ui-micro">Plan → workout → start</p>
+            <h2 className="ui-section-title mt-0.5">Template plans</h2>
+          </div>
           <button
             onClick={onClose}
-            className="p-1 hover:bg-slate-800 rounded transition"
+            aria-label="Close plans editor"
+            className="p-2 hover:bg-white/10 rounded-lg transition min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-400"
           >
-            <X size={20} className="text-slate-400" />
+            <X size={20} aria-hidden="true" />
           </button>
         </div>
 
@@ -100,37 +101,27 @@ export const TemplatePlansEditor = ({ template, onClose, onSave }) => {
           {/* Existing Plans */}
           {plans.length > 0 && (
             <div className="space-y-2">
-              <p className="text-xs text-slate-400 font-semibold tracking-widest">YOUR PLANS ({plans.length})</p>
+              <p className="ui-micro">Your plans ({plans.length})</p>
               {plans.map((plan, idx) => (
                 <div
                   key={plan.id}
-                  className={`border ${getIntensityColor(plan.intensityLevel)} rounded-lg p-3 flex items-start justify-between`}
+                  className="ui-surface-secondary p-3 flex items-start justify-between gap-3"
                 >
-                  <div className="flex-1">
-                    <p className="font-semibold text-white">{plan.name}</p>
-                    <div className="grid grid-cols-3 gap-2 mt-2 text-[10px] text-slate-300">
-                      <div>
-                        <p className="text-slate-500">Intensity</p>
-                        <p className="font-bold">{getIntensityLabel(plan.intensityLevel)}</p>
-                      </div>
-                      <div>
-                        <p className="text-slate-500">Weight %</p>
-                        <p className="font-bold">{plan.percentageRange.min}-{plan.percentageRange.max}%</p>
-                      </div>
-                      <div>
-                        <p className="text-slate-500">Reps</p>
-                        <p className="font-bold">{plan.repRange}</p>
-                      </div>
-                    </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="ui-card-title truncate">{plan.name}</p>
+                    <p className="ui-secondary mt-1">
+                      {getIntensityLabel(plan.intensityLevel)} · {plan.percentageRange.min}-{plan.percentageRange.max}% · {plan.repRange} reps
+                    </p>
                     {plan.description && (
-                      <p className="text-[10px] text-slate-400 mt-2">{plan.description}</p>
+                      <p className="ui-secondary mt-1.5 !text-xs">{plan.description}</p>
                     )}
                   </div>
                   <button
                     onClick={() => handleDeletePlan(idx)}
-                    className="ml-3 p-2 hover:bg-red-900/30 rounded transition text-red-400"
+                    aria-label={`Delete plan ${plan.name}`}
+                    className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-[12px] text-red-300/80 hover:text-red-200 hover:bg-red-500/10 border border-transparent hover:border-red-500/30 transition shrink-0"
                   >
-                    <Trash2 size={16} />
+                    <Trash2 size={16} aria-hidden="true" />
                   </button>
                 </div>
               ))}
@@ -138,17 +129,18 @@ export const TemplatePlansEditor = ({ template, onClose, onSave }) => {
           )}
 
           {/* Add New Plan */}
-          <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-3">
-            <p className="text-xs text-slate-400 font-semibold tracking-widest mb-3">ADD NEW PLAN</p>
+          <div className="ui-surface-secondary p-3">
+            <p className="ui-micro mb-3">Add new plan</p>
 
             {/* Quick Presets */}
             <div className="mb-4">
               <button
                 onClick={() => setShowPresets(!showPresets)}
-                className="w-full px-3 py-2 bg-slate-700/50 hover:bg-slate-700 rounded border border-slate-600 text-sm font-semibold text-white transition text-left flex items-center justify-between"
+                aria-expanded={showPresets}
+                className="ui-action-secondary w-full px-3 py-2.5 text-sm font-semibold text-white transition text-left flex items-center justify-between min-h-[44px]"
               >
-                <span>Use Preset</span>
-                <span className="text-xs text-slate-400">{showPresets ? '▼' : '▶'}</span>
+                <span>Use preset</span>
+                <span className="text-xs text-slate-400" aria-hidden="true">{showPresets ? '▾' : '▸'}</span>
               </button>
 
               {showPresets && (
@@ -157,7 +149,7 @@ export const TemplatePlansEditor = ({ template, onClose, onSave }) => {
                     <button
                       key={key}
                       onClick={() => handleAddPlan(preset)}
-                      className="px-2 py-2 bg-slate-700/30 hover:bg-slate-700/50 rounded border border-slate-600 text-xs font-semibold text-white transition"
+                      className="ui-action-secondary px-2 py-2.5 text-xs font-semibold text-white transition min-h-[44px]"
                     >
                       {preset.name}
                     </button>
@@ -168,18 +160,22 @@ export const TemplatePlansEditor = ({ template, onClose, onSave }) => {
 
             {/* Custom Form */}
             <div className="space-y-2">
+              <label className="sr-only" htmlFor="plan-name">Plan name</label>
               <input
+                id="plan-name"
                 type="text"
                 placeholder="Plan name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-2.5 py-1.5 bg-slate-700/50 border border-slate-600 rounded text-white text-sm placeholder-slate-500 focus:border-blue-500 outline-none transition"
+                className="touch-input w-full bg-slate-800/60 border border-slate-600/50 rounded-lg text-white text-sm placeholder-slate-500 focus:border-accent focus:outline-none transition"
               />
 
+              <label className="sr-only" htmlFor="plan-intensity">Intensity level</label>
               <select
+                id="plan-intensity"
                 value={formData.intensityLevel}
                 onChange={(e) => setFormData({ ...formData, intensityLevel: e.target.value })}
-                className="w-full px-2.5 py-1.5 bg-slate-700/50 border border-slate-600 rounded text-white text-sm focus:border-blue-500 outline-none transition"
+                className="touch-input w-full bg-slate-800/60 border border-slate-600/50 rounded-lg text-white text-sm focus:border-accent focus:outline-none transition"
               >
                 <option value="light">Light</option>
                 <option value="moderate">Moderate</option>
@@ -189,83 +185,87 @@ export const TemplatePlansEditor = ({ template, onClose, onSave }) => {
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-[10px] text-slate-400">Min %</label>
+                  <label className="ui-micro" htmlFor="plan-min">Min %</label>
                   <input
+                    id="plan-min"
                     type="number"
                     min="20"
                     max="100"
                     value={formData.percentageMin}
                     onChange={(e) => setFormData({ ...formData, percentageMin: Number(e.target.value) })}
-                    className="w-full px-2 py-1.5 bg-slate-700/50 border border-slate-600 rounded text-white text-sm focus:border-blue-500 outline-none transition"
+                    className="touch-input mt-1 w-full bg-slate-800/60 border border-slate-600/50 rounded-lg text-white text-sm focus:border-accent focus:outline-none transition"
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] text-slate-400">Max %</label>
+                  <label className="ui-micro" htmlFor="plan-max">Max %</label>
                   <input
+                    id="plan-max"
                     type="number"
                     min="20"
                     max="100"
                     value={formData.percentageMax}
                     onChange={(e) => setFormData({ ...formData, percentageMax: Number(e.target.value) })}
-                    className="w-full px-2 py-1.5 bg-slate-700/50 border border-slate-600 rounded text-white text-sm focus:border-blue-500 outline-none transition"
+                    className="touch-input mt-1 w-full bg-slate-800/60 border border-slate-600/50 rounded-lg text-white text-sm focus:border-accent focus:outline-none transition"
                   />
                 </div>
               </div>
 
+              <label className="sr-only" htmlFor="plan-reps">Rep range</label>
               <input
+                id="plan-reps"
                 type="text"
                 placeholder="Rep range (e.g., 8-12)"
                 value={formData.repRange}
                 onChange={(e) => setFormData({ ...formData, repRange: e.target.value })}
-                className="w-full px-2.5 py-1.5 bg-slate-700/50 border border-slate-600 rounded text-white text-sm placeholder-slate-500 focus:border-blue-500 outline-none transition"
+                className="touch-input w-full bg-slate-800/60 border border-slate-600/50 rounded-lg text-white text-sm placeholder-slate-500 focus:border-accent focus:outline-none transition"
               />
 
               <div>
-                <label className="text-[10px] text-slate-400">RIR Target</label>
+                <label className="ui-micro" htmlFor="plan-rir">RIR target</label>
                 <input
+                  id="plan-rir"
                   type="number"
                   min="0"
                   max="5"
                   value={formData.rirTarget}
                   onChange={(e) => setFormData({ ...formData, rirTarget: Number(e.target.value) })}
-                  className="w-full px-2.5 py-1.5 bg-slate-700/50 border border-slate-600 rounded text-white text-sm focus:border-blue-500 outline-none transition"
+                  className="touch-input mt-1 w-full bg-slate-800/60 border border-slate-600/50 rounded-lg text-white text-sm focus:border-accent focus:outline-none transition"
                 />
               </div>
 
               <button
                 onClick={() => handleAddPlan()}
                 disabled={!formData.name.trim()}
-                className="w-full mt-3 px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded font-semibold text-white text-sm transition flex items-center justify-center gap-2"
+                className="ui-action-secondary w-full mt-1 px-3 py-2.5 font-semibold text-white text-sm transition flex items-center justify-center gap-2 min-h-[44px] disabled:opacity-50"
               >
-                <Plus size={16} />
-                Add Plan
+                <Plus size={16} aria-hidden="true" />
+                Add plan
               </button>
             </div>
           </div>
 
           {/* Info */}
-          <div className="bg-slate-800/30 border border-slate-700/50 rounded p-3">
-            <p className="text-[10px] text-slate-400 mb-1">💡 TIP</p>
-            <p className="text-[10px] text-slate-300 leading-relaxed">
-              Create multiple plans for different training phases. Users can select
-              which plan to use for each workout session.
+          <div className="ui-surface-sub p-3">
+            <p className="ui-micro mb-1">How plans work</p>
+            <p className="ui-secondary !text-xs">
+              Plans are intensity variants of one blueprint. Pick one when training — the template itself never changes.
             </p>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="sticky bottom-0 bg-slate-900 border-t border-slate-700 p-4 flex gap-2">
+        <div className="sticky bottom-0 bg-[#0b1220]/95 backdrop-blur border-t border-white/10 p-4 flex gap-2">
           <button
             onClick={onClose}
-            className="flex-1 px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded font-semibold text-white transition"
+            className="ui-action-secondary flex-1 px-3 py-2.5 font-semibold text-white transition min-h-[44px]"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
-            className="flex-1 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 rounded font-semibold text-white transition"
+            className="ui-cta-primary flex-1 px-3 py-2.5 font-semibold text-white transition min-h-[44px] ui-press"
           >
-            Save Plans
+            Save plans
           </button>
         </div>
       </div>
